@@ -1,0 +1,16 @@
+{
+  "name": "RL School",
+  "short_name": "RL School",
+  "description": "A two-week, plain-English course on reinforcement learning, with interactive widgets, architecture diagrams, and a paper bible.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F9F8",
+  "theme_color": "#0F766E",
+  "lang": "en",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
