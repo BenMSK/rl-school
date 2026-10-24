@@ -14,7 +14,7 @@ Built with the `school` skill (`~/.claude/skills/school`), in the same house sty
 ```
 RL_school/                  ← git root (github.com/BenMSK/rl-school, branch main)
 ├─ index.html               ← the whole site: CSS + content + script. The only source.
-├─ apple-touch-icon.png     ← iOS home-screen icon 180px (loop arrow + reward star)
+├─ apple-touch-icon.png     ← iOS home-screen icon 180px (Go board corner with two black and two white stones)
 ├─ icon-192.png, icon-512.png, manifest.webmanifest   ← Android / PWA icon and manifest
 ├─ img/papers/*.png         ← 23 figures reproduced from the reviewed papers (≤1400px wide, <200 KB)
 ├─ .nojekyll                ← GitHub Pages serves files as-is
@@ -58,6 +58,7 @@ RL_school/                  ← git root (github.com/BenMSK/rl-school, branch ma
 
 | Date | Version | Git tag | What |
 |---|---|---|---|
+| 2026-10-25 | v1.0.1 | `v1.0.1` | New icon: a Go board corner with two black and two white stones (a nod to AlphaGo, 2016), replacing the loop-and-star. Same shapes in the header logo and the home-screen icons. |
 | 2026-10-25 | v1.0 | `v1.0` | First release. 14 lessons (Week 1: what RL is, bandits, MDPs and Bellman equations, dynamic programming, Monte Carlo and TD, Q-learning/SARSA/DQN, policy gradients and actor–critic; Week 2: TRPO/PPO/SAC, model-based RL and world models, offline RL and generative policies, exploration/self-play/multi-agent, RL for language models and agents, RL in the wild, the frontier and open problems). 20 paper reviews with 23 figures from the papers. 29 widgets, an architecture diagram per method, 144 quiz questions. Light/dark theme, phone layout, home-screen icon and manifest. |
 
 ## Known gaps and things to re-check later

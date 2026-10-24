@@ -6,15 +6,14 @@ const fs = require("fs"), path = require("path"), zlib = require("zlib");
 const outDir = process.argv[2] || ".";
 
 const ICON = {
-  bg: ["#0F766E", "#0F766E"],            // diagonal gradient, top-left → bottom-right (same colour twice = flat)
+  bg: ["#E2BB6A", "#D3A350"],            // diagonal gradient, top-left → bottom-right (same colour twice = flat)
   shapes: [                              // painted in order; kinds: rect [x,y,w,h,r] · circle [cx,cy,r] · ellipse [cx,cy,rx,ry] · poly [[x,y],…]
-    // loop arrow: white ring, then the background colour punched back in, a gap, and an arrowhead
-    { circle: [32, 32, 21], fill: "#FFFFFF" },
-    { circle: [32, 32, 15], fill: "#0F766E" },
-    { poly: [[32, 32], [32, 4], [4, 4], [4, 32]], fill: "#0F766E" },
-    { poly: [[8, 24], [20, 34], [24, 20]], fill: "#FFFFFF" },
-    // reward star
-    { poly: [[41, 9], [43.6, 15.4], [50, 18], [43.6, 20.6], [41, 27], [38.4, 20.6], [32, 18], [38.4, 15.4]], fill: "#FDE047" },
+    // Go board corner: a 4×4 grid of lines, then two black and two white stones (AlphaGo, 2016)
+    ...[11, 25, 39, 53].flatMap(v => [{ rect: [8, v - 0.8, 48, 1.6, 0], fill: "#5C4326" }, { rect: [v - 0.8, 8, 1.6, 48, 0], fill: "#5C4326" }]),
+    { circle: [25, 25, 6.6], fill: "#1A1A1A" }, { circle: [23, 23, 1.8], fill: "#5E5E5E" },
+    { circle: [39, 39, 6.6], fill: "#1A1A1A" }, { circle: [37, 37, 1.8], fill: "#5E5E5E" },
+    { circle: [39, 25, 6.6], fill: "#5C4326" }, { circle: [39, 25, 5.9], fill: "#FAFAFA" },
+    { circle: [25, 39, 6.6], fill: "#5C4326" }, { circle: [25, 39, 5.9], fill: "#FAFAFA" },
   ],
 };
 
