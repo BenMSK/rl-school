@@ -4,7 +4,7 @@ A two-week, plain-English course on reinforcement learning, from rewards and ban
 
 | Where | URL | Notes |
 |---|---|---|
-| GitHub Pages | https://benmsk.github.io/rl-school/ (not published yet) | Progress (days done) and theme are saved only in the browser. Add it to the iPhone home screen for an app icon. |
+| GitHub Pages | https://benmsk.github.io/rl-school/ | Progress (days done) and theme are saved only in the browser. Add it to the iPhone home screen for an app icon. |
 | Local | double-click `index.html` | Works offline except Google Fonts. |
 
 Built with the `school` skill (`~/.claude/skills/school`), in the same house style as [LLM School](https://benmsk.github.io/llm-school/). The research notes are in `../RL_school_research/` (one per 2–3 days, every source URL, an "Unverified / caution" list at the end of each). They sit outside this folder so they are not published.
@@ -12,7 +12,7 @@ Built with the `school` skill (`~/.claude/skills/school`), in the same house sty
 ## Files
 
 ```
-RL_school/                  ← git root (github.com/BenMSK/rl-school, branch main; not created yet)
+RL_school/                  ← git root (github.com/BenMSK/rl-school, branch main)
 ├─ index.html               ← the whole site: CSS + content + script. The only source.
 ├─ apple-touch-icon.png     ← iOS home-screen icon 180px (loop arrow + reward star)
 ├─ icon-192.png, icon-512.png, manifest.webmanifest   ← Android / PWA icon and manifest
@@ -51,14 +51,14 @@ RL_school/                  ← git root (github.com/BenMSK/rl-school, branch ma
 3. If you changed a diagram or widget: `python tools/review.py d8` (or `p-dqn`). It lists labels that run off the canvas, overlap another label, or are crossed by a line, and screenshots each diagram. Known, intentional findings: the paired arrows in `qlearn` (both agents' paths) and the crossed-out "value model" in Day 12.
 4. If you changed the script, open the page in a browser and check the console.
 5. Bump the version in the header `.ver` span and in the footer, and add a line to the change log below.
-6. `git add -A && git commit -m "…" && git push` → live in 1–2 minutes (after the repo and Pages are set up).
+6. `git add -A && git commit -m "…" && git push` → live in 1–2 minutes.
 7. To change the icon: edit the `<svg class="logo">` in the header and the matching `ICON` shapes in `tools/makeicon.js`, run `node tools/makeicon.js .`, then on the phone remove and re-add the home-screen icon.
 
 ## Change log
 
 | Date | Version | Git tag | What |
 |---|---|---|---|
-| 2026-10-25 | v1.0 | – | First release. 14 lessons (Week 1: what RL is, bandits, MDPs and Bellman equations, dynamic programming, Monte Carlo and TD, Q-learning/SARSA/DQN, policy gradients and actor–critic; Week 2: TRPO/PPO/SAC, model-based RL and world models, offline RL and generative policies, exploration/self-play/multi-agent, RL for language models and agents, RL in the wild, the frontier and open problems). 20 paper reviews with 23 figures from the papers. 29 widgets, an architecture diagram per method, 144 quiz questions. Light/dark theme, phone layout, home-screen icon and manifest. |
+| 2026-10-25 | v1.0 | `v1.0` | First release. 14 lessons (Week 1: what RL is, bandits, MDPs and Bellman equations, dynamic programming, Monte Carlo and TD, Q-learning/SARSA/DQN, policy gradients and actor–critic; Week 2: TRPO/PPO/SAC, model-based RL and world models, offline RL and generative policies, exploration/self-play/multi-agent, RL for language models and agents, RL in the wild, the frontier and open problems). 20 paper reviews with 23 figures from the papers. 29 widgets, an architecture diagram per method, 144 quiz questions. Light/dark theme, phone layout, home-screen icon and manifest. |
 
 ## Known gaps and things to re-check later
 
