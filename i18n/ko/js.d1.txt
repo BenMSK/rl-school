@@ -1,0 +1,100 @@
+@@ gridworld
+"4 by 4 gridworld with a goal, a trap and the agent"
+==
+"목표와 함정, agent가 있는 4×4 gridworld"
+@@ gridworld
+"Episode over: reached the goal. Press Reset."
+==
+"episode 종료: 목표에 도착했습니다. 초기화를 누르세요."
+@@ gridworld
+"Episode over: fell in the trap. Press Reset."
+==
+"episode 종료: 함정에 빠졌습니다. 초기화를 누르세요."
+@@ gridworld
+"Each move costs −1 · G ends the episode with +10 · T with −10"
+==
+"한 번 움직일 때마다 −1 · G는 +10, T는 −10을 주고 episode 종료"
+@@ gridworld
+" press an arrow"
+==
+" 화살표를 누르세요"
+@@ gridworld
+"Steps so far"
+==
+"지금까지 step 수"
+@@ gridworld
+"episode ended"
+==
+"episode 종료"
+@@ gridworld
+"episode running"
+==
+"episode 진행 중"
+@@ gridworld
+"move "+d
+==
+"이동 "+d
+@@ gridworld
+"A 4×4 gridworld: the loop by hand"
+==
+"4×4 gridworld: 손으로 돌려 보는 loop"
+@@ gridworld
+"You are the policy. Each arrow is one action A_t; the panel records the reward R_{t+1} and the next state S_{t+1}, and sums the return two ways."
+==
+"여러분이 곧 policy입니다. 화살표 하나가 action A_t 하나입니다. 패널은 reward R_{t+1}과 다음 state S_{t+1}을 기록하고, return을 두 가지 방식으로 합산합니다."
+@@ discount
+"reward at step "+k
+==
+"step "+k+"의 reward"
+@@ discount
+"bars of discounted rewards gamma^k times r_k for ten steps"
+==
+"열 step에 걸친 discounted reward, gamma^k 곱하기 r_k의 막대 그래프"
+@@ discount
+"dashed = r_k · filled = γᵏ·r_k"
+==
+"점선 = r_k · 채움 = γᵏ·r_k"
+@@ discount
+"Σ γᵏ r_k over 10 steps"
+==
+"10 step에 걸친 Σ γᵏ r_k"
+@@ discount
+"return of +1 forever"
+==
+"+1이 영원히 이어질 때의 return"
+@@ discount
+"Weight at k=9"
+==
+"k=9의 가중치"
+@@ discount
+"Weight at k=8"
+==
+"k=8의 가중치"
+@@ discount
+"γ⁸, the +10 spike"
+==
+"γ⁸, +10이 있는 자리"
+@@ discount
+"Discounting a stream of ten rewards"
+==
+"reward 열 개의 흐름에 discount 적용하기"
+@@ discount
+"Rewards r₀…r₉ arrive one per step. Each bar is the discounted term γᵏ·r_k; the return is their sum. Edit the numbers or pick a preset."
+==
+"reward r₀…r₉가 step마다 하나씩 들어옵니다. 각 막대는 discount가 적용된 항 γᵏ·r_k이고, return은 그 합입니다. 숫자를 직접 고치거나 준비된 패턴을 고르세요."
+@@ discount
+"Pattern"
+==
+"패턴"
+@@ discount
+"constant +1"
+==
+"매번 +1"
+@@ discount
+"single +10 at step 8"
+==
+"step 8에서 +10 한 번"
+@@ discount
+"alternating +1, −1"
+==
+"+1, −1 번갈아"

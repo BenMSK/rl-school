@@ -1,0 +1,340 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 9</span>
+@@ 2
+Model-based RL and world models
+@@ 3
+After today you can explain what a learned model of the environment buys an agent (planning, sample efficiency) and what it costs (compounding error), trace how Dyna-Q, MuZero and Dreamer each use one, and state exactly what Dreamer 4 did and did not do in Minecraft from offline data alone.
+@@ 4
+About 90 min · Needs Day 8
+@@ 5
+A model-free agent learns only from the steps it actually takes. A model-based agent also learns how the world answers its actions, then rehearses inside that model: thousands of imagined steps for every real one. The prize is sample efficiency. The price is that the rehearsal is only as good as the model, and a one-step model's errors feed back into its own input, so imagination must be kept short.
+@@ 6
+1. Model-free versus model-based: the trade
+@@ 7
+A <strong>model of the environment</strong> is anything the agent can use to predict how the environment will respond to an action. A <strong>distribution model</strong> gives the probabilities p(s′, r | s, a); a <strong>sample model</strong> just produces one plausible next state and reward. Sutton and Barto define <strong>planning</strong> as any process that takes a model as input and produces or improves a policy. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2020</a>
+@@ 8
+Everything you have met so far, Q-learning, DQN, PPO, SAC, is <strong>model-free</strong>: values and policies are fitted directly to real transitions. <strong>Model-based</strong> methods also learn, or are given, a model, and use it to generate simulated experience. The trade:
+@@ 9
+Property
+@@ 10
+Model-free
+@@ 11
+Model-based
+@@ 12
+Real steps needed
+@@ 13
+many (DQN: tens of millions of frames)
+@@ 14
+far fewer; the model is reused for many updates
+@@ 15
+Where errors come from
+@@ 16
+noisy value estimates
+@@ 17
+a wrong model, and the errors compound over imagined steps
+@@ 18
+Compute per real step
+@@ 19
+one update
+@@ 20
+one update plus n planning updates or a search
+@@ 21
+What transfers to a new reward
+@@ 22
+nothing; relearn
+@@ 23
+the model; only the planner has to change
+@@ 24
+The second row is the whole lesson: a model turns compute into data, but a model that is 1% wrong per step is far more than 1% wrong after fifty steps. Every method today is a different answer to that tension.
+@@ 25
+2. Dyna-Q: learning and planning with the same line of code
+@@ 26
+Richard Sutton's <strong>Dyna</strong> (1990) is the simplest model-based method. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2020</a> After each real step (S, A, R, S′) a Dyna-Q agent does three things: the ordinary Q-learning update; a model update that just remembers "S, A led to R, S′" (the environment is assumed deterministic); and n <strong>planning steps</strong>, each picking a previously seen state–action pair at random and applying the same Q-learning update to what the model remembers about it. With n = 0 Dyna-Q is exactly one-step Q-learning.
+@@ 27
+The textbook maze makes the payoff concrete: 47 states, four deterministic moves, reward +1 only for reaching G, γ = 0.95, α = 0.1, ε = 0.1, Q initialised to 0, shortest path 14 steps. Averaged over 30 runs, <strong>n = 0 needed about 25 episodes</strong> to reach near-optimal performance, <strong>n = 5 about 5</strong>, and <strong>n = 50 only 3</strong>. All three took about 1,700 steps in the first episode: planning cannot help before the model has seen the goal once. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2020</a>
+@@ 28
+Try it: pick n, press Run, then tick "compare all three". The widget runs the same maze with the same constants, averaged over 10 seeded runs.
+@@ 29
+Notice that the n = 50 curve is flat from episode 3 while n = 0 is still above 100 steps at episode 10. The maze arrows show the greedy action wherever Q is above zero: planning updates propagate value back toward S long before the real walk does.
+@@ 30
+Two kids learn a maze. One only learns from real steps. The other closes her eyes after every real step and replays fifty moves she remembers, thinking "that corner led here, so this corner must be good too". After one real walk she knows most of the route; the first kid needs twenty-five.
+@@ 31
+3. Planning with search: MCTS in four steps
+@@ 32
+Dyna plans in the background, improving a value table for every state. <strong>Decision-time planning</strong> spends its compute on the one state the agent is in right now. The dominant algorithm since 2006 is <strong>Monte Carlo tree search (MCTS)</strong>, which took computer Go from weak amateur to 6-dan strength in a decade. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2020</a> Each iteration has four steps:
+@@ 33 attr
+Four small trees side by side: Selection follows a highlighted path down the tree; Expansion adds a new leaf; Simulation runs a dashed rollout from the leaf to an outcome; Backup sends the result up the path.
+@@ 34
+1 Selection
+@@ 35
+2 Expansion
+@@ 36
+3 Simulation
+@@ 37
+4 Backup
+@@ 38
+win
+@@ 39
+UCB picks the path
+@@ 40
+add one leaf
+@@ 41
+cheap rollout
+@@ 42
+update N and mean
+@@ 43
+One MCTS iteration. Repeat while time remains, then play the root action that was visited most.
+@@ 44
+<strong>Selection</strong> walks down the existing tree with a tree policy that balances promising moves against under-explored ones (usually an upper-confidence rule, UCB). <strong>Expansion</strong> adds one child node. <strong>Simulation</strong> plays the game out from there with a cheap rollout policy, often random moves. <strong>Backup</strong> sends the result up the path, updating each node's visit count and mean value. After hundreds of iterations the root's visit counts are a good policy. The catch: every edge of the tree needs a simulator. AlphaGo and AlphaZero (<a href="#d11">Day 11</a>, <a href="#p-alphago">AlphaGo review</a>) were handed the true rules. The next question was whether the simulator could be learned.
+@@ 45
+Choosing a chess move by MCTS is playing many quick imaginary games from the current position, spending more of them on the lines that are going well, and then playing the move you spent most of your imagination on.
+@@ 46
+4. Search with a learned model: MuZero
+@@ 47
+<strong>MuZero</strong> (DeepMind, preprint November 2019, Nature December 2020) runs AlphaZero's search without ever being told the rules. It learns three networks. The <strong>representation function h</strong> turns the observation history into a root hidden state s⁰. The <strong>dynamics function g</strong> maps (s<sup>k</sup>, a) to a predicted reward r<sup>k</sup> and the next hidden state s<sup>k+1</sup>. The <strong>prediction function f</strong> maps any hidden state to a policy p<sup>k</sup> and a value v<sup>k</sup>. MCTS runs entirely in hidden-state space: one g call and one f call per simulation, 800 simulations per move for board games and 50 for Atari. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a>
+@@ 48
+Nothing forces the hidden state to look like a board. It is trained only so that, unrolled K = 5 steps along the actions actually played, the predicted policies match the search policies, the values match the observed returns and the rewards match the observed rewards. The model is a value-prediction device, not a simulator: it wastes no capacity on pixels that never affect the score. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a>
+@@ 49
+On 57 Atari games MuZero reached a median human-normalised score of 2041% and a mean of 4999%, against 1921% and 4025% for the previous best, R2D2, after 20 billion frames (about 12 hours of training). In Go, chess and shogi it matched AlphaZero's Elo and slightly exceeded it in Go. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> Its Go strength rose by more than 1000 Elo as thinking time went from 0.1 s to 50 s per move, and in Ms. Pac-Man even 6 or 7 simulations per move, fewer than there are actions, still worked. <a class="src" href="https://deepmind.google/discover/blog/muzero-mastering-go-chess-shogi-and-atari-without-rules/">DeepMind 2020</a> More in <a href="#p-muzero">the MuZero review</a>.
+@@ 50
+5. Learning in imagination: PlaNet, Dreamer, DreamerV3
+@@ 51
+MuZero plans at decision time. The <strong>Dreamer</strong> family, from Danijar Hafner and colleagues, uses its model the Dyna way: to generate training data for an actor–critic in the background. The model is a <strong>world model</strong>, a network that predicts the future in a compressed <strong>latent</strong> state rather than in pixels.
+@@ 52
+<strong>PlaNet</strong> (November 2018) introduced the <strong>recurrent state-space model (RSSM)</strong>: a latent with a deterministic part h, carried by a GRU, and a stochastic part z, sampled each step, so the model can represent both what it knows and what it is unsure about. It planned in this latent space and solved pixel-based control with far fewer episodes than model-free agents. <a class="src" href="https://arxiv.org/abs/1811.04551">Hafner 2018</a> <strong>Dreamer</strong> (December 2019) replaced the planner with an actor and critic trained purely on imagined latent trajectories. <a class="src" href="https://arxiv.org/abs/1912.01603">Hafner 2019</a> <strong>DreamerV2</strong> (October 2020) switched to discrete latents (32 categorical variables with 32 classes each) and a 15-step horizon, and became the first agent to reach human-level Atari by learning entirely inside a separately trained world model: gamer-normalised median 2.15 against Rainbow's 1.47, on one GPU in about 10 days. <a class="src" href="https://arxiv.org/abs/2010.02193">Hafner 2020</a>
+@@ 53
+<strong>DreamerV3</strong> (preprint January 2023, Nature 2 April 2025) made world models general: one fixed set of hyperparameters across 8 domains and more than 150 tasks, and six model sizes from 12M to 400M parameters, where bigger models score higher and need less data. <a class="src" href="https://arxiv.org/abs/2301.04104">Hafner 2023</a> <a class="src" href="https://www.nature.com/articles/s41586-025-08744-2">Nature 2025</a> The main trick is predicting rewards and values in <strong>symlog</strong> space:
+@@ 54
+symlog(x) = sign(x) · ln(|x| + 1),   symexp(x) = sign(x) · (e<sup>|x|</sup> − 1)
+@@ 55
+which is nearly the identity near zero and squashes large magnitudes, so one network handles rewards of 1 and of 10,000 without per-task tuning. The headline result was Minecraft: every DreamerV3 run collected a diamond from scratch within 100M environment steps, with no human data and no curriculum, the first algorithm to do so. <a class="src" href="https://arxiv.org/abs/2301.04104">Hafner 2023</a> See <a href="#p-dreamer">the Dreamer review</a>.
+@@ 56
+Try it: step through one turn of Dreamer's loop. In step 4, drag the error slider and watch the imagined frames rot with horizon.
+@@ 57
+Notice that imagination never produces pixels; the decoded frames are shown only so you can see the error. With 0.10 error per step the k = 15 frame is wrong about 79% of the time, which is why Dreamer stops at 15 or 16 steps and lets the critic estimate the rest.
+@@ 58
+6. Dreamer 4: diamonds from offline data alone
+@@ 59
+<strong>Dreamer 4</strong> (Hafner, Yan and Lillicrap, 29 September 2025) swaps the RSSM for a Transformer. A <strong>tokenizer</strong> (about 400M parameters) compresses each frame to continuous tokens; a <strong>block-causal</strong> dynamics model (about 1.6B, total about 2B) attends spatially within a frame and causally across frames, interleaved with actions. <strong>Shortcut forcing</strong> trains the dynamics model on noised tokens, conditioned on both noise level and step size, to predict the clean tokens directly, so each generated frame needs only K = 4 forward passes and the model runs interactively on one GPU. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a>
+@@ 60
+Training has three phases: pretrain the world model on video with or without actions; add policy and reward heads trained by behaviour cloning; then freeze the Transformer and train the policy on imagined rollouts with a sign-of-advantage objective. The data was the VPT contractor set, 2,541 hours of Minecraft video with recorded actions, which the authors contrast with the 270,000 hours of YouTube video VPT used, hence their "100× less data" claim. Training ran on 256 to 1,024 TPU-v5p chips. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a>
+@@ 61
+Now the result, stated carefully. On the offline diamond challenge the agent reached more than 90% success up to the stone pickaxe, 29% for the iron pickaxe, and <strong>obtained diamonds in 0.7% of episodes</strong>: over 20,000 mouse and keyboard actions from pixels. A fine-tuned VPT managed sticks in 53% of episodes and rarely iron; a Gemma-3 vision-language-action baseline reached the iron pickaxe 11% of the time and never a diamond. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a> What this is: the first agent to get a diamond with zero environment interaction, the whole policy learned from a fixed dataset plus imagination. What it is not: a reliable diamond miner (DreamerV3 online did it in every run), proof that the agent understands Minecraft mechanics rather than recombining recorded play, or a result on tasks beyond the 17 tested. As of October 2026 commentary still debates that second point.
+@@ 62
+7. Generative environments and other cousins
+@@ 63
+Push a world model to full video fidelity and it stops being an agent's internal tool and becomes an environment in its own right. DeepMind's <strong>Genie</strong> (February 2024) trained an 11B-parameter model on 30,000 hours of platformer video with no action labels, inferring 8 latent actions, at about 1 frame per second. <a class="src" href="https://arxiv.org/abs/2402.15391">Bruce 2024</a> <strong>Genie 3</strong> (5 August 2025) generates playable 3D worlds from a text prompt at 720p and 24 frames per second in real time, stays consistent for several minutes, and accepts "promptable world events" such as a change of weather; DeepMind used it to test its SIMA agent. Stated limits: a small action space, weak multi-agent interaction, minutes rather than hours. <a class="src" href="https://deepmind.google/discover/blog/genie-3-a-new-frontier-for-world-models/">DeepMind 2025</a> <strong>Project Genie</strong> (29 January 2026) put Genie 3 in a web app for US Google AI Ultra subscribers, capped at 60-second generations. <a class="src" href="https://blog.google/innovation-and-ai/models-and-research/google-deepmind/project-genie/">Google 2026</a>
+@@ 64
+Two other designs matter. <strong>TD-MPC2</strong> (October 2023) is MuZero's decoder-free idea for continuous control: latent dynamics, a reward head and five Q-functions, with sampling-based planning in latent space; one hyperparameter set covered 104 tasks across four domains, and a single 317M-parameter agent learned 80 tasks spanning different robots and action spaces. <a class="src" href="https://arxiv.org/abs/2310.16828">Hansen 2023</a> <strong>DayDreamer</strong> (June 2022) ran Dreamer on four physical robots with no simulator: a quadruped learned to roll over, stand and walk in about one hour and adapted to pushes within about ten minutes. <a class="src" href="https://arxiv.org/abs/2206.14176">Wu 2022</a>
+@@ 65
+<strong>"Model-based means the agent is given the physics."</strong> MuZero and Dreamer learn their models from pixels. AlphaZero is the one that was handed a perfect simulator.
+@@ 66
+<strong>"A world model must reconstruct the image."</strong> MuZero and TD-MPC2 never decode a pixel; they predict only what planning needs: reward, value, policy, next latent.
+@@ 67
+<strong>"Dyna is a different algorithm from Q-learning."</strong> It is Q-learning applied to both real and remembered transitions; n = 0 recovers Q-learning exactly.
+@@ 68
+<strong>"Genie is an RL agent."</strong> Genie 3 is an environment generator. An agent such as SIMA is trained inside it.
+@@ 69
+<strong>"More imagination is always better."</strong> Model errors compound; Dreamer stops at 15–16 steps and MBPO showed long rollouts hurt.
+@@ 70
+8. Compounding error, and why robots care
+@@ 71
+A one-step model with a small error produces, after k imagined steps, a state that was never real, and each further prediction is made from that unreal input. This is <strong>compounding model error</strong>, and there are four standard defences. Keep horizons short: Dreamer imagines 15 or 16 steps and bootstraps with the critic. Branch from real states: <strong>MBPO</strong> (June 2019) starts every short rollout from a replay-buffer state and argues from a bound that long rollouts are not worth their bias. <a class="src" href="https://arxiv.org/abs/1906.08253">Janner 2019</a> Predict clean targets rather than noise, as Dreamer 4's shortcut forcing does. And train the model for value prediction instead of pixel accuracy, as MuZero and TD-MPC2 do, so errors in irrelevant detail cost nothing.
+@@ 72
+Going deeper (optional): why the critic saves the horizon
+@@ 73
+Dreamer's actor target is a λ-return over the imagined trajectory: imagined rewards for the first steps, then the critic's value at the horizon. Lengthening the horizon trades critic error for model error; the best trade is a tuned constant, which is why every Dreamer paper reports H = 15 or 16 rather than "as long as possible". <a class="src" href="https://arxiv.org/abs/2010.02193">Hafner 2020</a>
+@@ 74
+Why does this matter most for robots? Because a robot's real steps are the expensive ones: slow, wearing, sometimes dangerous, and impossible to parallelise across 1,000 copies of the hardware. A world model turns one hour of walking data into millions of imagined steps, which is what DayDreamer showed. As of October 2026 the open questions are whether Transformer world models trained on video (Dreamer 4, Genie 3) can supply those imagined steps for real manipulation, and how to detect that imagination has drifted off the real world before a policy trained on it is deployed. <a href="#d10">Day 10</a> takes up the related problem of learning from fixed datasets.
+@@ 75 attr
+Dreamer architecture. Top row, real data: a frame goes into an encoder, which produces the stochastic latent z; a GRU produces the deterministic state h; three heads (decoder, reward, continue) read h and z. Bottom row, imagined data with dashed arrows: from a replayed latent, the actor picks an action, the sequence model and dynamics predictor produce the next h and z-hat, the reward and continue heads score it, repeated 16 times; the critic and actor are trained on the imagined trajectory.
+@@ 76
+World model, trained on real replayed frames
+@@ 77
+frame x_t
+@@ 78
+encoder
+@@ 79
+RSSM state (h_t, z_t)
+@@ 80
+h: GRU · z: 32×32 categorical
+@@ 81
+decoder → x̂_t (loss only)
+@@ 82
+reward head → r̂_t
+@@ 83
+continue head → ĉ_t
+@@ 84
+loss: reconstruction + reward + continue + KL(z ‖ ẑ) with KL balancing; symlog on targets
+@@ 85
+Actor–critic, trained on imagined latent trajectories (no pixels)
+@@ 86
+start state
+@@ 87
+replayed (h, z)
+@@ 88
+actor π(a | h, z)
+@@ 89
+samples â
+@@ 90
+GRU → h′, prior ẑ′ ~ p(ẑ | h′)
+@@ 91
+dynamics predictor
+@@ 92
+reward, continue heads
+@@ 93
+repeat H = 16 steps → imagined trajectory (ĥ, ẑ, â, r̂, ĉ)
+@@ 94
+critic v(h, z)
+@@ 95
+target: λ-return of imagined r̂
+@@ 96
+actor update
+@@ 97
+raise imagined return (+ entropy)
+@@ 98
+real data
+@@ 99
+imagined data
+@@ 100
+the actor's real action a_t goes to the environment and the replay buffer
+@@ 101
+Dreamer (V2/V3). Top: the world model is fitted to real replayed sequences. Bottom: actor and critic never see a pixel; they are trained on 16-step trajectories imagined by the dynamics predictor.
+@@ 102
+Read the top row left to right. A replayed frame enters the encoder, which produces the stochastic latent z_t; the GRU updates the deterministic state h_t from the previous h, z and action. Three heads read (h_t, z_t): the decoder reconstructs the frame, which exists only to force the latent to keep useful detail; the reward and continue heads predict the two numbers the agent needs. The KL term pulls the dynamics predictor's guess ẑ, made from h alone, toward what the encoder saw. <a class="src" href="https://arxiv.org/abs/2301.04104">Hafner 2023</a> Bottom row: start from a replayed latent, let the actor choose, let the dynamics predictor produce the next (h, ẑ), score it with the reward and continue heads, repeat 16 times. The critic regresses onto λ-returns of that imagined trajectory and the actor is updated to raise them. Then the actor acts for real, and the new transition refills the replay buffer that feeds the top row.
+@@ 103 attr
+MuZero architecture. Observations enter the representation function h, which outputs hidden state s0. The prediction function f maps each hidden state to a policy and a value. The dynamics function g takes a hidden state and an action and outputs a reward and the next hidden state; this is unrolled K=5 steps. Above the chain, a small search tree indicates that MCTS runs over hidden states using g and f. Below, training targets: policies to search policies, values to returns, rewards to observed rewards.
+@@ 104
+MCTS over hidden states: 800 simulations per move (board games), 50 (Atari); each simulation = one g call + one f call
+@@ 105
+s⁰ (root)
+@@ 106
+nodes are hidden states, edges are actions;
+@@ 107
+UCB selection on min-max normalised values;
+@@ 108
+root visit counts → search policy π_t, action sampled from π_t
+@@ 109
+representation h
+@@ 110
+dynamics g(s⁰, a¹)
+@@ 111
+dynamics g(s¹, a²)
+@@ 112
+… K = 5 steps
+@@ 113
+training targets: p<tspan baseline-shift="super" font-size="9">k</tspan> → search policy · v<tspan baseline-shift="super" font-size="9">k</tspan> → return · r<tspan baseline-shift="super" font-size="9">k</tspan> → observed reward
+@@ 114
+the hidden state is never trained to look like anything
+@@ 115
+MuZero. Three learned functions, one search. The dynamics function g is unrolled K = 5 steps during training; at play time MCTS calls g and f hundreds of times per move, entirely in hidden-state space.
+@@ 116
+Left to right again: the observation history enters the representation function h and becomes a root hidden state s⁰. From any hidden state, f reads off a policy and a value. g takes a hidden state and an action and returns a reward and the next hidden state, which feeds straight back into g. Training unrolls five steps along the actions actually played and matches the three outputs to their targets. At play time the same g and f are what MCTS expands: the tree at top-left is the figure of section 3 with every node replaced by a hidden vector. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a>
+@@ 117
+MuZero on board games trained on 16 TPUs while 1,000 TPUs ran self-play; on Atari, 8 training and 32 acting TPUs, 20B frames in about 12 hours, 50 simulations per move. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> DreamerV2 ran one Atari game on a single GPU for about 10 days (200M frames). <a class="src" href="https://arxiv.org/abs/2010.02193">Hafner 2020</a> DreamerV3 scaled from 12M to 400M parameters with imagination horizon 16, and Minecraft episodes ran up to 36,000 steps (30 minutes). <a class="src" href="https://arxiv.org/abs/2301.04104">Hafner 2023</a> Dreamer 4: about 2B parameters, 192-frame context of 256 spatial tokens each, 256–1,024 TPU-v5p for training, K = 4 passes per generated frame, interactive on one GPU at inference. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a> DayDreamer needed no cluster at all: one robot, one workstation, one hour. <a class="src" href="https://arxiv.org/abs/2206.14176">Wu 2022</a>
+@@ 118
+Q1. In the Dyna maze with n = 50 planning steps, roughly how many episodes did the agent need to reach near-optimal performance, compared with about 25 for n = 0?
+@@ 119
+About 25; planning only reduces compute
+@@ 120
+About 12
+@@ 121
+About 3
+@@ 122
+1; the first episode is already optimal
+@@ 123
+Answer 3. Sutton and Barto report about 25, 5 and 3 episodes for n = 0, 5 and 50. The first episode is the same length for all n because the model knows nothing useful until the goal has been reached once.
+@@ 124
+Q2. What is the main difference between how MuZero and AlphaZero search?
+@@ 125
+MuZero searches over learned hidden states produced by its dynamics network; AlphaZero searches over real game states using the given rules
+@@ 126
+MuZero uses no tree search at all
+@@ 127
+AlphaZero learns a model of the rules; MuZero is given them
+@@ 128
+MuZero's search needs far more simulations per move
+@@ 129
+Answer 1. Both run MCTS with 800 simulations per move on board games. The difference is what a node contains: a real board for AlphaZero, a hidden vector produced by g for MuZero, which was never told the rules.
+@@ 130
+Q3. A colleague says: "A good world model must reconstruct the frames accurately, otherwise planning in it is meaningless." Which fact contradicts this?
+@@ 131
+DreamerV3 uses symlog to compress rewards
+@@ 132
+Genie 3 runs at 24 frames per second
+@@ 133
+Dyna-Q stores transitions in a table
+@@ 134
+MuZero and TD-MPC2 have no decoder and never generate a pixel, yet plan well
+@@ 135
+Answer 4. MuZero's hidden state is trained only to predict policy, value and reward; TD-MPC2 is likewise decoder-free. Reconstruction is one way to shape a latent, not a requirement for planning.
+@@ 136
+Q4. Dreamer imagines 15–16 steps ahead rather than, say, 500. Why?
+@@ 137
+GPU memory runs out beyond 16 steps
+@@ 138
+One-step model errors compound with horizon, so long imagined trajectories drift from reality; the critic estimates the rest
+@@ 139
+Episodes in its benchmarks are only 16 steps long
+@@ 140
+The KL loss becomes undefined for longer horizons
+@@ 141
+Answer 2. Each imagined state is produced from the previous imagined state, so error accumulates. Short horizons plus a critic for the tail (and MBPO's branched rollouts) are the standard remedy.
+@@ 142
+Q5. Which statement about Dreamer 4's Minecraft result is accurate?
+@@ 143
+It mined diamonds in most episodes after 100M online environment steps
+@@ 144
+It was trained on 270,000 hours of YouTube video
+@@ 145
+It obtained diamonds in 0.7% of episodes with zero environment interaction, learning from 2,541 hours of recorded play plus imagination
+@@ 146
+It beat human players at Minecraft
+@@ 147
+Answer 3. The 100M-step online result belongs to DreamerV3; 270,000 YouTube hours is VPT's dataset, which Dreamer 4 contrasts with its 2,541 contractor hours. The diamond rate is 0.7%, a first for offline-only learning but far from reliable.
+@@ 148
+Q6. symlog(x) = sign(x) · ln(|x| + 1). What is symlog(e − 1), where e ≈ 2.718?
+@@ 149
+ln(e) + 1 = 2
+@@ 150
+Answer 2. ln((e − 1) + 1) = ln(e) = 1. The function is close to the identity near zero and grows only logarithmically, which lets one critic handle rewards of very different scales.
+@@ 151
+A model turns compute into data: Dyna-Q with n = 50 planning updates per real step learned the maze in 3 episodes instead of 25, using the same Q-learning update on remembered transitions.
+@@ 152
+MCTS plans at decision time in four steps (selection, expansion, simulation, backup); MuZero runs it over learned hidden states with three networks h, g, f and matched AlphaZero without being told the rules (Atari median 2041%).
+@@ 153
+Dreamer learns an RSSM world model from pixels and trains its actor–critic entirely on 15–16-step imagined latent trajectories; DreamerV3 solved 150+ tasks with one hyperparameter set and mined Minecraft diamonds from scratch within 100M steps.
+@@ 154
+Dreamer 4 (September 2025) learned a 2B-parameter Transformer world model from 2,541 hours of offline Minecraft data and reached diamonds in 0.7% of episodes with no environment interaction: a first, not a solved task.
+@@ 155
+Model error compounds with horizon. Short rollouts, branching from real states, clean-target prediction and decoder-free latents are the defences, and they matter most where real steps are expensive: robots.
+@@ 156
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd ed., Chapter 8</a> — Sutton &amp; Barto, 2020. Dyna-Q (the box on p. 164, Example 8.1 and Figures 8.2–8.3) and MCTS (Section 8.11).
+@@ 157
+<a href="https://arxiv.org/abs/1911.08265">Mastering Atari, Go, Chess and Shogi by Planning with a Learned Model</a> — Schrittwieser et al., DeepMind, 2019 (Nature 2020). MuZero: the h/g/f functions, simulation counts, Atari and board-game results.
+@@ 158
+<a href="https://deepmind.google/discover/blog/muzero-mastering-go-chess-shogi-and-atari-without-rules/">MuZero: Mastering Go, chess, shogi and Atari without rules</a> — DeepMind blog, 23 Dec 2020. The thinking-time Elo curve and the Ms. Pac-Man simulation experiment.
+@@ 159
+<a href="https://arxiv.org/abs/1811.04551">Learning Latent Dynamics for Planning from Pixels</a> — Hafner et al., 2018. PlaNet and the RSSM.
+@@ 160
+<a href="https://arxiv.org/abs/1912.01603">Dream to Control: Learning Behaviors by Latent Imagination</a> — Hafner et al., 2019. DreamerV1.
+@@ 161
+<a href="https://arxiv.org/abs/2010.02193">Mastering Atari with Discrete World Models</a> — Hafner et al., 2020. DreamerV2: discrete latents, KL balancing, horizon 15, Atari median 2.15.
+@@ 162
+<a href="https://arxiv.org/abs/2301.04104">Mastering Diverse Domains through World Models</a> — Hafner et al., 2023 (v2 2024). DreamerV3: symlog, 150+ tasks, model sizes, Minecraft diamonds.
+@@ 163
+<a href="https://www.nature.com/articles/s41586-025-08744-2">Mastering diverse control tasks through world models</a> — Hafner et al., Nature 640, 647–653, 2 Apr 2025. Journal version of DreamerV3.
+@@ 164
+<a href="https://arxiv.org/abs/2509.24527">Training Agents Inside of Scalable World Models</a> — Hafner, Yan &amp; Lillicrap, 29 Sep 2025. Dreamer 4: tokenizer and block-causal dynamics, shortcut forcing, offline diamond results (Figure 3).
+@@ 165
+<a href="https://arxiv.org/abs/2310.16828">TD-MPC2: Scalable, Robust World Models for Continuous Control</a> — Hansen, Su &amp; Wang, 2023. Decoder-free latent model, 104 tasks, 317M multitask agent.
+@@ 166
+<a href="https://arxiv.org/abs/2402.15391">Genie: Generative Interactive Environments</a> — Bruce et al., DeepMind, 2024. 11B-parameter video world model with latent actions.
+@@ 167
+<a href="https://deepmind.google/discover/blog/genie-3-a-new-frontier-for-world-models/">Genie 3: A new frontier for world models</a> — Parker-Holder &amp; Fruchter, DeepMind blog, 5 Aug 2025. 720p, 24 fps, minutes of consistency, limitations.
+@@ 168
+<a href="https://blog.google/innovation-and-ai/models-and-research/google-deepmind/project-genie/">Project Genie</a> — Google blog, 29 Jan 2026. Genie 3 as a consumer prototype, 60-second generations.
+@@ 169
+<a href="https://arxiv.org/abs/2206.14176">DayDreamer: World Models for Physical Robot Learning</a> — Wu et al., 2022. Four real robots; a quadruped walks in about one hour.
+@@ 170
+<a href="https://arxiv.org/abs/1906.08253">When to Trust Your Model: Model-Based Policy Optimization</a> — Janner et al., 2019. MBPO and the case for short branched rollouts.

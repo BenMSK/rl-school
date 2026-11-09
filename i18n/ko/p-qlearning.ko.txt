@@ -1,0 +1,118 @@
+@@ 1
+<span class="eyebrow">1992 · Watkins &amp; Dayan · Machine Learning 8:279–292 (그리고 Watkins의 1989년 Cambridge 학위논문)</span>
+@@ 2
+=
+@@ 3
+한 줄짜리 update입니다. 모든 state에서 모든 action을 계속 시도하기만 하면, 아무리 서툴게 탐색해도 확률 1로 optimal action value에 수렴합니다.
+@@ 4
+<a href="#d6">Day 6</a>에서 다룸 · 원문 읽는 시간: 약 45분 (14쪽짜리 technical note)
+@@ 5
+Q(s,a) table을 하나 둡니다. step마다 Q(s,a)를 "reward에, 다음 state의 가장 좋은 Q에 γ를 곱한 값을 더한 것" 쪽으로 조금 옮깁니다. 그러면 "모든 state에서 모든 action이 반복해서 sample되고 action-value가 이산적으로 표현되는 한" table은 q<sub>*</sub>로 수렴합니다. <a class="src" href="https://link.springer.com/article/10.1007/BF00992698">Watkins &amp; Dayan 1992</a>
+@@ 6
+미로 안에 있다고 해 봐요. 문마다 그 문으로 지나가면 얼마나 좋은지 적은 쪽지를 붙여 둬요. 문을 지날 때마다 그 문의 쪽지를 고쳐 써요. "문 너머에서 얻은 것에, 다음 방에서 보이는 가장 좋은 쪽지를 더한 값"으로요. 아무렇게나 돌아다녀도 괜찮아요. 충분히 오래 돌아다니면 쪽지가 딱 맞게 되거든요. 그러면 가장 좋은 길은 그냥 "가장 큰 쪽지를 따라가기"예요.
+@@ 7
+Dynamic programming(Bellman 1957, Howard의 policy iteration 1960)은 optimal policy를 찾아 줍니다. 하지만 전체 규칙집 p(s′,r|s,a)가 주어져야 하고, 작은 문제에만 쓸 수 있습니다. 백개먼만 해도 state가 약 10<sup>20</sup>개입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Temporal-difference learning(Sutton 1988)은 모델 없이 학습했지만, 배운 것은 고정된 policy의 value였습니다. 그리고 state-value function으로 greedy하게 행동하려면 여전히 모델이 필요합니다. <a class="src" href="http://incompleteideas.net/papers/sutton-88-with-erratum.pdf">Sutton 1988</a> Watkins의 1989년 학위논문은 문제 전체를 "incremental dynamic programming으로 Markov Decision Process를 제어하는 법을 학습하는 것"으로 다시 정의했고, 수렴 증명의 개요도 실었습니다. Dayan과 함께 쓴 1992년 note가 그 증명을 제공합니다. <a class="src" href="https://www.cs.rhul.ac.uk/~chrisw/thesis.html">Watkins 1989</a> <a class="src" href="https://link.springer.com/article/10.1007/BF00992698">Watkins &amp; Dayan 1992</a>
+@@ 8
+<strong>action value</strong>를 배우되, optimal한 것을 직접 배웁니다. target에는 어쩌다 고르게 된 action이 아니라 다음 state의 <em>가장 좋은</em> action, 즉 max<sub>a</sub> Q(S′,a)를 씁니다. 그래서 table은 "따르고 있는 policy와 무관하게 optimal action-value function인 q<sub>*</sub>를 직접 근사"합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 이것이 <strong>off-policy</strong>의 의미입니다. behaviour policy는 탐색하고 target policy는 greedy하며, 둘이 일치할 필요가 전혀 없습니다. Q가 맞아지면 모델도 search도 없이 policy를 읽어 낼 수 있습니다. greedy하게 행동하면 됩니다.
+@@ 9
+모든 (s,a) 쌍에 대해 Q(s,a)를 임의로 초기화하고, Q(terminal, ·) = 0으로 둡니다.
+@@ 10
+state S에서, 탐색을 멈추지 않는 policy라면 무엇으로든 A를 고릅니다. 예를 들면 Q에 대한 ε-greedy입니다.
+@@ 11
+A를 실행하고 reward R과 다음 state S′을 관찰합니다.
+@@ 12
+target을 만듭니다: R + γ max<sub>a</sub> Q(S′, a). 이것은 Bellman optimality equation의 one-step sample입니다.
+@@ 13
+Q(S,A)를 step size α만큼 target 쪽으로 옮깁니다 (Sutton &amp; Barto의 eq. 6.8):
+@@ 14
+=
+@@ 15
+S ← S′. episode가 끝날 때까지 반복하고, 끝나면 새 episode를 시작합니다.
+@@ 16
+<strong>수렴 정리를 말로 풀면.</strong> 이 과정을 영원히 돌린다고 합시다. 모든 state–action 쌍이 무한히 자주 update되고, value가 정확히 저장되며(쌍마다 칸이 하나인 table), step size가 stochastic approximation의 통상적인 방식으로 줄어들면(step size의 합은 무한대이고 제곱의 합은 유한함), Q는 확률 1로 q<sub>*</sub>에 수렴합니다. <a class="src" href="https://link.springer.com/article/10.1007/BF00992698">Watkins &amp; Dayan 1992</a> <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> action을 <em>어떻게</em> 고르는지에 대해서는 아무 가정도 없습니다. note는 확장 두 가지도 간략히 다룹니다. absorbing goal state가 있는 undiscounted 문제, 그리고 step마다 Q value를 하나가 아니라 여러 개 update하는 방법입니다. <a class="src" href="https://link.springer.com/article/10.1007/BF00992698">Watkins &amp; Dayan 1992</a>
+@@ 17 attr
+Q-learning update 한 번의 데이터 흐름: state S의 agent가 Q table에서 epsilon-greedy로 action A를 고름. environment가 reward R과 다음 state S prime을 돌려줌. S prime에서 Q table을 읽어 action들에 대한 max를 계산함. target인 R 더하기 gamma 곱하기 그 max를 Q(S, A)와 비교함. 그 차이에 alpha를 곱해 Q(S, A) 칸 하나에 더함
+@@ 18
+=
+@@ 19
+(s,a)마다 칸 하나
+@@ 20
+=
+@@ 21
+행동: S에서 A
+@@ 22
+=
+@@ 23
+R, S′ 반환
+@@ 24
+=
+@@ 25
+다음 state에서 greedy: off-policy
+@@ 26
+Q(S′,·) 읽기
+@@ 27
+=
+@@ 28
+=
+@@ 29
+Q-learning 한 step: 행동하는 policy와 배우는 policy가 다름
+@@ 30
+Q(S,A) 칸만 바뀜. 다음 state 칸들의 max가 핵심
+@@ 31
+update의 데이터 흐름입니다. 무슨 일이 일어날지는 behaviour policy(ε-greedy)가 정하고, target은 그와 상관없이 S′에서의 greedy max를 씁니다. step마다 table의 칸 하나만 바뀝니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 32
+이것은 이론 논문입니다. 결과는 벤치마크가 아니라 정리(theorem)입니다. 이 정리가 예측하는 동작은 Sutton과 Barto의 cliff-walking gridworld(Example 6.6, ε = 0.1)에서 볼 수 있습니다. Q-learning은 절벽 가장자리를 따라가는 optimal 경로의 value를 배우고, on-policy인 Sarsa는 더 길고 안전한 경로를 배웁니다. exploration 때문에 agent가 계속 절벽에서 떨어지므로 Q-learning의 online return은 오히려 <em>더 나쁩니다</em>. 책의 그래프에서 Q-learning은 episode당 약 −50, Sarsa는 약 −25입니다. RL School의 재현(α = 0.5, 50회 실행)에서는 −50.9와 −27.4가 나옵니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 책은 target의 max가 <strong>maximisation bias</strong>를 일으킨다는 것도 보여 줍니다. Example 6.7에서 Q-learning은 수렴한 뒤에도 나쁜 action을 약 5% 더 자주 고르는데, Double Q-learning이 이를 없앱니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> <a class="src" href="https://proceedings.neurips.cc/paper/2010/hash/091d584fced301b442654dd8c23b3fc9-Abstract.html">van Hasselt 2010</a>
+@@ 33
+Sutton과 Barto는 RL의 dynamic programming 흐름과 trial-and-error 흐름이 "완전히 하나로 합쳐진" 시점을 Watkins의 1989년 학위논문으로 봅니다. "action value"라는 용어도 그가 만들었습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 26년 뒤, table 자리에 convolutional network를 넣은 같은 update가 DQN이 되었습니다. DQN은 픽셀만 보고 Atari 게임 49개를 "전문 게임 테스터에 견줄 만한" 수준으로 플레이했습니다 (Nature, 2015년 2월). <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> 그 뒤에 나온 모든 value-based deep RL 방법, 곧 Double DQN, Rainbow, Agent57은 이 update에 엔지니어링을 더한 것입니다 (<a href="#p-dqn">DQN 논문 리뷰</a> 참고).
+@@ 34
+이 정리에는 table이 필요합니다. table을 function approximator로 바꾸면 <strong>deadly triad</strong>의 세 요소(approximation, bootstrapping, off-policy)가 모두 갖춰지고, 이 조건에서는 불안정성이 "생길 수" 있습니다. "deadly triad의 요소 가운데 어느 둘이 있더라도 셋 모두가 있는 것이 아니라면" 불안정성을 피할 수 있습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> noise가 낀 추정값들에 max를 취하면 값을 과대추정하게 됩니다. Double DQN(2015)은 Atari 게임 49개 모두에서 overestimation을 관찰했고, 이를 고쳐 median normalised score를 93.5%에서 114.7%로 끌어올렸습니다. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> 정리는 수렴 속도를 알려 주지 않으며, "무한히 자주"는 예산이 아닙니다. 그리고 cliff walking이 보여 주듯, optimal policy를 배우는 것과 배우는 동안 잘 행동하는 것은 같지 않습니다.
+@@ 35
+note는 짧습니다. 다만 전문이 Springer의 paywall 뒤에 있어서, 우리는 abstract 페이지만 확인할 수 있었습니다. abstract를 읽고 (5분), 정리의 진술과 step size 조건을 읽은 다음, 증명은 훑어보세요. 그런 다음 Sutton &amp; Barto §6.5에서 현대적인 서술과 절차 box를, §6.7에서 maximisation bias를, §11.3에서 table이 왜 중요한지를 읽으세요 (45분). 학위논문의 해당 챕터가 note보다 읽기 쉽습니다. <a class="src" href="https://www.cs.rhul.ac.uk/~chrisw/thesis.html">Watkins 1989</a>
+@@ 36
+Q1. Watkins–Dayan 수렴 정리가 요구하지 않는 조건은 무엇입니까?
+@@ 37
+모든 state–action 쌍이 무한히 자주 update됩니다
+@@ 38
+behaviour policy가 극한에서 greedy가 됩니다
+@@ 39
+action value가 쌍마다 하나씩 이산적으로 저장됩니다
+@@ 40
+step size가 stochastic approximation 조건을 만족합니다
+@@ 41
+Q-learning은 off-policy입니다. behaviour policy는 모든 쌍을 계속 방문하기만 하면 됩니다. 극한에서 greedy가 되어야 한다는 것은 Q-learning이 아니라 Sarsa의 조건입니다.
+@@ 42
+Q2. ε = 0.1인 cliff walking에서, 책의 그래프상 Q-learning과 Sarsa의 episode당 점수는 대략 얼마였습니까?
+@@ 43
+=
+@@ 44
+둘 다 약 −25
+@@ 45
+둘 다 약 −100
+@@ 46
+=
+@@ 47
+Q-learning은 절벽 가장자리의 optimal 경로를 찾지만 exploration 중에 떨어집니다. Sarsa의 더 안전한 경로가 online 점수는 더 좋습니다. optimal value를 배우는 것과 잘 행동하는 것은 서로 다른 일입니다.
+@@ 48
+Q3. "Off-policy 방법은 본질적으로 불안정하다." deadly triad가 실제로 말하는 것은 무엇입니까?
+@@ 49
+불안정성에는 function approximation, bootstrapping, off-policy 학습 세 가지가 모두 필요하며, 둘만 있으면 안전합니다
+@@ 50
+off-policy 학습은 table을 쓰더라도 그것만으로 발산할 수 있습니다
+@@ 51
+bootstrapping은 항상 불안정합니다
+@@ 52
+function approximation은 항상 불안정합니다
+@@ 53
+Tabular Q-learning은 off-policy이고 bootstrap도 하지만 수렴합니다. 위험은 table을 공유 파라미터 벡터로 바꿀 때에만 나타납니다.
+@@ 54
+Watkins, C. J. C. H. &amp; Dayan, P. (1992). Q-learning. <em>Machine Learning</em> 8(3–4):279–292. <a href="https://link.springer.com/article/10.1007/BF00992698">doi:10.1007/BF00992698</a> (abstract 페이지를 열어 확인; 전문은 paywall).
+@@ 55
+Watkins, C. J. C. H. (1989). <em>Learning from Delayed Rewards</em>. 박사 학위논문, University of Cambridge. <a href="https://www.cs.rhul.ac.uk/~chrisw/thesis.html">저자의 학위논문 페이지</a>.
+@@ 56
+=
+@@ 57
+=
+@@ 58
+=
+@@ 59
+=

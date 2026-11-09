@@ -1,0 +1,110 @@
+@@ 1
+<span class="eyebrow">2025 · Hafner et al. · Nature 640:647–653 (arXiv 2301.04104) · Dreamer 4: arXiv 2509.24527</span>
+@@ 2
+DreamerV3 and Dreamer 4: learning inside a world model
+@@ 3
+One fixed configuration learned over 150 tasks across 8 domains and was the first to collect Minecraft diamonds from scratch; Dreamer 4 (2025) collected diamonds from 2,541 hours of offline video alone, in 0.7% of episodes.
+@@ 4
+Taught in <a href="#d9">Day 9</a> · Read time of the original: ~40 min (V3) + ~30 min (Dreamer 4)
+@@ 5
+Dreamer learns a compressed model of the world from replayed experience, then trains its actor and critic entirely on imagined rollouts inside that model; V3 made this work with the same hyperparameters everywhere by normalising every quantity, and Dreamer 4 scaled the model to a 2-billion-parameter transformer that learns from video.
+@@ 6
+Before you step onto ice you imagine slipping, and you walk differently because of it. Dreamer watches what happens when it acts, builds a small imaginary world in its head, and then practises thousands of futures there, which is much cheaper than practising for real. Dreamer 4 learned its imaginary Minecraft mostly by watching videos of other people playing, and then practised inside it until it could find diamonds, something no player manages by luck.
+@@ 7
+Model-free agents need huge numbers of real interactions, and every earlier model-based agent needed per-domain tuning: different reward scales, different loss weights, different horizons. DreamerV2 (2020) had reached a median of 2.15 gamer-normalised on 55 Atari games against Rainbow's 1.47, but only on Atari. <a class="src" href="https://arxiv.org/abs/2010.02193">Hafner 2020</a> Minecraft's diamond task, a 12-item chain with sparse rewards and episodes of up to 36,000 steps, had never been solved from scratch. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a>
+@@ 8
+Make every signal the networks see live on the same scale, so one configuration fits all domains. V3 does this with <strong>symlog</strong> transforms of inputs and targets, a critic that predicts a distribution over bins instead of a number, returns normalised by their 5th–95th percentile range, and KL losses clipped below 1 nat so they switch off once small. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a> Dreamer 4 keeps the imagination loop and swaps the recurrent model for a transformer trained with <strong>shortcut forcing</strong>, so it stays accurate over long rollouts and fast enough to run in real time. <a class="src" href="https://arxiv.org/html/2509.24527">Hafner 2025</a>
+@@ 9
+<strong>World model (RSSM).</strong> An encoder maps the image x<sub>t</sub> to a discrete latent z<sub>t</sub>; a recurrent sequence model h<sub>t</sub> = f(h<sub>t−1</sub>, z<sub>t−1</sub>, a<sub>t−1</sub>) carries memory; a dynamics predictor guesses ẑ<sub>t</sub> from h<sub>t</sub> alone; heads from (h<sub>t</sub>, z<sub>t</sub>) decode the image, predict reward and predict whether the episode continues. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a>
+@@ 10
+<strong>Loss.</strong> Prediction loss (decoder, reward, continue) with weight 1; dynamics loss, pulling the prior toward the posterior, weight 1; representation loss, pulling the posterior toward the prior, weight 0.1; both KL terms floored at 1 nat ("free bits") and smoothed with 1% uniform noise. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a>
+@@ 11
+symlog(x) = sign(x) · ln(|x| + 1),  symexp = its inverse
+@@ 12
+<strong>Imagine.</strong> Start from replayed latent states and roll the dynamics predictor forward T = 16 steps, choosing actions with the actor. No pixels are produced. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a>
+@@ 13
+<strong>Actor-critic.</strong> The critic predicts a categorical distribution over exponentially spaced bins with two-hot regression; returns are divided by max(1, S) where S is the 5th–95th percentile range; the actor uses the REINFORCE estimator for both discrete and continuous actions. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a>
+@@ 14
+<strong>Dreamer 4.</strong> A ~400M-parameter tokenizer compresses frames; a ~1.6B block-causal transformer (spatial attention within a frame, temporal attention once every 4 layers) predicts the next tokens given interleaved actions. Shortcut forcing trains it on noised representations conditioned on noise level and step size and predicts the clean representation, so inference needs only K = 4 forward passes per frame. Three phases: pretrain on video (and actions when available), fine-tune policy and reward heads by behaviour cloning, then imagination training with the transformer frozen and a sign-of-advantage objective (PMPO). <a class="src" href="https://arxiv.org/html/2509.24527">Hafner 2025</a>
+@@ 15 attr
+Two panels: (a) world model learning, with an encoder producing latents, a recurrent sequence model, and decoder, reward and continue heads trained on replayed frames; (b) actor-critic learning on imagined latent trajectories, with the actor choosing actions and the critic estimating returns
+@@ 16
+<a class="src" href="https://arxiv.org/abs/2301.04104">Figure 3, Hafner 2023</a> Training process of Dreamer. Left: the world model learns from replay. Right: actor and critic learn from imagined trajectories of latent states, never from pixels.
+@@ 17 attr
+Dreamer's two loops: real experience from the environment goes to a replay buffer and trains the world model (encoder, sequence model, dynamics predictor, decoder, reward and continue heads); the world model then produces imagined latent trajectories of 16 steps that train the actor and critic; the actor acts in the real environment
+@@ 18
+Replay buffer
+@@ 19
+World model (RSSM)
+@@ 20
+encoder → z_t · GRU h_t · prior ẑ_t
+@@ 21
+heads: decoder, reward, continue
+@@ 22
+symlog in/out · free bits 1 nat
+@@ 23
+Actor π(a|h,z)
+@@ 24
+REINFORCE
+@@ 25
+Critic v(h,z)
+@@ 26
+two-hot bins, λ-returns
+@@ 27
+imagined latents, T = 16 (dashed)
+@@ 28
+action a_t in the real world
+@@ 29
+advantages
+@@ 30
+Two loops. Solid: real experience trains the world model and the actor acts in the real environment. Dashed: the world model generates 16-step imagined latent trajectories that train actor and critic. Dreamer 4 replaces the RSSM box with a block-causal transformer and, in its offline setting, deletes the arrow back into the environment.
+@@ 31
+With one set of hyperparameters, V3 covered 8 domains: Atari (57 games), ProcGen (16), DMLab (30), Atari100k (26), Proprio Control (18), Visual Control (20), BSuite (23 environments, 468 configurations) and Minecraft, "over 150 diverse tasks", outperforming the tuned specialist on each benchmark summary. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a> Across six model sizes from 12M to 400M parameters, "increasing the model size directly translates to both higher task performance and a lower data requirement". <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a> Every Dreamer run discovered diamonds in Minecraft within 100M environment steps, with no human data or curriculum, on one A100 GPU for 9 days. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a> The ablations rank the KL objective as the most important robustness technique, then return normalisation and the two-hot critic. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a>
+@@ 32 attr
+Bar chart of success rates for the Minecraft item ladder from logs to diamond, for Dreamer 4, a fine-tuned VPT and a Gemma-3 VLA, all trained without environment interaction; Dreamer 4 is above 90 percent through the stone pickaxe, 29 percent on the iron pickaxe and 0.7 percent on diamonds, where the baselines reach zero
+@@ 33
+<a class="src" href="https://arxiv.org/abs/2509.24527">Figure 3, Hafner 2025</a> Agent performance in Minecraft without environment interaction. Only Dreamer 4 reaches the end of the ladder.
+@@ 34
+Dreamer 4 trained on the 2,541-hour VPT contractor dataset (video plus actions) and never touched the game during training; it reaches diamonds in 0.7% of 60-minute episodes and the iron pickaxe in 29%, a task that takes humans about 20,000 to 24,000 mouse and keyboard actions. A fine-tuned VPT gets as far as sticks 53% of the time and a Gemma-3 vision-language-action baseline reaches the iron pickaxe in 11%. <a class="src" href="https://arxiv.org/html/2509.24527">Hafner 2025</a> The authors call this "100x less data" than VPT's 270K hours of YouTube video; training ran on 256 to 1024 TPU-v5p chips, and the finished world model runs interactively in real time on a single GPU. <a class="src" href="https://arxiv.org/html/2509.24527">Hafner 2025</a>
+@@ 35
+DreamerV3 was the first general RL algorithm whose selling point was "no tuning", and its 2025 Nature publication made world models respectable as a route to generality rather than a curiosity. <a class="src" href="https://www.nature.com/articles/s41586-025-08744-2">Hafner 2025a</a> DayDreamer (2022) had already put the loop on hardware, with a quadruped walking in about 1 hour without a simulator. <a class="src" href="https://arxiv.org/abs/2206.14176">Wu 2022</a> Dreamer 4 ties the line to video-trained generative models: if the model can be learned from recorded play, the agent can be trained before it ever acts, which is the setting robots live in. <a class="src" href="https://arxiv.org/html/2509.24527">Hafner 2025</a>
+@@ 36
+Imagination is capped at 16 steps because model errors compound, so the agent cannot plan long chains explicitly; it relies on the critic to summarise them. <a class="src" href="https://arxiv.org/html/2301.04104">Hafner 2023</a> V3 spends capacity reconstructing pixels, which MuZero and TD-MPC2 avoid (<a href="#p-muzero">the MuZero review</a>). Dreamer 4's diamond rate is 0.7%, a proof of existence rather than a reliable skill, and its "100×" counts only labelled hours. <a class="src" href="https://arxiv.org/html/2509.24527">Hafner 2025</a> As of October 2026 there is no independent replication of the offline diamond result.
+@@ 37
+V3: Figure 1 (the benchmark summary), then "Learning algorithm" for the world model, critic and actor, with Figure 3 beside you; the "Robust predictions" subsection is the heart of it. Skim "Ablations" and "Scaling properties". Dreamer 4: Figure 2 for the architecture, Section 3.3 for imagination training, Section 4.1 and Figure 3 for the challenge. About 70 minutes together.
+@@ 38
+Q1. What does symlog(x) = sign(x)·ln(|x|+1) buy DreamerV3?
+@@ 39
+A faster recurrent model
+@@ 40
+Pixel-perfect reconstructions
+@@ 41
+A longer imagination horizon
+@@ 42
+One network scale for rewards and values of any magnitude, with no per-task tuning
+@@ 43
+Symlog compresses large magnitudes of either sign while staying near the identity around zero, so inputs and targets across domains land on comparable scales.
+@@ 44
+Q2. In what fraction of episodes did Dreamer 4 obtain diamonds, having never interacted with Minecraft during training?
+@@ 45
+0.7%. 29% is the iron pickaxe, 53% is fine-tuned VPT reaching sticks, 11% is the Gemma-3 baseline at the iron pickaxe.
+@@ 46
+Q3. Why does Dreamer stop imagined rollouts at 16 steps?
+@@ 47
+Model errors compound with every imagined step, so longer rollouts drift from reality
+@@ 48
+Minecraft episodes are 16 steps long
+@@ 49
+The GRU cannot be unrolled further
+@@ 50
+Longer horizons would need pixel decoding
+@@ 51
+A one-step model feeds its own output back as input; small errors grow. Short horizons plus a learned critic is the standard remedy.
+@@ 52
+Hafner, Pasukonis, Ba, Lillicrap. Mastering Diverse Domains through World Models (DreamerV3). 2023, v2 2024. <a href="https://arxiv.org/abs/2301.04104">arXiv 2301.04104</a>; Nature 640:647–653, 2 Apr 2025: <a href="https://www.nature.com/articles/s41586-025-08744-2">Mastering diverse control tasks through world models</a>
+@@ 53
+Hafner, Yan, Lillicrap. Training Agents Inside of Scalable World Models (Dreamer 4). 29 Sep 2025. <a href="https://arxiv.org/abs/2509.24527">arXiv 2509.24527</a>
+@@ 54
+Hafner et al. Mastering Atari with Discrete World Models (DreamerV2). 2020. <a href="https://arxiv.org/abs/2010.02193">arXiv 2010.02193</a>
+@@ 55
+Wu et al. DayDreamer: World Models for Physical Robot Learning. 2022. <a href="https://arxiv.org/abs/2206.14176">arXiv 2206.14176</a>

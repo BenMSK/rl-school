@@ -1,0 +1,116 @@
+@@ pg
+"REINFORCE on a 3-arm softmax policy"
+==
+"3-arm softmax policy에서의 REINFORCE"
+@@ pg
+"Arms pay 100, 105 and 95 on average, each ±10 of noise. The policy is uniform (logits 0,0,0). Each pull is one episode; the gradient sample is (G − b)·(onehot(a) − π). Compare the spread of the batch estimate with and without a baseline."
+==
+"arm은 평균적으로 100, 105, 95를 지급하고, 각각 ±10의 noise가 붙습니다. policy는 균등합니다(logit 0,0,0). 한 번 당기는 것이 episode 하나이고, gradient sample은 (G − b)·(onehot(a) − π)입니다. baseline이 있을 때와 없을 때 batch 추정값이 얼마나 퍼지는지 비교해 보세요."
+@@ pg
+"off (b = 0)"
+==
+"끔 (b = 0)"
+@@ pg
+"learned running mean"
+==
+"학습된 누적 평균"
+@@ pg
+"Sample batch"
+==
+"batch sampling"
+@@ pg
+"Variance of the batch gradient estimate (sum over the three logits):"
+==
+"batch gradient 추정값의 분산 (세 logit에 대한 합):"
+@@ pg
+"no baseline"
+==
+"baseline 없음"
+@@ pg
+"with baseline"
+==
+"baseline 있음"
+@@ pg
+"ĝ without baseline"
+==
+"baseline 없는 ĝ"
+@@ pg
+"per logit, arms 1 2 3"
+==
+"logit별, arm 1 2 3"
+@@ pg
+"ĝ with baseline"
+==
+"baseline 있는 ĝ"
+@@ pg
+"b used ≈ "
+==
+"사용한 b ≈ "
+@@ pg
+"true gradient"
+==
+"실제 gradient"
+@@ pg
+"arm 2 up, arm 3 down"
+==
+"arm 2는 위로, arm 3은 아래로"
+@@ pg
+"variance ratio"
+==
+"분산 비율"
+@@ pg
+"need N ≥ 2"
+==
+"N ≥ 2 필요"
+@@ pg
+"Var(no baseline) ÷ Var(with)"
+==
+"Var(baseline 없음) ÷ Var(있음)"
+@@ pg
+"Batch of "+N+" pulls: arm 1 ×"
+==
+N+"번 당긴 batch: arm 1 ×"
+@@ pg
+". Both estimates have the same expected value; only the spread differs. "
+==
+". 두 추정값의 기댓값은 같고, 퍼진 정도만 다릅니다. "
+@@ pg
+"The learned baseline is the running mean of all "+cnt+" rewards seen so far ("+(sum/cnt).toFixed(1)+"); press again and it gets better."
+==
+"학습된 baseline은 지금까지 본 reward "+cnt+"개 전체의 누적 평균("+(sum/cnt).toFixed(1)+")입니다. 다시 누르면 더 좋아집니다."
+@@ pg
+"Baseline off: both bars are the same estimator."
+==
+"baseline 끔: 두 막대는 같은 추정량입니다."
+@@ pg
+"V(s) = 100 is the true expected reward under the uniform policy."
+==
+"V(s) = 100은 균등한 policy에서 reward의 실제 기댓값입니다."
+@@ gae
+"GAE on a 10-step trajectory"
+==
+"10-step trajectory에서의 GAE"
+@@ gae
+"Fixed rewards and critic guesses V(s_t). Each bar is Â_t = Σ_l (γλ)^l δ_{t+l}. Slide λ from 0 (one-step TD) to 1 (Monte Carlo minus V)."
+==
+"reward와 critic의 추정값 V(s_t)는 고정되어 있습니다. 막대 하나하나가 Â_t = Σ_l (γλ)^l δ_{t+l}입니다. λ를 0(one-step TD)에서 1(Monte Carlo에서 V를 뺀 값)까지 움직여 보세요."
+@@ gae
+"Ten bars, one per time step, showing the GAE advantage at the chosen lambda and gamma; rows below give t, reward and TD residual."
+==
+"time step마다 하나씩 있는 막대 열 개가 선택한 lambda와 gamma에서의 GAE advantage를 보여 줍니다. 아래 줄에는 t, reward, TD residual이 적혀 있습니다."
+@@ gae
+"Â_0 at this λ"
+==
+"이 λ에서의 Â_0"
+@@ gae
+"Monte Carlo minus V"
+==
+"Monte Carlo에서 V를 뺀 값"
+@@ gae
+"total over the trajectory"
+==
+"trajectory 전체의 합"
+@@ gae
+"Weights on δ_0, δ_1, δ_2, δ_3, δ_4 inside Â_0: "
+==
+"Â_0 안에서 δ_0, δ_1, δ_2, δ_3, δ_4에 붙는 가중치: "

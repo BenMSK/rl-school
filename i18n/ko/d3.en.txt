@@ -1,0 +1,324 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 3</span>
+@@ 2
+Markov decision processes and the Bellman equations
+@@ 3
+After today you can define states, actions, transitions, policies and the two value functions V and Q, write down the Bellman expectation and optimality equations, and check them by hand on a small grid.
+@@ 4
+About 90 min · Needs Day 2
+@@ 5
+Once the situation can change, "how good is this action" depends on where it leaves you. The Markov decision process is the model that makes this precise, and the Bellman equation is the one-line consequence: the value of a state equals the reward you expect now plus the discounted value of where you expect to be next. Every RL algorithm in this course is a way of solving that equation approximately.
+@@ 6
+1. The Markov property: what a "state" must contain
+@@ 7
+In <a href="#d2">Day 2</a> the world never changed: every pull of a bandit arm faced the same situation. Today the situation moves. A chess move changes the board; a step in a maze changes where you stand. The word for "the situation right now" is <strong>state</strong>, and the whole theory rests on one requirement about it.
+@@ 8
+A state S<sub>t</sub> has the <strong>Markov property</strong> when the probability of what happens next depends only on it, not on how you got there. In David Silver's phrase, "the future is independent of the past given the present". <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a>
+@@ 9
+If this holds, the history may be thrown away: the state is a <strong>sufficient statistic</strong> of the future. Sutton and Barto put the burden on the designer: "The state must include information about all aspects of the past agent–environment interaction that make a difference for the future." It is "a restriction not on the decision process, but on the state". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 10
+A concrete test. A ball flies through the air. If your state is "position", you cannot predict the next position: a ball at the same point could be rising or falling, so position alone is not Markov. If your state is "position and velocity", the next position is predictable (up to noise) and the history adds nothing: Markov. Choosing a state is choosing what to remember.
+@@ 11
+In a board game you do not need to know every move that was ever played to pick your next move. You just look at the board. The board is the "state": it already contains everything from the past that still matters. If a game rule said "you cannot move a piece you moved three turns ago", then the board alone would not be enough, and you would have to add that memory to your state.
+@@ 12
+2. The MDP: states, actions, and p(s′, r | s, a)
+@@ 13
+A <strong>Markov decision process</strong> (MDP) is the bandit problem plus a Markov state that your actions change. Richard Bellman introduced the model in 1957 in a short paper titled "A Markovian Decision Process". <a class="src" href="https://www.iumj.indiana.edu/IUMJ/FULLTEXT/1957/6/56038">Bellman 1957</a> A <strong>finite MDP</strong> has four ingredients and one number:
+@@ 14
+<strong>S</strong>, a finite set of states.
+@@ 15
+<strong>A</strong>, a finite set of actions (possibly different in each state).
+@@ 16
+<strong>R</strong>, a finite set of possible rewards, which are real numbers.
+@@ 17
+The <strong>dynamics</strong> p, a single function that gives the probability of every (next state, reward) pair given the current state and action.
+@@ 18
+The <strong>discount</strong> γ between 0 and 1, from <a href="#d1">Day 1</a>.
+@@ 19
+p(s′, r | s, a) ≐ Pr{ S<sub>t</sub> = s′, R<sub>t</sub> = r | S<sub>t−1</sub> = s, A<sub>t−1</sub> = a }, &nbsp; with &nbsp; Σ<sub>s′</sub> Σ<sub>r</sub> p(s′, r | s, a) = 1
+@@ 20
+That one function p is the whole environment. From it you can derive anything else: the transition probability p(s′ | s, a) = Σ<sub>r</sub> p(s′, r | s, a), and the expected reward r(s, a) = Σ<sub>r</sub> r Σ<sub>s′</sub> p(s′, r | s, a). <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Silver writes the same thing as a tuple ⟨S, A, P, R, γ⟩ with transitions P<sup>a</sup><sub>ss′</sub> and rewards R<sup>a</sup><sub>s</sub> kept separate; <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a> the book's four-argument form also lets the reward depend on where you landed.
+@@ 21
+Two sanity checks. A bandit is an MDP with a single state. A <strong>terminal state</strong> (game over, goal reached) is one from which every action returns to itself with reward 0, so its value is 0 by definition.
+@@ 22
+3. Policies, V, and Q
+@@ 23
+A <strong>policy</strong> is the agent's rule for acting: "a mapping from states to probabilities of selecting each possible action", written π(a | s) = Pr{A<sub>t</sub> = a | S<sub>t</sub> = s}. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> A <strong>deterministic policy</strong> is the special case where one action gets probability 1 in each state; you can write it as a function a = π(s). A <strong>stochastic policy</strong> spreads probability over several actions. The equiprobable random policy, π(a | s) = 1/|A| for every a, will be our test case all day.
+@@ 24
+Given a policy, two questions have well-defined answers. How good is it to be in state s and then follow π? That is the <strong>state-value function</strong> V. How good is it to be in s, take action a, and only then follow π? That is the <strong>action-value function</strong> Q. Both are expected returns, where the return G<sub>t</sub> = R<sub>t+1</sub> + γR<sub>t+2</sub> + γ²R<sub>t+3</sub> + … is the discounted sum you met in <a href="#d1">Day 1</a>.
+@@ 25
+The two are tied together in both directions. V is the policy-weighted average of Q, because the first thing that happens in s is that π picks an action. And Q is the environment-weighted average of "reward plus discounted V of the next state", because after the action the environment picks (s′, r):
+@@ 26
+The term "action value" is Chris Watkins's, from the 1989 thesis behind the <a href="#p-qlearning">Q-learning review</a>. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> V has one number per state, Q one per state–action pair, and Q is the one you can act on directly: comparing q(s, a) across actions tells you what to do without knowing the dynamics.
+@@ 27
+4. The Bellman expectation equation
+@@ 28
+Substitute the second formula of section 3 into the first and you get an equation that mentions only v<sub>π</sub>:
+@@ 29
+v<sub>π</sub>(s) = Σ<sub>a</sub> π(a | s) Σ<sub>s′, r</sub> p(s′, r | s, a) [ r + γ v<sub>π</sub>(s′) ] &nbsp; for every s
+@@ 30
+This is the <strong>Bellman expectation equation</strong>. Here is the derivation in words, with no algebra. The return has a recursion: whatever happens, G<sub>t</sub> = R<sub>t+1</sub> + γ G<sub>t+1</sub>, because the sum from tomorrow onward is the sum from today onward with one reward peeled off and the rest discounted once more. Take the expectation of both sides given S<sub>t</sub> = s. The left side is v<sub>π</sub>(s). On the right, the expected first reward and the expected value of the next state are both averages over the two random choices that happen in one step: π chooses a, then the environment chooses (s′, r). Weighting every branch by its probability gives the double sum. Sutton and Barto read it as: "the value of the start state must equal the (discounted) value of the expected next state, plus the reward expected along the way". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 31
+The same substitution the other way round gives the equation for Q, in which the policy appears one step later: q<sub>π</sub>(s, a) = Σ<sub>s′, r</sub> p(s′, r | s, a) [ r + γ Σ<sub>a′</sub> π(a′ | s′) q<sub>π</sub>(s′, a′) ]. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">OpenAI 2018</a>
+@@ 32 attr
+Two backup diagrams. Left, for V: an open circle for state s at the top branches to two solid dots (actions, weighted by the policy), each of which branches to two open circles (next states, weighted by the dynamics, each branch labelled with a reward). Right, for Q: a solid dot for the pair (s,a) at the top branches to two next-state circles, each of which branches to two action dots chosen by the policy.
+@@ 33
+Backup for v_π(s)
+@@ 34
+average over a (by π), then over s′, r (by p)
+@@ 35
+Backup for q_π(s, a)
+@@ 36
+average over s′, r (by p), then over a′ (by π)
+@@ 37
+Backup diagrams. Open circles are states, solid dots are state–action pairs. Reading top to bottom, each level is one random choice (the policy's or the environment's); the equation "averages over all the possibilities, weighting each by its probability". For the optimality equations of section 5, the policy's level becomes a max instead of an average.
+@@ 38
+Two facts about this equation carry the rest of the course. First, it is <strong>linear</strong> in the unknowns v<sub>π</sub>(s): n states give n linear equations in n unknowns, which is how the book produced the gridworld numbers in section 7. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Second, it is a <em>consistency condition</em>, not a procedure: it says what must be true of v<sub>π</sub> and leaves open how to find it. Algorithms are different answers to "how".
+@@ 39
+Think of value as the total candy you will collect from here on if you keep walking your usual route, with candy far down the road counting a little less. The Bellman equation says: candy-from-here = candy-on-this-square + 0.9 × candy-from-the-next-square. You do not need to walk the whole route to check a value; you only need to look one square ahead. That one-step look is called a <strong>backup</strong>, because information is backed up from the next state to this one.
+@@ 40
+5. The Bellman optimality equation
+@@ 41
+Policies can be compared: π is at least as good as π′ when v<sub>π</sub>(s) ≥ v<sub>π′</sub>(s) in every state. This is only a partial order (two policies may each win in different states), but the central theorem of MDPs is that it always has a top: "There is always at least one policy that is better than or equal to all other policies." That is an <strong>optimal policy</strong> π*, and all optimal policies share the same <strong>optimal value functions</strong>: <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 42
+v*(s) ≐ max<sub>π</sub> v<sub>π</sub>(s) &nbsp;&nbsp;&nbsp; q*(s, a) ≐ max<sub>π</sub> q<sub>π</sub>(s, a) &nbsp;&nbsp;&nbsp; q*(s, a) = E[ R<sub>t+1</sub> + γ v*(S<sub>t+1</sub>) | S<sub>t</sub> = s, A<sub>t</sub> = a ]
+@@ 43
+Now the key move. Under an optimal policy, the value of a state must equal the value of the <em>best</em> action from it, because an optimal policy would never knowingly take a worse one. So in the backup diagram the policy's averaging level turns into a maximum, and we get the <strong>Bellman optimality equations</strong>:
+@@ 44
+v*(s) = max<sub>a</sub> Σ<sub>s′, r</sub> p(s′, r | s, a) [ r + γ v*(s′) ]
+@@ 45
+q*(s, a) = Σ<sub>s′, r</sub> p(s′, r | s, a) [ r + γ max<sub>a′</sub> q*(s′, a′) ]
+@@ 46
+Because of the max, these are <strong>nonlinear</strong>: n equations in n unknowns that matrix algebra cannot solve. But for a finite MDP the system has a unique solution v*, and once you have it, acting well is easy. Any policy that is <strong>greedy</strong> with respect to v*, picking the action that maximises the bracket above, is optimal: "a one-step-ahead search yields the long-term optimal actions". With q* you do not even need the one-step search; the best action is read straight off the table. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Silver adds that an optimal <em>deterministic</em> policy always exists: π*(a | s) = 1 for a = argmax<sub>a</sub> q*(s, a). <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a>
+@@ 47
+So why is RL not just "solve the optimality equation"? Solving it exactly needs known dynamics, Markov states, and enough compute, and compute fails first. Backgammon has about 10<sup>20</sup> states, and solving its Bellman equation exactly "would take thousands of years"; RL methods settle for approximate solutions. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The rest of this course is about the approximations.
+@@ 48
+<strong>"Markov means the environment is simple or deterministic."</strong> It means only that the state carries everything that predicts the future. Dice, noise and huge state spaces are all allowed; it is a restriction on the state, not on the process.
+@@ 49
+<strong>"v*(s) is the reward you get in s."</strong> It is the expected discounted sum of all future rewards under the best behaviour. In the optimal gridworld of section 7, state A is worth 24.4 even though its reward is 10, because the +10 can be collected again every five steps.
+@@ 50
+<strong>"The Bellman equation is an algorithm."</strong> It is a condition that v<sub>π</sub> satisfies. Dynamic programming, temporal-difference learning and Q-learning are different algorithms for solving it, exactly or approximately.
+@@ 51
+<strong>"The optimal policy is unique."</strong> The optimal <em>values</em> are unique. Several policies can achieve them; the book's optimal gridworld shows cells with two or three equally good arrows.
+@@ 52
+<strong>"Reward and next state are independent."</strong> The book's four-argument p(s′, r | s, a) models them jointly on purpose; in the 3-state MDP below, the risky action's reward depends on where it lands.
+@@ 53
+6. A 3-state MDP solved by hand
+@@ 54
+Here is an MDP small enough to solve on paper. Two non-terminal states, Start and Mid, one terminal state Goal, two actions everywhere, and γ = 0.9.
+@@ 55
+State
+@@ 56
+Action
+@@ 57
+Outcome
+@@ 58
+Start
+@@ 59
+safe
+@@ 60
+→ Mid, reward 0, probability 1
+@@ 61
+risky
+@@ 62
+→ Goal, reward +10, probability 0.5; → Start, reward −1, probability 0.5
+@@ 63
+Mid
+@@ 64
+→ Goal, reward +5, probability 1
+@@ 65
+→ Goal, reward +8, probability 0.8; → Start, reward 0, probability 0.2
+@@ 66
+Guess that the optimal policy is "risky in both states" and write the optimality equation for each state under that guess. Goal is terminal, so v*(Goal) = 0.
+@@ 67
+v(Start) = 0.5·[10 + 0] + 0.5·[−1 + 0.9·v(Start)] &nbsp;&nbsp;⇒&nbsp;&nbsp; 0.55·v(Start) = 4.5 &nbsp;&nbsp;⇒&nbsp;&nbsp; v(Start) = 8.18
+@@ 68
+v(Mid) = 0.8·[8 + 0] + 0.2·[0 + 0.9·8.18] = 6.4 + 1.47 = 7.87
+@@ 69
+Now check the guess with the q* table, using q*(s, a) = Σ p [r + γ v*(s′)]:
+@@ 70
+q*(s, safe)
+@@ 71
+q*(s, risky)
+@@ 72
+Greedy action
+@@ 73
+v*(s) = max
+@@ 74
+In both states the greedy action is the one we assumed, so the values satisfy the optimality equation: max(7.09, 8.18) = 8.18 and max(5.00, 7.87) = 7.87. The solution is unique, so these are v* and q*, and "always risky" is optimal. For comparison, the equiprobable random policy gives v<sub>π</sub>(Start) = 6.56 and v<sub>π</sub>(Mid) = 6.29, lower than v* in every state, as the partial order promises.
+@@ 75
+Try it: pick a policy below. The widget solves the two-equation linear system for v<sub>π</sub>, computes q<sub>π</sub> for all four state–action pairs, and highlights the action that is greedy with respect to q<sub>π</sub>.
+@@ 76
+Notice that for "random" and "always safe", the greedy action disagrees with the policy in at least one state: that is the signal that a better policy exists. For "always risky" the greedy action is the policy itself, which is the hand check above. "Always safe" scores 4.50 at Start: the walk Start → Mid → Goal collects 0 then +5, and 0.9 × 5 = 4.5.
+@@ 77
+A computer does the same check by repeating the optimality backup until nothing changes; this is <strong>value iteration</strong>, which <a href="#d4">Day 4</a> treats properly:
+@@ 78
+7. Sutton and Barto's 5×5 gridworld
+@@ 79
+The book's Example 3.5 is the standard test case for everything in this lesson. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The state is one of 25 cells. Four actions move north, east, south or west with reward 0; a move off the grid leaves the position unchanged and costs −1. From A (top row, second column) every action pays +10 and teleports the agent to A′ at the bottom of that column; from B (top row, fourth column) every action pays +5 and teleports to B′, two rows below. Nothing is terminal; the game runs forever with γ = 0.9.
+@@ 80
+For the equiprobable random policy, solving the 25 linear expectation equations gives these values (rows top to bottom):
+@@ 81
+col 1
+@@ 82
+col 2 (A/A′)
+@@ 83
+col 3
+@@ 84
+col 4 (B/B′)
+@@ 85
+col 5
+@@ 86
+row 1
+@@ 87
+row 2
+@@ 88
+row 3
+@@ 89
+row 4
+@@ 90
+row 5
+@@ 91
+Three things to read off. A is worth 8.8, less than its immediate reward of 10, because the teleport drops the agent at A′ on the bottom edge, where a random walker keeps bumping into the wall at −1 each time. B is worth 5.3, more than its +5, because B′ sits in the middle of the grid with positive value. And you can check any cell by hand with the expectation equation. Take the centre cell (row 3, column 3, value 0.7). Its neighbours are 2.3 to the north, 0.4 east, −0.4 south, 0.7 west, and all four rewards are 0, so
+@@ 92
+which matches to the one decimal the table shows. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 93
+Example 3.8 solves the same grid for v*. The optimal agent walks to A, collects +10, is teleported to A′, walks four cells back up the column and repeats:
+@@ 94
+Check the optimality equation at A. Every action from A does the same thing, so the max is trivial: v*(A) = 10 + 0.9 · v*(A′) = 10 + 0.9 · 16.0 = 24.4. Check B the same way: 5 + 0.9 · 16.0 = 19.4. The column under A shows the discount at work: 24.4 × 0.9 = 22.0, × 0.9 = 19.8, × 0.9 = 17.8, × 0.9 = 16.0, so v*(A′) = 0.9⁴ · v*(A). <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 95
+Try it: every cell starts at 0. Press "One backup" to apply the Bellman equation once to all 25 cells at the same time, then keep pressing, or "Run to convergence". Switch between the random policy (expectation equation) and the optimal policy (optimality equation). Tap any cell to see its backup written out with its four neighbours.
+@@ 96
+Notice that after one backup only A, B and the edge cells are non-zero: information travels one cell per backup. The random-policy grid needs about 220 synchronous backups to settle to twelve decimals, the optimal grid about 285, but both match the book's tables to one decimal long before that. The centre cell's backup shows the four-neighbour sum from above (0.67 from the unrounded values, 0.675 from the book's rounded ones); A in optimal mode shows 10 + 0.9 · 16.0.
+@@ 97
+Going deeper (optional): why repeated backups converge
+@@ 98
+The right-hand side of a Bellman equation is an operator on value tables. Because γ &lt; 1, applying it to two different tables brings their largest difference down by a factor of at least γ (it is a contraction), and a contraction has exactly one fixed point, reached by repeated application from any start. That is the uniqueness claim of section 5 and the reason "Run to convergence" is safe to press. With γ = 1 and no terminal state the argument fails, which is why the gridworld, which never ends, needs γ &lt; 1 to have finite values at all.
+@@ 99
+8. Partial observability: when you cannot see the state
+@@ 100
+Everything above assumed the agent sees S<sub>t</sub>. Often it sees only a clue. A <strong>partially observable MDP</strong> (POMDP) is, in Silver's words, "an MDP with hidden states. It is a hidden Markov model with actions". The tuple gains an observation set O and an observation function Z, which gives the probability of each observation given the true next state and the action. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a> Sutton and Barto describe the same setting as an environment that "would emit not its states, but only observations", and define the agent's state as whatever summary of the history it keeps, S<sub>t</sub> = f(H<sub>t</sub>). <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 101
+The clean fix is the <strong>belief state</strong>: a probability distribution over the hidden states given everything observed so far. "The belief state b(H<sub>t</sub>) satisfies the Markov property", so a POMDP is an ordinary MDP whose states are beliefs. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a> The cost is that beliefs are continuous and high-dimensional, so in practice agents use cheaper summaries, and "the states of real agents will not be Markov but may approach it as an ideal." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 102
+The most famous cheap summary is in the 2013 DQN paper. A single Atari screen shows where the ball is but not which way it is moving; the authors say "the task is partially observed and many emulator states are perceptually aliased, i.e. it is impossible to fully understand the current situation from only the current screen". Their fix makes the state the recent history: the preprocessing is applied "to the last 4 frames of a history" and the frames are stacked "to produce the input to the Q-function". <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> Four frames carry position, velocity and acceleration, close enough to Markov for Pong and Breakout. The <a href="#p-dqn">DQN review</a> covers what the network did with them.
+@@ 103
+An MDP is a graph with two kinds of nodes. Here is the 3-state MDP of section 6 drawn that way, with the optimal actions highlighted.
+@@ 104 attr
+The 3-state MDP as a graph: open circles for Start, Mid and Goal (Goal drawn with a double ring as terminal); solid dots for the four state–action pairs; arrows from each action dot to the next states labelled with probability and reward. The risky actions are highlighted as optimal.
+@@ 105
+Goal
+@@ 106
+safe · q* 7.09
+@@ 107
+risky · q* 8.18
+@@ 108
+risky · q* 7.87
+@@ 109
+safe · q* 5.00
+@@ 110
+Circles are states (the double ring is the terminal state), dots are state–action pairs, and each arrow out of a dot is one (s′, r) outcome of p with its probability. The policy lives on the state → dot edges; the dynamics live on the dot → state arrows. Highlighted: the optimal action in each state and its outcomes.
+@@ 111
+Read it left to right. A state node branches into one dot per action; which dot you take is the policy's business. Each dot branches into outcomes; which one happens is the environment's business, with probabilities from p. Every value in this lesson is a number attached to a node: V to circles, Q to dots. A backup diagram (section 4) is this graph cut out around one node and read one level down.
+@@ 112
+The second picture shows which objects each equation relates.
+@@ 113 attr
+Three boxes in a row: policy π(a|s) on the left, environment p(s′,r|s,a) in the middle, value functions V and Q on the right. Arrows: policy sends actions to the environment; environment returns next state and reward; the Bellman expectation equation combines π and p to define V and Q; the greedy rule reads Q back into the policy.
+@@ 114
+policy
+@@ 115
+value functions
+@@ 116
+Bellman expectation: π and p together define v<tspan baseline-shift="sub" font-size="10">π</tspan>, q<tspan baseline-shift="sub" font-size="10">π</tspan>
+@@ 117
+greedy: a = argmax<tspan baseline-shift="sub" font-size="10">a</tspan> q(s, a) improves π; at the fixed point, Bellman optimality holds
+@@ 118
+What each equation relates. The policy and the environment exchange actions and (s′, r). The Bellman expectation equation takes a fixed π and p and determines v<sub>π</sub> and q<sub>π</sub>. The greedy rule turns q back into a policy. The Bellman optimality equation is the condition that this loop has stopped changing anything.
+@@ 119
+Today both arrows are computed exactly: p is known and the state table is small. From <a href="#d4">Day 4</a> onward one or both become approximate: dynamic programming keeps p but iterates; temporal-difference methods drop p and sample it; deep RL replaces the value table with a network. The diagram does not change, only how faithfully each box is computed.
+@@ 120
+Everything today runs on your phone's CPU in microseconds. The 5×5 gridworld has 25 states and 100 state–action pairs, so one synchronous sweep is 100 evaluations of r + γ v(s′), and the 220 to 285 sweeps to convergence are about 25,000 multiplications. The problem at scale is not the per-state cost but the number of states: backgammon's 10<sup>20</sup> would make a single sweep impossible, which is why no later method in this course visits every state. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 121
+Q1. A ball is flying through the air. Which description of the state is Markov?
+@@ 122
+Its position only
+@@ 123
+The time since it was thrown
+@@ 124
+Its position and velocity
+@@ 125
+The full list of every position it has ever occupied, which is the only Markov option
+@@ 126
+Answer 3. Position and velocity predict the next position; the history adds nothing, so it is a sufficient statistic. Position alone is not Markov (rising and falling look identical). The full history is Markov too, but trivially and wastefully; Markov does not require keeping everything, only everything that matters.
+@@ 127
+Q2. What is the main mathematical difference between the Bellman expectation equation and the Bellman optimality equation?
+@@ 128
+The expectation equation is linear in the values; the optimality equation has a max and is nonlinear
+@@ 129
+The expectation equation uses Q while the optimality equation uses V
+@@ 130
+The optimality equation does not use the discount γ
+@@ 131
+The expectation equation only applies to deterministic policies
+@@ 132
+Answer 1. The expectation equation averages over actions with π, which is linear in v and can be solved as a linear system (that is how the book got the random-policy gridworld). The optimality equation replaces the average with a max, so it is nonlinear. Both equations exist in V and Q forms, both use γ, and both allow stochastic policies.
+@@ 133
+Q3. In the optimal 5×5 gridworld, v*(A′) = 16.0 and every action from A pays +10 and teleports to A′ with γ = 0.9. What is v*(A)?
+@@ 134
+Answer 4. v*(A) = 10 + 0.9 × 16.0 = 24.4. The value is far more than the +10 reward because the agent collects it again every five steps; 26.0 forgets the discount.
+@@ 135
+Q4. Under the equiprobable random policy, state A in the gridworld is worth 8.8, less than its reward of 10. Why?
+@@ 136
+Because the discount γ = 0.9 reduces the 10 to 9 before it is received
+@@ 137
+Because the teleport to A′ puts a random walker on the bottom edge, where it keeps paying −1 for bumping into the wall
+@@ 138
+Because the random policy sometimes chooses not to collect the reward
+@@ 139
+Because the book's table is rounded to one decimal
+@@ 140
+Answer 2. The +10 is received in full (it is R<sub>t+1</sub>, not discounted), but v(A′) = −1.3 under the random policy, and 10 + 0.9 × (−1.3) = 8.8. Every action from A collects the reward, so the policy cannot "skip" it.
+@@ 141
+Q5. You are handed the exact q*(s, a) table for an MDP. What else do you need to act optimally?
+@@ 142
+The dynamics p, to look one step ahead
+@@ 143
+The state-value table v*, to compare next states
+@@ 144
+Nothing: pick argmax<sub>a</sub> q*(s, a) in each state
+@@ 145
+A stochastic policy, because optimal policies cannot be deterministic
+@@ 146
+Answer 3. Any policy greedy with respect to q* is optimal, and q* already contains the one-step lookahead. With only v* you would need p to look one step ahead. A deterministic optimal policy always exists.
+@@ 147
+Q6. Why did the 2013 DQN agent stack the last four Atari frames as its input?
+@@ 148
+To make the convolutional network four times larger
+@@ 149
+Because a single screen is not Markov: it shows position but not motion, so recent history is used as an approximate state
+@@ 150
+Because Atari games update the screen only every fourth frame
+@@ 151
+To give the agent four chances to see each reward
+@@ 152
+Answer 2. The paper says the task "is partially observed" and a single screen cannot "fully understand the current situation". Stacking frames puts velocity and acceleration into the input, turning a POMDP into something close to an MDP.
+@@ 153
+A state is Markov when it contains everything about the past that predicts the future; this is a requirement on the state you choose, not on the world.
+@@ 154
+A finite MDP is states, actions, rewards, the dynamics p(s′, r | s, a), and γ. A policy π(a | s) chooses actions; v<sub>π</sub>(s) and q<sub>π</sub>(s, a) are expected returns, with v<sub>π</sub>(s) = Σ<sub>a</sub> π(a | s) q<sub>π</sub>(s, a).
+@@ 155
+Bellman expectation: v<sub>π</sub>(s) = Σ<sub>a</sub> π Σ<sub>s′, r</sub> p [r + γ v<sub>π</sub>(s′)]. It is linear, one equation per state, and a consistency condition rather than an algorithm.
+@@ 156
+Bellman optimality: v*(s) = max<sub>a</sub> Σ<sub>s′, r</sub> p [r + γ v*(s′)]. Nonlinear, unique solution, and any policy greedy with respect to v* (or q*, with no lookahead) is optimal. Check: v*(A) = 10 + 0.9 × 16.0 = 24.4; 3-state MDP v* = (8.18, 7.87).
+@@ 157
+When the state is hidden you have a POMDP; the belief state restores the Markov property in theory, and stacking recent observations (DQN's four frames) approximates it in practice.
+@@ 158
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd ed., Chapter 3</a> — Sutton &amp; Barto, MIT Press, 2018 (free PDF). Sections 3.1 to 3.7 are today's lesson in the authors' own words; Examples 3.5 and 3.8 are the gridworld tables; section 17.3 discusses observations and state. Book page: <a href="http://incompleteideas.net/book/the-book-2nd.html">incompleteideas.net</a>.
+@@ 159
+<a href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Lecture 2: Markov Decision Processes</a> — David Silver, UCL course on RL, 2015. The Markov property, the MDP tuple, the optimality theorem and the POMDP slides; the Student MDP example is a good second worked example.
+@@ 160
+<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">Spinning Up: Key Concepts in RL</a> — OpenAI (Achiam), 2018. All four Bellman equations on one page in modern deep-RL notation.
+@@ 161
+<a href="https://www.iumj.indiana.edu/IUMJ/FULLTEXT/1957/6/56038">A Markovian Decision Process</a> — Richard Bellman, Indiana University Mathematics Journal 6(4):679–684, 1957. The paper that named the model.
+@@ 162
+<a href="https://arxiv.org/abs/1312.5602">Playing Atari with Deep Reinforcement Learning</a> — Mnih et al., DeepMind, 2013. States the partial-observability problem and the four-frame fix quoted above.

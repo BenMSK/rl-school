@@ -1,0 +1,108 @@
+@@ 1
+<span class="eyebrow">2025 · Khatri, Madaan et al. · Meta (ICLR 2026 oral)</span>
+@@ 2
+ScaleRL: the art of scaling reinforcement learning compute for LLMs
+@@ 3
+More than 400,000 GPU-hours of ablations showed that RL training curves follow a sigmoid in compute whose ceiling depends on the recipe, and the resulting ScaleRL recipe predicted the outcome of a 100,000 GPU-hour run from its first half. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a>
+@@ 4
+Taught in <a href="#d12">Day 12</a> · Read time of the original: ~70 min (28 pages, 20 figures; the appendix is most of it)
+@@ 5
+Fit every RL run with R<sub>C</sub> − R<sub>0</sub> = (A − R<sub>0</sub>) / (1 + (C<sub>mid</sub>/C)<sup>B</sup>) and you can separate design choices that raise the ceiling A from those that only make you reach it faster (B), which turns out to be most of them. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 6
+Everyone training a reasoning model argues about the recipe: this loss, that batch size, this trick. ScaleRL ran hundreds of small bake-offs and found that most tricks only change how fast the cake rises, not how tall it can get. A few ingredients change the height. And if you watch the cake for the first half of the baking time, you can predict exactly how tall it will be at the end.
+@@ 7
+Pretraining has scaling laws: fit a power law on small runs and predict a big one. RL for LLMs had none. Recipes (GRPO, DAPO, Magistral, MiniMax-M1 and others) were compared at one small budget, and nobody knew whether a recipe that won at 1,000 GPU-hours would still win at 100,000, or how to tell a slow start from a low ceiling. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> Picking wrong at scale costs hundreds of thousands of GPU-hours.
+@@ 8
+Measure every recipe the same way: run it on a fixed 8B dense model with maths prompts, record pass rate on a held-in validation set against GPU-hours spent, and fit a <strong>sigmoid</strong>, chosen over a power law because it fits more robustly in the low-compute regime and has a ceiling. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a> Then ask of each design choice: did it move A, or only B and C<sub>mid</sub>?
+@@ 9
+<strong>The curve</strong> (Eq. 1): A is the asymptotic pass rate (0 ≤ A ≤ 1), B the scaling exponent (compute efficiency), C<sub>mid</sub> the compute at which half the gain is reached, R<sub>0</sub> the starting reward. Fits start after about 1,500 GPU-hours. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 10
+R<sub>C</sub> − R<sub>0</sub> = (A − R<sub>0</sub>) · 1 / ( 1 + (C<sub>mid</sub> / C)<sup>B</sup> )
+@@ 11
+<strong>The study.</strong> Leave-one-out and one-at-a-time ablations on the 8B model, each run to a few thousand GPU-hours, then confirmation on Llama-4 Scout (17B×16 MoE). In total more than 400,000 GPU-hours on GB200 GPUs. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 12
+<strong>What moves the ceiling A.</strong> The loss type (CISPO and GSPO beat DAPO's token-level clipped loss); computing the LM head's logits in <strong>FP32</strong>, which raised A from about 0.52 to about 0.61; larger batches and longer generation lengths, which start slower but end higher. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 13
+<strong>What mostly moves efficiency B.</strong> Asynchronous PipelineRL versus PPO-off-policy (same A, better B), loss aggregation, advantage normalisation, curriculum. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 14
+<strong>The recipe.</strong> ScaleRL = asynchronous PipelineRL with 8 off-policy steps; CISPO (a truncated-importance-sampling REINFORCE loss); FP32 LM head; prompt-level loss averaging; batch-level advantage normalisation; zero-variance filtering (drop prompts whose group all agree, DAPO's dynamic sampling in another coat); No-Positive-Resampling (drop prompts with historical pass rate ≥ 0.9); and interruption-based length control that forces an end-of-thinking phrase instead of truncating. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 15 attr
+Two sigmoid curves of pass rate against log compute. Curve one rises to a higher ceiling A; curve two with the same ceiling rises faster, showing a larger B. Annotations mark A, C_mid and R_0.
+@@ 16
+compute C (GPU-hours, log scale)
+@@ 17
+pass rate R_C
+@@ 18
+R_0 start
+@@ 19
+A = 0.61 (FP32 head)
+@@ 20
+A = 0.52 (BF16 head)
+@@ 21
+C_mid
+@@ 22
+solid vs dashed, same colour: same A, larger B
+@@ 23
+blue vs orange: different A (ceiling)
+@@ 24
+The paper's lens. Two recipes with the same asymptote A but different exponent B (solid vs dashed) end in the same place; a recipe with a lower A (second colour) never catches up however long you run it. Most knobs in the study only moved B.
+@@ 25
+The fit made from the first 50,000 GPU-hours of a ScaleRL run on the 8B model predicted the validation pass rate of the full 100,000 GPU-hour run; a 50,000 GPU-hour run on Scout and a downstream AIME-24 curve followed the same shape. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a> Against four published recipes re-implemented in the same harness, ScaleRL had the highest fitted asymptote, A = 0.61, and the others differed in A, not only in speed: "Not all recipes yield similar asymptotic performance". <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 26 attr
+Left: validation pass rate against GPU-hours for an 8B model to 100,000 GPU-hours and Scout to 50,000, with sigmoid fits from the early portion extrapolated; right: AIME-24 accuracy along the same runs
+@@ 27
+<a class="src" href="https://arxiv.org/abs/2510.13786">Figure 1, Khatri 2025</a> (a) The 100,000 GPU-hour run: points beyond the fitting window land on the curve fitted before them. (b) The same runs scored on AIME-24.
+@@ 28 attr
+Fitted sigmoid curves of pass rate against compute for ScaleRL, GRPO (DeepSeek), DAPO (Qwen-2.5), Magistral and MiniMax-M1 recipes; ScaleRL reaches the highest asymptote
+@@ 29
+<a class="src" href="https://arxiv.org/abs/2510.13786">Figure 2, Khatri 2025</a> Five recipes, one harness. The curves separate in their ceilings, not only their slopes; ScaleRL reaches A = 0.61.
+@@ 30
+It is the first paper to treat LLM-RL as something you can budget rather than gamble on, and it was accepted as an oral at ICLR 2026 (25 April 2026). <a class="src" href="https://iclr.cc/virtual/2026/oral/10010608">ICLR 2026</a> Its negative result is as useful as its recipe: the 2025 objective papers (<a href="#p-dapo">DAPO</a>, Dr. GRPO, GSPO) were mostly arguing about B. It also made two systems ideas standard: PipelineRL's in-flight weight updates, where the inference engine pauses only to receive new weights and continues the same half-finished sequences, <a class="src" href="https://arxiv.org/abs/2509.19128">Piché 2025</a> and FP32 logits at the LM head, after the paper traced the gap between the sampler's and the trainer's probabilities to that layer. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 31
+The authors say the predictions are for in-distribution validation pass rate and generalisation to held-out tests is not fully characterised; the experiments are almost all maths, with maths-plus-code results called preliminary; effects of generations-per-prompt may only appear at batches of 2,000 or more; and ScaleRL "is not the final word" given how many design choices remain. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a> Two models, one lab, one kind of prompt. Whether the sigmoid shape survives agentic multi-turn rewards (<a href="#d12">Day 12</a>) is, as of October 2026, unanswered in print.
+@@ 32
+Read Figure 1, Eq. 1 and Figure 3 (the A/B/C<sub>mid</sub> schematic) first, then Section 3.2 one ablation at a time, looking only at whether A or B moved. Section 4 lists the recipe; Section 5 is the scaling confirmation. Skip Appendix A.1–A.17 unless you are reproducing a specific ablation. About 45 minutes for the main text.
+@@ 33
+Q1. In the fitted curve, which parameter does a "better recipe" in the authors' sense change?
+@@ 34
+B, the exponent
+@@ 35
+A, the asymptotic pass rate
+@@ 36
+R<sub>0</sub>, the start
+@@ 37
+The log base of C
+@@ 38
+Most choices only change efficiency B; the recipe-defining ones (loss type, FP32 head, batch and length) move the ceiling A.
+@@ 39
+Q2. What did switching the LM head logits to FP32 do?
+@@ 40
+Doubled training speed
+@@ 41
+Reduced memory by half
+@@ 42
+Nothing measurable
+@@ 43
+Raised the asymptote from about 0.52 to about 0.61
+@@ 44
+A precision fix at one layer moved the ceiling, not just the speed.
+@@ 45
+Q3. Why fit a sigmoid rather than a power law?
+@@ 46
+It fits more robustly at low compute and has a finite ceiling for a bounded pass rate
+@@ 47
+Power laws cannot be fitted on GPUs
+@@ 48
+Pretraining also uses sigmoids
+@@ 49
+The authors did not try a power law
+@@ 50
+Pass rate is bounded in [0, 1]; the sigmoid gives a ceiling A and was more stable to fit early.
+@@ 51
+Khatri, Madaan, Tiwari, Bansal, Duvvuri, Zaheer, Dhillon, Brandfonbrener, Agarwal. The Art of Scaling Reinforcement Learning Compute for LLMs. 2025; ICLR 2026 oral. <a href="https://arxiv.org/abs/2510.13786">arXiv 2510.13786</a> · <a href="https://arxiv.org/html/2510.13786">full text</a> · <a href="https://iclr.cc/virtual/2026/oral/10010608">ICLR page</a>
+@@ 52
+Piché, Kamalloo, Pardinas, Chen, Bahdanau. PipelineRL. 2025 (TMLR 2026). <a href="https://arxiv.org/abs/2509.19128">arXiv 2509.19128</a>
+@@ 53
+Yu et al. DAPO. 2025. <a href="https://arxiv.org/abs/2503.14476">arXiv 2503.14476</a>
+@@ 54
+Zheng et al. (Qwen). Group Sequence Policy Optimization (GSPO). 2025. <a href="https://arxiv.org/abs/2507.18071">arXiv 2507.18071</a>

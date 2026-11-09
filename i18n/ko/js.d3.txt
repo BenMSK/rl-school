@@ -1,0 +1,96 @@
+@@ mdp
+"Graph of the 3-state MDP with values under the chosen policy"
+==
+"선택한 policy에서의 value를 표시한 3-state MDP 그래프"
+@@ mdp
+"The greedy action equals the policy in every state, so these values satisfy the Bellman optimality equation: v* = ("
+==
+"모든 state에서 greedy action이 policy와 같으므로 이 값들은 Bellman optimality equation을 만족합니다: v* = ("
+@@ mdp
+"In "+S.filter(s=>pi[s][AC.indexOf(greedy[s])]!==1).join(" and ")+" the greedy action is not what the policy does, so a better policy exists (switch to the highlighted action)."
+==
+S.filter(s=>pi[s][AC.indexOf(greedy[s])]!==1).join("와 ")+"에서는 greedy action이 policy의 선택과 다르므로 더 나은 policy가 있습니다 (강조된 action으로 바꿔 보세요)."
+@@ mdp
+"A 3-state MDP: policy in, values out"
+==
+"3-state MDP: policy를 넣으면 value가 나옵니다"
+@@ mdp
+"Pick a policy. v_π comes from solving the two linear Bellman expectation equations exactly; q_π follows from v_π; the highlighted action is greedy with respect to q_π. γ = 0.9."
+==
+"policy를 골라 보세요. v_π는 선형 Bellman expectation equation 두 개를 정확히 풀어서 구하고, q_π는 v_π에서 계산합니다. 강조된 action은 q_π에 대해 greedy한 action입니다. γ = 0.9."
+@@ mdp
+"always safe"
+==
+"항상 safe"
+@@ mdp
+"always risky"
+==
+"항상 risky"
+@@ bellman
+"5 by 5 gridworld; each cell shows its current value estimate"
+==
+"5×5 gridworld. 각 칸에 현재 value 추정값 표시"
+@@ bellman
+"any"
+==
+"모든 action"
+@@ bellman
+"Cell row "+(sr+1)+", col "+(sc+1)
+==
+(sr+1)+"행 "+(sc+1)+"열 칸"
+@@ bellman
+"   (all four actions do the same)"
+==
+"   (네 action 모두 결과가 같음)"
+@@ bellman
+"new v = max(…) = "
+==
+"새 v = max(…) = "
+@@ bellman
+"new v = ¼·("
+==
+"새 v = ¼·("
+@@ bellman
+"   (was "
+==
+"   (이전 값 "
+@@ bellman
+"synchronous sweeps"
+==
+"synchronous sweep 횟수"
+@@ bellman
+"Max change"
+==
+"최대 변화량"
+@@ bellman
+"largest |new − old|"
+==
+"최대 |새 값 − 이전 값|"
+@@ bellman
+"Matches book"
+==
+"책과 일치"
+@@ bellman
+"cells equal to 1 decimal"
+==
+"소수 첫째 자리까지 같은 칸"
+@@ bellman
+"Bellman backups on the 5×5 gridworld"
+==
+"5×5 gridworld에서의 Bellman backup"
+@@ bellman
+"All cells start at 0. Each backup replaces every cell with the Bellman right-hand side computed from the current table. Tap a cell to see its own backup written out."
+==
+"모든 칸은 0에서 시작합니다. backup을 한 번 할 때마다 현재 표로 계산한 Bellman equation의 우변으로 모든 칸의 값을 바꿉니다. 칸을 누르면 그 칸의 backup이 풀어서 표시됩니다."
+@@ bellman
+"One backup"
+==
+"backup 한 번"
+@@ bellman
+"Run to convergence"
+==
+"수렴할 때까지 실행"
+@@ bellman
+"A → A′ pays +10, B → B′ pays +5, walking off the grid pays −1 and leaves you in place, everything else pays 0; γ = 0.9. Book tables: Sutton & Barto Examples 3.5 and 3.8."
+==
+"A → A′은 +10, B → B′은 +5를 줍니다. 격자 밖으로 나가려 하면 −1을 받고 제자리에 머물며, 나머지는 모두 0입니다. γ = 0.9. 책의 표: Sutton & Barto Example 3.5와 3.8."

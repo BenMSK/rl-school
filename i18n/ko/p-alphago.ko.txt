@@ -1,0 +1,124 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+policy network와 value network가 Monte Carlo tree search를 이끄는 구조로, 다른 바둑 프로그램을 상대로 99.8%의 승률을 올리고 유럽 챔피언을 5–0으로 이겼습니다. 후속작 AlphaGo Zero는 random play에서 출발해 학습했고, Lee Sedol과 대국한 버전을 100–0으로 이겼습니다.
+@@ 4
+<a href="#d11">Day 11</a>에서 다룸 · 원문 읽는 시간: 약 45분
+@@ 5
+AlphaGo는 이전 바둑 프로그램이 쓰던 random rollout과 사람이 직접 짠 평가 함수를 두 신경망으로 대체했습니다. 어떤 수가 검토할 만한지 알려 주는 policy network와, 누가 이기고 있는지 알려 주는 value network입니다. 그 결과 Monte Carlo tree search는 brute force보다 더 좁고 더 얕아졌습니다.
+@@ 6
+바둑은 나올 수 있는 대국의 수가 우주의 원자 수보다 많아서, 누구도 모든 수를 다 따져 볼 수 없어요. AlphaGo에게는 도우미가 둘 있어요. 하나는 "이 세 수만 괜찮아 보여" 하고 속삭이고, 다른 하나는 바둑판을 보고 "아마 네가 이기고 있어" 하고 말해 줘요. AlphaGo는 이 힌트를 가지고 머릿속으로 빠른 가상 대국을 아주 많이 둬 본 다음, 가장 많이 시도해 본 수를 골라요. 나중에 나온 AlphaGo Zero는 오직 자기 자신과만 대국하면서 두 도우미를 모두 배웠어요.
+@@ 7
+체스는 1997년에 깊은 search와 사람이 손으로 만든 평가 함수 앞에 무너졌습니다. 바둑은 버텼습니다. 바둑판이 19×19이고, 국면마다 둘 수 있는 수가 수백 개이며, 누가 앞서는지 알려 주는 간단한 공식이 없기 때문입니다. random 대국을 끝까지 둬 보는 방식으로 국면을 평가하는 Monte Carlo tree search가 프로그램을 아마추어 강자 수준까지 끌어올렸지만, 정식 크기 바둑판에서 프로 기사를 이긴 적은 없었습니다. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a>
+@@ 8
+search가 brute force로 해결할 수 없는 두 가지를 학습합니다. <strong>policy network</strong> p(a|s)는 각 수에 prior를 부여해 search의 <em>폭</em>을 줄입니다. <strong>value network</strong> v(s)는 <em>깊이</em>를 줄입니다. random 대국을 끝까지 두는 대신 leaf에서 멈추고 누가 이기고 있는지 물어볼 수 있기 때문입니다. search 없이 두 network만으로도 이미 가장 강한 MCTS 프로그램 수준으로 바둑을 두었습니다. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a>
+@@ 9
+<strong>Supervised policy network.</strong> 사람 고수의 기보에서 뽑은 국면으로 convolutional network를 학습시켜 고수가 둔 수를 예측하게 합니다(Figure 1이 전체 파이프라인을 보여 줍니다). <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a>
+@@ 10
+<strong>RL policy network.</strong> 같은 network를 self-play로 개선합니다. <a href="#d7">Day 7</a>의 REINFORCE gradient를 쓰며, reward는 대국이 끝났을 때만 주어집니다. 이기면 +1, 지면 −1입니다.
+@@ 11
+<strong>Value network.</strong> 두 번째 network를 self-play 결과에 회귀시킵니다. v<sub>θ</sub>(s) ≈ E[z | s].
+@@ 12
+<strong>Search.</strong> 각 simulation은 tree를 따라 내려가며, value에 exploration bonus를 더한 값이 가장 큰 수를 고릅니다. 이 bonus는 prior에 비례하고 visit 수가 늘수록 줄어듭니다. 새 leaf는 policy의 prior로 expand하고, value network와 fast rollout을 섞어 점수를 매긴 뒤, 그 점수를 back up합니다. 실제로 두는 수는 root에서 가장 많이 방문한 수입니다(Figure 3). <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a>
+@@ 13
+=
+@@ 14
+<strong>AlphaGo Zero (2017).</strong> residual network 하나 f<sub>θ</sub>(s) = (p, v)만 쓰고, 사람 데이터도 rollout도 없습니다. search의 visit count π가 policy target이 되고 대국 결과 z가 value target이 됩니다. <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a>
+@@ 15
+=
+@@ 16
+<strong>AlphaZero (2017/2018).</strong> 같은 알고리즘을 "random play에서 출발해, 게임 규칙 말고는 어떤 도메인 지식도 주지 않은 채" 바둑뿐 아니라 체스와 쇼기에도 적용했습니다. <a class="src" href="https://arxiv.org/abs/1712.01815">Silver 2017</a>
+@@ 17 attr
+AlphaGo 아키텍처: 바둑판 국면이 policy network와 value network로 들어감. policy network는 Monte Carlo tree search에 수의 prior를 주고, value network는 leaf 국면에 점수를 매김. search는 visit 수가 가장 많은 수를 출력하고, self-play 결과가 두 network를 학습시킴
+@@ 18
+국면 s
+@@ 19
+=
+@@ 20
+=
+@@ 21
+기보 SL → RL self-play
+@@ 22
+=
+@@ 23
+결과 z에 회귀
+@@ 24
+=
+@@ 25
+=
+@@ 26
+=
+@@ 27
+=
+@@ 28
+수
+@@ 29
+최다 visit
+@@ 30
+=
+@@ 31
+=
+@@ 32
+self-play 대국 → 결과 z (AlphaGo Zero: visit count π → policy target도)
+@@ 33
+policy network는 search를 좁히고 value network는 search를 짧게 만듭니다. self-play 결과는 점선을 따라 되돌아가 두 network를 학습시킵니다. AlphaGo Zero에서는 두 network가 head 두 개를 가진 하나의 network로 합쳐지고 rollout이 빠집니다.
+@@ 34
+2016년 논문은 다른 바둑 프로그램을 상대로 한 99.8% 승률과, 유럽 챔피언 Fan Hui를 상대로 한 5–0 승리를 보고합니다. 정식 크기 바둑판에서 프로 기사가 패한 첫 사례입니다(Figure 4, "Tournament evaluation of AlphaGo"). <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a> 논문이 나오고 두 달 뒤인 2016년 3월, AlphaGo는 서울에서 Lee Sedol을 4–1로 이겼고 2억 명이 넘는 사람이 이를 지켜보았습니다. 2국의 37번째 수는 사람이 둘 확률이 10,000분의 1인 수였고, 이 승리로 AlphaGo는 명예 9단을 받았습니다. <a class="src" href="https://deepmind.google/research/breakthroughs/alphago/">DeepMind 2016</a>
+@@ 35
+AlphaGo Zero(Nature 550:354–359, 2017년 10월)는 "오직 self-play만으로" 학습했고 "챔피언을 꺾은, 앞서 발표된 AlphaGo를 상대로 100–0"으로 이겼습니다. 3일짜리 학습에는 20-block residual network를, 40일짜리 학습에는 40 block을 썼습니다. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017a</a> AlphaGo Zero는 3일 뒤에 AlphaGo Lee를, 40일 뒤에 AlphaGo Master를 넘어섰습니다. AlphaGo Lee가 TPU 48개를 쓴 데 비해 TPU 4개만 썼습니다. Elo 차트에서 AlphaGo Zero는 5000을 넘고 Master는 대략 4800입니다. <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a>
+@@ 36
+AlphaZero의 preprint는 "24시간 안에" 체스, 쇼기, 바둑에서 superhuman 수준에 도달했다고 주장합니다. <a class="src" href="https://arxiv.org/abs/1712.01815">Silver 2017</a> 2018년 평가에서는 4시간 뒤 Stockfish를, 2시간 뒤 Elmo를, 30시간 뒤 AlphaGo Lee를 앞질렀습니다. Stockfish와의 1,000국에서 155번 이기고 6번 졌으며, Elmo를 상대로 91.2%, AlphaGo Zero를 상대로 61%의 승률을 기록했습니다. 그러면서도 초당 search한 국면은 약 6만 개로, Stockfish의 6,000만 개보다 훨씬 적었습니다. 하드웨어는 1세대 TPU 4개와 CPU 코어 44개였습니다. <a class="src" href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">DeepMind 2018</a>
+@@ 37
+AlphaGo는 "deep RL에 search를 더한다"는 구도를, 이 과정에서 뒤에 나오는 모든 planning 시스템의 틀로 만들었습니다. MuZero(2019년 11월)는 search는 그대로 두고 model을 학습했기 때문에 규칙을 더는 알려 줄 필요가 없었습니다(<a href="#p-muzero">MuZero 논문 리뷰</a>). <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> AlphaTensor(2022)와 AlphaDev(2023)는 알고리즘 설계를 1인용 게임으로 보고, AlphaZero의 loop를 다시 써서 더 빠른 행렬 곱셈 알고리즘과 정렬 알고리즘을 찾아냈습니다. <a class="src" href="https://www.nature.com/articles/s41586-022-05172-4">Fawzi 2022</a> <a class="src" href="https://www.nature.com/articles/s41586-023-06004-9">Mankowitz 2023</a> 자동 curriculum으로서의 self-play는 <a href="#d11">Day 11</a>에서 "상대는 어디서 오는가"라는 질문에 대한 표준 답입니다.
+@@ 38
+2016년 시스템은 tabula rasa가 아니었습니다. 사람의 기보에서 출발했고, fast rollout에는 사람이 설계한 feature를 썼으며, 분산 시스템으로 돌아갔습니다. AlphaGo Zero는 사람 데이터와 rollout을 없앴습니다. <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a> 세 시스템 모두 완벽한 시뮬레이터, 곧 2인 zero-sum perfect-information 게임의 규칙을 받습니다. MuZero는 이 가정을 버렸습니다. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> 학습에 드는 compute는 여전히 컸습니다. 이 구성을 물려받은 이후의 MuZero 보드게임 실험은 학습에 TPU 16개, self-play에 1000개를 썼습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a>
+@@ 39
+Nature 본문은 유료이지만 abstract와 figure caption은 무료입니다. Figure 1(파이프라인), Figure 3(MCTS의 네 단계), Figure 4(토너먼트)를 보면 되고, 수식은 Methods에 있습니다. 그다음에는 AlphaGo Zero의 abstract와 함께, 3일과 40일 수치가 나오는 DeepMind 블로그를 읽습니다. 마지막으로 AlphaZero preprint의 첫 두 쪽과 Table 1을 봅니다. 약 45분이 걸립니다.
+@@ 40
+Q1. value network는 search에서 무엇을 바꿉니까?
+@@ 41
+root에서 어떤 수를 둘지 고른다
+@@ 42
+각 수의 prior 확률을 제공한다
+@@ 43
+tree를 forward pass 한 번으로 대체한다
+@@ 44
+random 대국을 끝까지 두는 대신 leaf에서 search를 멈출 수 있게 한다
+@@ 45
+value network는 search의 깊이를 줄이고, policy network의 prior는 폭을 줄입니다.
+@@ 46
+Q2. AlphaGo Zero는 self-play를 얼마나 한 뒤에 Lee Sedol 버전을 100–0으로 이겼습니까?
+@@ 47
+3일
+@@ 48
+40일
+@@ 49
+24시간
+@@ 50
+30시간
+@@ 51
+AlphaGo Lee를 넘는 데 3일, Master를 넘는 데 40일이 걸렸습니다. 24시간과 30시간은 AlphaZero의 수치입니다.
+@@ 52
+Q3. "AlphaGo는 사람 데이터 없이 바둑을 배웠다." 어느 것이 맞습니까?
+@@ 53
+참: 모든 버전이 random play에서 출발했다
+@@ 54
+참: 사람의 기보는 테스트에만 쓰였다
+@@ 55
+거짓: 2016년 AlphaGo는 고수의 기보에서 출발했고, tabula rasa인 것은 AlphaGo Zero(2017)다
+@@ 56
+거짓: 어떤 버전도 self-play를 쓴 적이 없다
+@@ 57
+2016년 파이프라인은 고수 기보의 국면에 대한 지도학습으로 시작합니다. "완전한 random play"에서 출발하는 학습은 AlphaGo Zero에서 등장했습니다.
+@@ 58
+Silver et al. Mastering the game of Go with deep neural networks and tree search. Nature 529:484–489, 2016년 1월 27일. <a href="https://www.nature.com/articles/nature16961">nature.com</a>
+@@ 59
+Silver et al. Mastering the game of Go without human knowledge. Nature 550:354–359, 2017년 10월 19일. <a href="https://www.nature.com/articles/nature24270">nature.com</a>; 블로그: <a href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">AlphaGo Zero: starting from scratch</a>
+@@ 60
+Silver et al. Mastering Chess and Shogi by Self-Play with a General RL Algorithm. 2017. <a href="https://arxiv.org/abs/1712.01815">arXiv 1712.01815</a>; 블로그: <a href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">AlphaZero (2018년 12월)</a>
+@@ 61
+=
+@@ 62
+=

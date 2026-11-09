@@ -1,0 +1,345 @@
+@@ 1
+<span class="eyebrow">2주차 · Day 8</span>
+@@ 2
+Trust region: TRPO, PPO, SAC
+@@ 3
+오늘을 마치면 제약 없는 policy step이 왜 훈련을 망칠 수 있는지 설명하고, PPO의 clipped objective를 적고 계산 예시 표를 채울 수 있습니다. PPO를 작동하게 하는 구현 세부 사항을 나열하고, continuous control용 maximum-entropy SAC와 대비하며, 주어진 문제에 둘 중 무엇을 쓸지 고를 수 있습니다.
+@@ 4
+약 90분 · Day 7 필요
+@@ 5
+policy gradient는 국소적인 방향일 뿐입니다. 그 gradient를 만든 데이터는 지금 바꾸려는 policy가 모은 것이기 때문입니다. 너무 멀리 나아가면 다음 batch는 더 나쁜 policy에서 나오고, loop 전체가 무너질 수 있습니다. TRPO는 hard KL constraint와 2차 미분 계산으로 이를 해결합니다. PPO는 한 줄짜리 clip으로 그 이점의 대부분을 얻습니다. sample이 비싼 continuous control에서는 다른 계열(DDPG, TD3, SAC)이 replay buffer의 예전 데이터를 재사용하고, SAC는 여기에 더해 agent가 random하게 남아 있는 것에도 대가를 지급합니다.
+@@ 6
+1. 큰 policy step이 훈련을 무너뜨리는 이유
+@@ 7
+<a href="#d7">Day 7</a>의 update는 θ ← θ + α ĝ였습니다. α를 얼마나 크게 잡아도 되는지는 아무것도 알려 주지 않았습니다. 지도학습에서는 step이 너무 커도 batch 하나를 망칠 뿐이고, 데이터는 달라지지 않습니다. on-policy RL에서는 데이터가 곧 policy 자신의 행동 기록입니다. 지나치게 나아간 step은 agent가 방문하는 state를 바꿉니다. 다음 batch는 그 나빠진 policy가 모으고, 그 advantage는 예전 state로 학습한 critic이 추정하므로, 그다음 step은 더 나빠질 수 있습니다. PPO 논문의 숫자 하나가 이 효과의 크기를 보여 줍니다. MuJoCo task 7개에서 random policy를 0, 관측된 최고 결과를 1로 두고 점수를 매겼을 때, clipping도 penalty도 없는 plain surrogate objective는 평균 <strong>−0.39</strong>로 random보다 나빴습니다. 같은 코드에 ε = 0.2의 clipping을 넣자 평균 <strong>0.82</strong>가 나왔습니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 8
+TRPO 논문이 이론을 제공합니다. L<sub>π</sub>(π̃)를 <strong>surrogate objective</strong>(대리 목적함수)라고 합시다. 새 policy π̃의 기대 advantage를 이전 policy π가 방문한 state 위에서 잰 값입니다. 논문의 Theorem 1에 따르면 π̃의 실제 성능은 다음 값 이상입니다.
+@@ 9
+=
+@@ 10
+여기서 ε은 advantage 절댓값의 최댓값입니다. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> 쉽게 말하면, surrogate objective는 새 policy가 이전 policy와 가까이 있을 때에만 실제 개선을 잘 대신합니다. 가까운 정도는 KL divergence로 잽니다. 멀리 움직이면 penalty 항이 surrogate objective의 이득을 모두 삼켜 버립니다. surrogate objective를 믿어도 되는 영역이 바로 <strong>trust region</strong>(신뢰 영역)입니다.
+@@ 11
+자전거를 배울 때는 몸을 조금씩 기울여 보고 어떻게 되는지 살펴요. 한 번에 확 기울이면 넘어지고, 그러면 자전거가 아니라 땅바닥에서 배우게 돼요. PPO는 "연습 한 번에 하던 방식을 아주 조금만 바꾸기"라는 규칙이에요. 오늘 뒤에서 배울 SAC는 다른 규칙이에요. "보물을 찾으면 점수를 받고, 새로운 길을 가 봐도 점수를 받기"예요.
+@@ 12
+2. TRPO: KL 목줄과 그 비용
+@@ 13
+<strong>Trust Region Policy Optimization</strong>은 2015년 2월에 제출된 논문으로, 이 bound를 알고리즘으로 바꿉니다. probability ratio를 r(θ) = π<sub>θ</sub>(a|s) / π<sub>θ<sub>k</sub></sub>(a|s)라 하면 surrogate objective는 L(θ<sub>k</sub>,θ) = E[r(θ) · A<sup>π<sub>θk</sub></sup>(s,a)]이고, update는 다음과 같습니다.
+@@ 14
+θ<sub>k+1</sub> = argmax<sub>θ</sub> L(θ<sub>k</sub>,θ) &nbsp; 단, &nbsp; D̄<sub>KL</sub>(θ ‖ θ<sub>k</sub>) ≤ δ
+@@ 15
+이론이 요구하는 state별 최댓값은 실용적이지 않으므로, 방문한 state에 대한 <em>평균</em> KL을 씁니다. 또 penalty 대신 hard constraint를 쓰는데, 이론이 정당화하는 penalty 계수로는 "매우 작은 step"만 나오기 때문입니다. 논문은 모든 실험에서 δ = 0.01을 썼습니다. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a>
+@@ 16
+비용은 이 제약 문제를 푸는 데서 생깁니다. L은 1차까지(gradient g), KL은 2차까지(Hessian H, 즉 Fisher information matrix) 전개합니다. 그 해가 <strong>natural gradient</strong>(자연 경사) step θ<sub>k+1</sub> = θ<sub>k</sub> + √(2δ / gᵀH⁻¹g) · H⁻¹g입니다. H의 행 수는 신경망의 파라미터 수와 같아서, H를 직접 만들거나 역행렬을 구하는 일은 없습니다. 대신 Hessian-vector product를 써서 conjugate gradient로 Hx = g를 풉니다(논문은 CG를 10회 반복했고, Fisher-vector product는 batch의 10%로 계산했습니다). 그런 다음 backtracking line search가 KL constraint가 만족되고 surrogate objective가 실제로 좋아질 때까지 step을 α<sup>j</sup>배로 줄입니다. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Achiam 2018</a>
+@@ 17
+<strong>손으로 해 보는 한 step.</strong> δ = 0.01이고 gᵀH⁻¹g = 4이면 H⁻¹g 방향의 배율은 √(2 × 0.01 / 4) = √0.005 ≈ 0.0707입니다. 그 결과 KL이 δ보다 큰 0.013으로 나왔다면, line search는 0.8 × 0.0707, 이어서 0.64 × 0.0707을 시도하며 KL ≤ 0.01이고 surrogate objective가 양수가 될 때까지 계속합니다.
+@@ 18
+TRPO는 효과가 있었습니다. MuJoCo에서 헤엄치기, 깡충뛰기, 걷기를 학습했는데, trust region이 없는 natural gradient는 깡충뛰기와 걷기를 만들어 내지 못했습니다. 또 파라미터 33.5k개의 convolutional policy로 Atari 게임 7개를 픽셀 입력만으로 플레이했습니다. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> 하지만 update마다 conjugate gradient 풀이와 line search가 필요하고, actor–critic이 신경망을 공유하는 구조나 noise가 들어가는 아키텍처, dropout과는 잘 맞지 않으며, 코드도 많습니다. 자세한 내용은 <a href="#p-trpo">TRPO 논문 리뷰</a>에 있습니다. PPO를 낳은 질문은 이것입니다. 1차 방법으로도 같은 안정성을 얻을 수 있을까?
+@@ 19
+3. PPO의 clipped objective와 계산 예시 표
+@@ 20
+<strong>Proximal Policy Optimization</strong>(2017년 7월)은 TRPO의 ratio r<sub>t</sub>(θ) = π<sub>θ</sub>(a<sub>t</sub>|s<sub>t</sub>) / π<sub>θ<sub>old</sub></sub>(a<sub>t</sub>|s<sub>t</sub>)를 그대로 씁니다. 이 값은 이전 파라미터에서 1입니다. 그리고 constraint를 clipped objective로 바꿉니다.
+@@ 21
+=
+@@ 22
+여기서 ε은 하이퍼파라미터로, "예컨대 ε = 0.2"입니다. 논문의 설명은 이렇습니다. clipping은 "r<sub>t</sub>를 구간 [1−ε, 1+ε] 밖으로 옮길 유인을 없애고", 최솟값을 취하면 결과가 "clip하지 않은 objective의 lower bound(즉 pessimistic bound)"가 됩니다. θ<sub>old</sub> 근처에서는 clip한 objective와 clip하지 않은 objective가 1차까지 일치하므로, update를 시작할 때의 gradient는 보통의 policy gradient입니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 23
+ε = 0.2, 즉 구간이 [0.8, 1.2]일 때 sample을 하나씩 따져 봅시다.
+@@ 24
+=
+@@ 25
+=
+@@ 26
+r에 대한 gradient?
+@@ 27
+있음 (출발점)
+@@ 28
+없음: clip되어 평평함. 이 action을 더 밀어 올리지 않음
+@@ 29
+있음: clip 전 항이 최솟값이라 r을 다시 끌어올림
+@@ 30
+있음: clip되지 않으며 확률을 계속 낮춤
+@@ 31
+없음: 이미 충분히 낮췄음
+@@ 32
+있음 (구간 안)
+@@ 33
+외워 둘 패턴은 이렇습니다. objective가 평평해지는 때는, update가 r을 advantage가 이미 선호하는 방향으로 구간 너머까지 <em>더</em> 옮기려 할 때뿐입니다. 해로운 방향으로 움직일 때는 결코 평평해지지 않습니다. 이 비대칭이 "pessimistic bound"의 실제 의미이며, PPO가 같은 batch로 gradient step을 여러 번 밟아도 폭주하지 않는 이유입니다.
+@@ 34
+직접 해 보기: 위젯은 L<sup>CLIP</sup>의 항 하나를 r의 함수로 그립니다. Â = +2로 두고 r을 1.2 너머로 끌어 보세요. 그런 다음 Â = −2로 두고 0.8 아래로 끌어 보세요.
+@@ 35
+눈여겨볼 점: 평평한 부분은 한쪽에만 나타나고, 어느 쪽인지는 Â의 부호에 따라 뒤집힙니다. 구간 안에서는 실선이 점선 위에 놓입니다. 보통의 policy gradient입니다. 구간 밖이라도 "해로운" 쪽에서는 실선이 여전히 점선을 따라갑니다. 그래서 좋은 action의 확률을 낮춘 step은 온전한 세기로 바로잡힙니다. 논문의 Figure 1이 Â &gt; 0과 Â &lt; 0에 대한 바로 이 그림입니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 36
+논문은 <strong>adaptive KL penalty</strong>도 시험했습니다. L<sup>KLPEN</sup> = Ê<sub>t</sub>[r<sub>t</sub>Â<sub>t</sub> − β KL[π<sub>old</sub>, π<sub>θ</sub>]]를 쓰되, 측정한 KL이 d<sub>targ</sub>/1.5 아래로 떨어지면 β를 절반으로 줄이고 1.5 d<sub>targ</sub>를 넘으면 두 배로 키우는 방식입니다. 점수는 0.74로 clipping의 0.82에 못 미쳤고, 논문은 "clipped surrogate objective보다 성능이 나빴다"고 적습니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> 그래도 KL이라는 아이디어는 사라지지 않았습니다. 5절에서 RLHF의 per-token KL penalty로 다시 등장합니다.
+@@ 37
+<strong>"PPO는 trust region을 강제한다."</strong> PPO가 하는 일은 sample마다 r을 구간 밖으로 옮길 <em>유인</em>을 없애는 것입니다. 이전 policy와 새 policy 사이의 KL을 제한하는 장치는 없습니다. bound가 필요한 구현은 approximate KL에 대한 early stopping을 별도 장치로 추가합니다(Spinning Up은 0.01에서 멈춥니다). <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/ppo.html">Achiam 2018</a>
+@@ 38
+<strong>"ε = 0.2이면 policy는 최대 20%까지만 바뀔 수 있다."</strong> clip되는 것은 각 sample의 ratio뿐이고, 그것도 advantage가 선호하는 방향으로만입니다. 해로운 방향의 움직임에는 최솟값 덕분에 gradient가 온전히 남습니다. policy 전체는 그보다 더 멀리 움직일 수 있습니다.
+@@ 39
+<strong>"TD3와 SAC의 twin critic은 두 추정값을 평균한다."</strong> 평균이 아니라 최솟값을 취합니다. 비관적으로 보는 것이 핵심입니다.
+@@ 40
+<strong>"Off-policy는 항상 on-policy를 이긴다."</strong> environment step당으로 따질 때만 그렇습니다. 값싸고 병렬로 돌릴 수 있는 시뮬레이터가 있으면 wall-clock 시간으로는 PPO가 이기는 경우가 많습니다. 또 PPO는 discrete action을 다루지만, 논문에 발표된 그대로의 SAC는 그러지 못합니다.
+@@ 41
+4. 실전 PPO: 중요한 세부 사항
+@@ 42
+PPO의 전체 loss에는 value 항과 entropy bonus가 더해집니다. policy와 value가 신경망을 공유할 때 이 점이 중요합니다.
+@@ 43
+=
+@@ 44
+advantage는 <a href="#d7">Day 7</a>의 truncated GAE로, T step 길이의 segment마다 계산하고 segment 끝의 V로 bootstrap합니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> Algorithm 1이 방법의 전부입니다. N개의 actor가 각각 π<sub>θold</sub>를 T step 동안 실행해 Â를 계산합니다. 그런 다음 크기 M ≤ NT인 minibatch로 L을 K epoch 동안 최적화합니다. 마지막으로 θ<sub>old</sub> ← θ로 두고 batch를 버립니다. MuJoCo 설정은 T = 2048, Adam 3 × 10⁻⁴, 10 epoch, minibatch 64, γ = 0.99, λ = 0.95였습니다. Atari 설정은 T = 128에 actor 8개, 3 epoch, 32 × 8 크기의 minibatch, ε = 0.1, c<sub>1</sub> = 1, c<sub>2</sub> = 0.01이었고, learning rate(2.5 × 10⁻⁴)와 ε을 모두 훈련 동안 0까지 선형으로 annealing했습니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 45
+이 식들은 PPO가 잘 작동하는 이유의 작은 일부일 뿐입니다. 2022년 3월 Huang, Dossa, Raffin, Kanervisto, Wang은 ICLR Blog Track에 "The 37 Implementation Details of Proximal Policy Optimization"을 발표했습니다. OpenAI의 reference 코드 <code>ppo2</code>를 역설계한 글입니다. 이들이 꼽은 핵심 세부 사항 13개에는 다음이 들어 있습니다. rollout마다 N × M개의 sample로 학습하는 vectorised 아키텍처; hidden layer에는 gain √2, policy head에는 0.01, value head에는 1을 쓰는 orthogonal 가중치 초기화; 기본값 10⁻⁸ 대신 10⁻⁵으로 둔 Adam의 ε; learning rate를 0까지 선형으로 annealing하기; λ = 0.95의 GAE와 value bootstrapping; 순서를 섞은 minibatch update(Atari는 minibatch 4개 × 4 epoch, MuJoCo는 32 × 10); minibatch 단위의 <strong>advantage normalisation</strong>(정규화); clipped surrogate objective(ε은 Atari 0.1, MuJoCo 0.2); 이전 value 주변으로 value loss를 clipping하기; entropy 계수를 Atari에서 0.01, MuJoCo에서 0으로 두고 하나로 합친 loss; 0.5의 global gradient-norm clip; 단순한 task에서 policy와 value에 따로 쓰는 64-unit tanh 신경망. <a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a> 나머지 가운데 9개는 Atari 전처리(no-op reset, frame skip 4, 84×84 grayscale, 부호만 남기는 reward clipping, 4-frame stack)이고, 또 9개는 continuous control 전용 사항(0으로 초기화한 state-independent log-std, observation normalisation과 ±10 clipping, running standard deviation으로 나누는 reward scaling)입니다.
+<a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a>
+@@ 46
+모든 세부 사항이 제 몫을 하는 것은 아닙니다. 이 블로그는 Engstrom et al. (2020)이 "value function loss clipping이 도움이 된다는 증거를 찾지 못했고", Andrychowicz et al. (2021)은 "value function loss clipping이 오히려 성능을 해친다고 시사한다"고 적습니다. 그런데도 reference 코드에는 들어 있습니다. <a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a> 여러분이 얻을 교훈은 이것입니다. PPO 실행이 실패하면 objective를 건드리기 전에 코드 수준의 세부 사항(초기화, normalisation, Adam ε, gradient clipping)부터 확인하세요.
+@@ 47
+TRPO는 한 걸음 내디딜 때마다 낭떠러지까지의 거리를 정확히 재는 측량사입니다. 안전하지만 느리고 장비가 무겁습니다. PPO는 경험칙 하나를 지닌 등산객입니다. "기꺼이 되돌아올 수 있는 걸음만 내디딘다"는 규칙이고, clip이 걸음마다 이를 지키게 합니다. 6절의 SAC는 전혀 다른 등산객입니다. 끝에서 보는 경치뿐 아니라 새로 밟은 땅의 미터 수만큼도 보수를 받습니다.
+@@ 48
+5. PPO가 기본 선택이 된 이유
+@@ 49
+PPO 논문의 결과는 눈부시다기보다는 좋은 편이었습니다. MuJoCo task 7개에서는 100만 step 시점에 TRPO, cross-entropy method, vanilla policy gradient, A2C를 앞섰습니다. seed 3개로 돌린 Atari 게임 49개에서는 훈련 전체의 평균 reward 기준으로 PPO가 30개 게임에서 "이겼고" ACER는 18개, A2C는 1개였습니다. 반면 마지막 100 episode의 reward 기준으로는 ACER가 28개, PPO가 19개에서 이겼습니다. 즉 PPO가 가장 빨리 학습했고, 최종 성적은 ACER가 조금 높았습니다. 논문 초록이 내세우는 것은 PPO가 "훨씬 단순하다"는 점입니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> 결국 단순함이 이겼습니다. 실용적인 이유는 세 가지입니다. PPO는 1차 미분만 쓰므로 어떤 신경망, 어떤 optimiser와도 함께 쓸 수 있습니다. constrained solver 대신 clip이라는 조절 손잡이 하나만 있습니다. 그리고 rollout–update loop는 감당할 수 있는 만큼 많은 environment로 병렬화됩니다. 두 시스템이 이 마지막 이유를 대규모로 입증했습니다.
+@@ 50
+<strong>OpenAI Five.</strong> 2019년 4월 13일 세계 챔피언 OG를 2–0으로 꺾은 Dota 2 agent는 PPO와 GAE로 훈련했습니다. policy는 4096 unit의 single-layer LSTM으로, 전체 파라미터의 약 84%가 여기에 들어 있었습니다. optimiser는 2초마다 약 200만 프레임의 batch를 소비했습니다. 훈련은 재시작과 되돌리기 때문에 10개월에 걸쳐 이어졌고, 합치면 180일에 해당합니다. 2019년 4월 경기까지 대략 770 ± 50 petaflop/s-days를 썼고, optimiser GPU 480~1,536개, rollout GPU 500~1,440개, rollout CPU 80,000~172,800개를 사용했습니다. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> update마다 Hessian-vector 풀이가 필요한 알고리즘이었다면 이 파이프라인에서 살아남지 못했을 것입니다.
+@@ 51
+<strong>RLHF.</strong> InstructGPT(2022년 3월)는 지도학습으로 만든 모델을 학습된 reward model에 대해 PPO로 fine-tuning했습니다. 이때 "reward model에 대한 과도한 최적화를 줄이기 위해 token마다 SFT 모델로부터의 per-token KL penalty"를 더했고, 선택적으로 pretraining gradient를 섞었습니다(PPO-ptx). 사람 평가자들은 파라미터 1,750억 개의 GPT-3보다 파라미터 13억 개의 InstructGPT를 선호했습니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> 여기서 "environment"는 token을 내놓는 언어 모델이고, action은 discrete하며, rollout은 병렬로 값싸게 돌릴 수 있고, policy는 파라미터가 수십억 개인 Transformer입니다. 정확히 PPO에 맞는 조건입니다. <a href="#p-instructgpt">InstructGPT 논문 리뷰</a>가 이 이야기를 2주차로 이어 갑니다.
+@@ 52
+6. Off-policy continuous control: DDPG → TD3 → SAC
+@@ 53
+PPO는 K epoch이 지나면 batch를 모두 버립니다. 실제 로봇이나 느린 물리 시뮬레이터처럼 environment step 하나하나가 비싸다면 데이터를 남겨 두고 싶어집니다. 그것이 off-policy 계열입니다. <a href="#d6">Day 6</a>의 Q-learning을 continuous action으로 확장하고 replay buffer에서 학습합니다.
+@@ 54
+<strong>DDPG</strong>(2015년 9월)는 "continuous action으로 확장한 deep Q-learning"입니다. deterministic actor μ<sub>θ</sub>(s)와 critic Q<sub>φ</sub>(s,a)로 이루어집니다. critic은 target r + γ(1−d) Q<sub>targ</sub>(s', μ<sub>targ</sub>(s'))에 대한 squared Bellman error를 최소화합니다. actor는 critic을 거치는 backpropagation으로 Q<sub>φ</sub>(s, μ<sub>θ</sub>(s))를 최대화합니다. target network는 Polyak averaging으로 움직이고, exploration은 action에 noise를 더해서 얻습니다. 아키텍처 하나와 하이퍼파라미터 한 벌로 20개가 넘는 물리 시뮬레이션 task를 풀었고, 일부는 픽셀 입력만으로 풀었습니다. <a class="src" href="https://arxiv.org/abs/1509.02971">Lillicrap 2015</a> <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/ddpg.html">Achiam 2018</a> 약점은 overestimation입니다. actor는 critic이 과대평가하는 action이라면 무엇이든 찾아냅니다.
+@@ 55
+<strong>TD3</strong>(2018년 2월)는 세 가지를 고칩니다. <strong>Clipped double-Q</strong>: critic 두 개를 훈련하고 두 target value 중 작은 쪽을 씁니다. y = r + γ(1−d) min<sub>i=1,2</sub> Q<sub>targ,i</sub>(s', a'). <strong>Delayed policy updates</strong>: critic을 d = 2번 update할 때마다 actor와 target을 한 번 update합니다. <strong>Target policy smoothing</strong>: target action에 clip한 noise를 더합니다. a' = clip(μ<sub>targ</sub>(s') + clip(ε, −c, c), a<sub>low</sub>, a<sub>high</sub>)이고 ε ∼ N(0, 0.2), c = 0.5입니다. 그래서 critic이 뾰족한 spike를 악용할 수 없습니다. <a class="src" href="https://arxiv.org/abs/1802.09477">Fujimoto 2018</a> HalfCheetah에서 100만 step 시점에 TD3는 9636.95에 도달했고, DDPG는 3305.60, PPO는 1795.43이었습니다. <a class="src" href="https://arxiv.org/abs/1802.09477">Fujimoto 2018</a>
+@@ 56
+<strong>SAC</strong>(2018년 1월, automatic temperature를 넣은 버전은 2018년 12월)는 objective 자체를 바꿉니다. <strong>Maximum-entropy RL</strong>(최대 엔트로피 RL)은 agent에게 reward에 더해 자기 policy의 entropy에 대한 bonus까지 최대화하라고 요구합니다.
+@@ 57
+<strong>temperature</strong>(온도) α는 "reward에 대한 entropy 항의 상대적 중요도를 결정"합니다. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> 이것은 A3C나 PPO의 entropy regulariser가 아닙니다. 그쪽은 entropy를 loss에 더합니다. SAC는 entropy를 <em>reward</em>에 넣으므로, soft Bellman equation Q(s,a) = E[r + γ(Q(s',a') − α log π(a'|s'))]을 통해 Q와 V 자체가 바뀝니다. 한 state에서 이 objective를 최대화하는 policy는 π(a|s) ∝ exp(Q(s,a)/α)이고, actor는 KL divergence를 최소화해 이 분포에 맞춰지도록 훈련합니다. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/sac.html">Achiam 2018</a> SAC는 TD3의 twin critic을 유지하고(논문: "Q-function 두 개는 특히 어려운 task에서 훈련을 크게 앞당긴다"), reparameterisation trick으로 sampling하는 stochastic tanh-squashed Gaussian actor를 씁니다. 2018년 후속 논문에서는 policy의 entropy를 target H̄ = −dim(A) 근처로 유지하는 방식으로 α를 자동으로 학습합니다. 예를 들어 HalfCheetah에서는 −6입니다. 같은 후속 논문은 별도의 state-value 신경망도 불필요하다며 없앴습니다. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a>
+@@ 58
+직접 해 보기: 아래 위젯에는 reward가 높은 영역이 두 곳인 1차원 action이 있습니다. a = +0.6 근처에서 Q = 1.0, a = −0.5 근처에서 Q = 0.7입니다. temperature 슬라이더를 움직여 보세요.
+@@ 59
+눈여겨볼 점: α = 0.05에서는 거의 모든 확률 질량(99.6%)이 오른쪽 봉우리에 놓이고 entropy는 −1.75 nats로, 거의 deterministic한 policy입니다. α = 0.2에서는 두 번째 봉우리가 질량의 약 4분의 1을 가지고 살아 있습니다. α = 1.0이 되면 밀도가 거의 평평해지고 entropy는 [−1, 1] 범위 action에서의 최댓값인 ln 2 = 0.693에 가까워집니다. automatic temperature tuning은 이 슬라이더를 움직이는 제어기입니다. policy의 entropy가 target보다 높으면 α가 내려가고, 낮으면 α가 올라갑니다.
+@@ 60
+<strong>손으로 구하는 α의 gradient.</strong> H̄ = −6이고 policy의 현재 entropy가 −4(target보다 더 random)라고 합시다. temperature loss J(α) = E[−α log π(a|s) − α H̄]의 도함수는 E[−log π] − H̄ = (−4) − (−6) = +2이므로 gradient descent는 α를 낮춥니다. 즉 randomness에 주는 reward가 줄어듭니다. entropy가 −8이면 도함수는 −2이고 α가 올라갑니다. <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> 왜 이런 수고를 할까요? 2018년 1월의 SAC는 task마다 reward scale을 손으로 맞춰야 했습니다(Hopper, Walker, HalfCheetah, Ant는 5, Humanoid-v1은 20). reward를 scaling하는 것은 α를 바꾸는 것과 같기 때문입니다. 그 논문의 Figure 3은 SAC가 "reward scaling에 민감한데, 이는 reward scaling이 temperature와 관련되기 때문"임을 보였습니다. automatic α는 이 조절 손잡이를 없앱니다. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a>
+@@ 61
+결과: 2018년 벤치마크에서 DDPG는 "Ant-v1, Humanoid-v1, Humanoid (rllab)에서 전혀 진전을 보이지 못한" 반면, SAC는 "모든 task에서 일관된 성능을 보이고" "PPO보다 훨씬 빨리 학습"합니다. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> 실제 하드웨어에서는 SAC가 Minitaur 사족보행 로봇에게 160,000 environment step(약 400 episode, 실제 시간으로 약 2시간)으로 걷는 법을 가르쳤고, 그 걸음걸이는 경사, 장애물, 계단에도 일반화되었습니다. Dynamixel claw는 joint angle 입력으로 약 3시간, 32×32 이미지 입력으로 약 20시간(300k step) 만에 밸브 돌리기를 학습했습니다. <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> <a href="#p-sac">SAC 논문 리뷰</a>가 두 논문을 모두 다룹니다.
+@@ 62
+더 깊이 (선택): "stochastic"이 exploration 말고도 SAC에 도움이 되는 이유
+@@ 63
+2018년 1월 논문의 Figure 2는 Humanoid (rllab)에서 SAC를 deterministic 변형과 비교합니다. deterministic 버전은 seed에 따라 불안정한 반면 stochastic 버전은 매끄럽게 훈련되는데, 저자들은 이를 "stochasticity가 훈련을 안정시킬 수 있다"고 해석합니다. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> entropy 항은 Q를 매끄럽게 만들어, actor가 DDPG처럼 오차로 생긴 좁은 spike를 타고 오르지 못하게 합니다(TD3의 target smoothing은 같은 아이디어를 손으로 만든 것입니다). 또 위젯이 중간 정도의 α에서 보여 주듯 두 번째 mode를 살려 둔 policy는, critic이 나중에 그 mode가 과소평가되었음을 알아내면 그쪽으로 옮겨 갈 수 있습니다.
+@@ 64
+7. PPO와 SAC 중 고르기
+@@ 65
+2026년 10월 기준으로 이 둘이 model-free deep RL의 주력 알고리즘이며, 선택은 대체로 sample이 어디에서 오는지에 달려 있습니다.
+@@ 66
+질문
+@@ 67
+PPO가 유리
+@@ 68
+SAC(또는 TD3)가 유리
+@@ 69
+action이 discrete한가?
+@@ 70
+그렇다: PPO는 언어 token을 포함해 discrete action과 continuous action을 모두 다룸
+@@ 71
+논문에 발표된 그대로의 SAC는 continuous 전용
+@@ 72
+environment step이 값싸고 병렬로 돌릴 수 있는가?
+@@ 73
+그렇다: 게임 엔진, 물리 시뮬레이션 farm, LLM rollout. OpenAI Five는 2 s마다 ~2M 프레임을 처리
+@@ 74
+아니다: 실제 로봇, 느린 시뮬레이터. Minitaur는 160k step 만에 걸음
+@@ 75
+wall-clock 시간과 sample 수 중 무엇이 더 중요한가?
+@@ 76
+environment가 많을 때의 wall-clock 시간. on-policy 데이터는 K번 쓰고 버림
+@@ 77
+sample 수. 10⁶ transition 크기의 replay buffer를 여러 update에 재사용
+@@ 78
+안정성을 조절하는 손잡이는?
+@@ 79
+ε, epoch 수, minibatch 크기, entropy 계수, LR annealing, grad clip
+@@ 80
+α(최신 SAC에서는 자동), τ = 0.005, reward scale(auto-α로 제거됨)
+@@ 81
+병렬화가 되는가?
+@@ 82
+기본적으로 됨: update마다 N actor × T step
+@@ 83
+reference 설계는 environment step마다 gradient step을 한 번 밟으며 "병렬화를 지원하지 않음"
+@@ 84
+표의 출처: PPO 열은 PPO 논문과 Dota 보고서, SAC 열은 SAC 논문들과 Spinning Up입니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/sac.html">Achiam 2018</a> 경험칙: 시뮬레이션이 값싸거나 action이 discrete하면 PPO, sample 하나하나에 실제 시간이 드는 continuous control이면 SAC나 TD3입니다. HalfCheetah 숫자가 sample efficiency 격차를 구체적으로 보여 줍니다. TD3 논문의 Table 1에서 100만 step 시점에 TD3는 9637, PPO는 1795입니다. <a class="src" href="https://arxiv.org/abs/1802.09477">Fujimoto 2018</a> 하지만 HalfCheetah 1만 개를 동시에 돌릴 수 있다면 그 100만 step은 몇 분이면 끝나고, 비교 기준은 wall-clock 시간으로 뒤집힙니다. 그 기준에서는 PPO를 이기기 어렵습니다.
+@@ 85 attr
+위쪽 띠, PPO: CPU의 vectorised environment N개가 observation, action, reward, 이전 log-probability, value를 N 곱하기 T sample 크기의 rollout buffer로 보냅니다. GAE가 advantage를 계산하고, GPU learner가 clipped loss, value loss, entropy로 minibatch update를 K epoch 실행합니다. 새 파라미터는 theta old로 environment에 돌아가고 buffer는 버려집니다. 아래쪽 띠, SAC: actor가 environment에 쓸 action을 sampling합니다. transition은 100만 개 크기의 replay buffer에 들어갑니다. batch는 critic 두 개에 공급되고, 그 target은 천천히 update되는 target critic 두 개에서 나옵니다. critic의 최솟값과 alpha를 곱한 log-probability가 actor로 흘러 들어가고, alpha는 entropy target에 맞춰 조정됩니다.
+@@ 86
+PPO: on-policy loop (데이터 K번 쓰고 폐기)
+@@ 87
+=
+@@ 88
+π_old로 T step 실행
+@@ 89
+=
+@@ 90
+=
+@@ 91
+=
+@@ 92
+=
+@@ 93
+128·8 또는 2048·1
+@@ 94
+=
+@@ 95
+V로 Â, R̂ 계산
+@@ 96
+=
+@@ 97
+=
+@@ 98
+=
+@@ 99
+=
+@@ 100
+θ_old ← θ; buffer 비우기
+@@ 101
+SAC: off-policy, environment step마다 gradient step 1번
+@@ 102
+=
+@@ 103
+=
+@@ 104
+=
+@@ 105
+=
+@@ 106
+=
+@@ 107
+=
+@@ 108
+target y와의 MSE
+@@ 109
+=
+@@ 110
+=
+@@ 111
+=
+@@ 112
+min Q_φ(s,ã) − α log π(ã|s)의 actor gradient,
+@@ 113
+critic을 거쳐 전달
+@@ 114
+=
+@@ 115
+=
+@@ 116
+α → y, actor loss
+@@ 117
+위: PPO의 동기식 rollout → GAE → K-epoch update loop. iteration 사이에 넘어가는 것은 되돌아가는 화살표 하나뿐입니다. 아래: SAC의 다섯 가지 흐름, 즉 action 선택, 저장, twin target에서 오는 critic update, critic을 거치는 actor update, α 제어기입니다. target은 Polyak averaging으로 critic을 뒤따릅니다.
+@@ 118
+PPO 띠를 왼쪽에서 오른쪽으로 읽어 봅시다. 보통 CPU에서 도는 environment N개가 고정된 policy π<sub>θold</sub>를 T step 동안 실행하며 state, action, reward, 이전 log-probability, critic의 value를 기록합니다. rollout buffer에는 N × T개의 sample이 담깁니다(논문에서 Atari는 8 × 128, MuJoCo는 1 × 2048). GAE는 reward와 value를 advantage와 return target으로 바꾸고, 각 segment 끝의 V로 bootstrap합니다. 그런 다음 learner가 순서를 섞은 minibatch로 K epoch을 돕니다. 저장해 둔 log-probability로 ratio를 구하고, clipped loss, value loss, entropy를 계산한 뒤, gradient norm을 0.5로 clip하여 minibatch마다 Adam step을 한 번 밟습니다. 마지막으로 θ<sub>old</sub> ← θ로 두고 buffer를 비운 뒤 loop를 반복합니다. 데이터는 K번(3~10번) 쓰이고 다시는 쓰이지 않습니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> <a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a>
+@@ 119
+SAC 띠는 상자가 더 많지만 리듬은 더 일정합니다. actor가 평균과 log-standard-deviation을 출력하고 tanh-squashed action을 sampling하면, 그 transition이 10⁶ transition 크기의 replay buffer에 들어갑니다. update마다 256개의 batch를 뽑습니다. actor가 s'에서 ã'를 제안하고, 거기서 target critic 두 개를 평가한 뒤, 둘 중 작은 값에서 α log π(ã'|s')를 뺀 것이 두 critic의 squared-error loss에 쓰이는 target y가 됩니다. actor update는 reparameterisation trick으로 s에서 ã를 sampling하고 min<sub>j</sub> Q<sub>φj</sub>(s,ã) − α log π(ã|s)를 높이는 방향으로 올라가며, gradient는 critic을 거쳐 θ로 흘러 들어갑니다. α는 policy entropy를 H̄로 유지하는 쪽으로 조금씩 조정되고, target critic은 τ = 0.005로 critic을 뒤따릅니다. 신경망은 256-unit ReLU layer 두 개, Adam 3 × 10⁻⁴, γ = 0.99이며, environment step마다 gradient step을 한 번 밟습니다. <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/sac.html">Achiam 2018</a>
+@@ 120
+PPO의 loop는 rollout worker(CPU, 또는 policy가 4096-unit LSTM이라면 rollout GPU)와 optimiser(GPU)로 깔끔하게 나뉩니다. OpenAI Five는 optimiser GPU 480~1,536개, rollout GPU 500~1,440개, rollout CPU 80,000~172,800개를 돌리며 2초마다 약 200만 프레임을 소비했고, 10개월에 걸쳐 훈련 180일에 해당하는 분량을 돌렸습니다. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> SAC의 loop는 설계상 직렬입니다. environment step 한 번에 gradient step 한 번이므로 GPU 한 대, 심지어 CPU로도 실제 로봇의 속도를 따라갑니다. Minitaur는 실제 시간으로 약 2시간(160k step) 만에 걷는 법을 배웠고, 밸브 task는 joint angle 입력으로 약 3시간, 픽셀 입력으로 약 20시간이 걸렸습니다. <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> 10⁶ transition 크기의 replay buffer가 두 방법을 통틀어 유일하게 큰 메모리 구조이며, PPO에는 그것이 없습니다.
+@@ 121
+Q1. PPO 논문의 MuJoCo 비교(0 = random, 1 = 최고)에서 clip하지 않은 surrogate objective의 점수와 ε = 0.2 clipping의 점수는 각각 얼마였습니까?
+@@ 122
+0.39와 0.82
+@@ 123
+−0.39와 0.82
+@@ 124
+0.74와 0.76
+@@ 125
+−0.39와 0.70
+@@ 126
+정답 2. 제약 없는 surrogate objective는 평균 −0.39로 random policy보다 낮았고, ε = 0.2 clipping은 0.82였습니다. adaptive KL penalty는 0.74, ε = 0.3은 0.70이었습니다.
+@@ 127
+Q2. ε = 0.2, Â = +2, r<sub>t</sub> = 1.5일 때 clipped objective 항의 값과 r에 대한 gradient는 얼마입니까?
+@@ 128
+=
+@@ 129
+=
+@@ 130
+=
+@@ 131
+=
+@@ 132
+정답 4. r·Â = 3.0이지만 clip(1.5) = 1.2이므로 2.4가 됩니다. 최솟값은 2.4이고 r에 대해 상수이므로 gradient는 0입니다. 이 action을 더 밀어 올릴 유인이 없습니다.
+@@ 133
+Q3. PPO의 clipping에 대한 설명으로 옳은 것은 무엇입니까?
+@@ 134
+각 sample의 ratio를 [1−ε, 1+ε] 밖으로 옮길 유인을 없애지만, 이전 policy와 새 policy 사이의 KL을 제한하지는 않는다
+@@ 135
+새 policy와 이전 policy 사이의 KL이 ε 이하임을 보장한다
+@@ 136
+모든 action 확률의 변화를 최대 20%로 제한한다
+@@ 137
+advantage의 부호와 상관없이 ratio가 구간을 벗어나면 항상 gradient를 0으로 만든다
+@@ 138
+정답 1. clipping은 sample 단위이고 한쪽 방향으로만 작동합니다. 전체 KL을 제한하는 것은 없으며, 그래서 일부 구현은 approximate KL에 대한 early stopping을 추가합니다. 구간 밖의 해로운 쪽에서는 clip하지 않은 항이 최솟값이 되어 gradient가 살아 있습니다.
+@@ 139
+Q4. SAC의 entropy 항은 A3C나 PPO의 entropy bonus와 어떻게 다릅니까?
+@@ 140
+다르지 않다. 둘 다 loss에 c · H(π)를 더한다
+@@ 141
+SAC는 actor가 아니라 critic의 entropy를 쓴다
+@@ 142
+SAC는 α · H(π)를 reward에 넣으므로 soft Bellman equation을 통해 Q와 V가 바뀐다
+@@ 143
+SAC의 entropy 항은 훈련의 처음 10% 동안만 쓰인다
+@@ 144
+정답 3. maximum-entropy RL의 objective는 Σ E[r + α H(π)]입니다. entropy가 critic이 추정하는 대상의 일부이므로 soft Bellman equation과 target y = r + γ(min Q_targ − α log π)가 나옵니다. A3C와 PPO는 entropy를 policy loss의 regulariser로만 더합니다.
+@@ 145
+Q5. TD3와 SAC는 critic 두 개를 씁니다. target을 만들 때 두 추정값을 어떻게 결합합니까?
+@@ 146
+평균을 낸다
+@@ 147
+최솟값을 취한다
+@@ 148
+update마다 둘을 번갈아 쓴다
+@@ 149
+training loss가 더 낮은 쪽을 쓴다
+@@ 150
+정답 2. Clipped double-Q는 min<sub>i</sub> Q<sub>targ,i</sub>를 취합니다. 일부러 비관적으로 잡은 추정값으로, actor가 critic의 오차를 악용할 때 DDPG가 겪는 overestimation을 막습니다.
+@@ 151
+Q6. 실물 사족보행 로봇의 controller를 훈련해야 하는데, 경험 한 시간을 모을 때마다 엔지니어의 오후 한나절이 듭니다. 오늘 레슨이 뒷받침하는 선택은 무엇입니까?
+@@ 152
+수천 개의 병렬 actor를 쓰는 PPO. 확장성이 가장 좋기 때문
+@@ 153
+TRPO. trust region 덕분에 sample efficiency가 가장 높기 때문
+@@ 154
+A2C. replay buffer가 필요 없기 때문
+@@ 155
+automatic temperature를 쓰는 SAC. replay buffer의 모든 transition을 재사용하고, 약 160k step 만에 Minitaur를 걷게 했기 때문
+@@ 156
+정답 4. 비싸고, 직렬이며, action이 continuous한 sample은 SAC의 본거지입니다. Minitaur는 160k environment step, 실제 시간으로 약 2시간 만에 걷는 법을 배웠습니다. PPO의 강점은 값싼 병렬 시뮬레이션이고, TRPO와 A2C 역시 on-policy입니다.
+@@ 157
+on-policy 데이터는 θ가 바뀌는 순간 낡은 것이 되므로, 제약 없는 policy step은 훈련을 무너뜨릴 수 있습니다. MuJoCo에서 clip하지 않은 surrogate objective는 −0.39, PPO의 clipping은 0.82를 기록했습니다.
+@@ 158
+TRPO는 average-KL constraint δ = 0.01 아래에서 surrogate objective E[r·A]를 최대화하며, conjugate gradient와 line search로 풉니다. 올바르지만 2차 방법이라 무겁습니다.
+@@ 159
+PPO의 L<sup>CLIP</sup> = E[min(r·Â, clip(r, 1−ε, 1+ε)·Â)]는 pessimistic bound로, step이 ratio를 advantage가 이미 선호하는 방향으로 더 밀어낼 때에만 평평해집니다. 그 덕분에 batch 하나로 minibatch update를 K epoch 돌릴 수 있습니다. 성능의 상당 부분은 코드 수준의 세부 사항(초기화, Adam ε, normalisation, grad clipping)이 떠받칩니다.
+@@ 160
+PPO가 기본 선택이 된 것은 1차 방법이고, 조절 손잡이가 하나이며, 병렬화가 되기 때문입니다. OpenAI Five(rollout CPU 최대 172,800개, 훈련 180일)와 InstructGPT의 RLHF가 모두 PPO를 썼습니다.
+@@ 161
+DDPG → TD3 → SAC는 off-policy continuous control의 계보입니다. replay buffer, 최솟값을 취하는 twin critic, target smoothing이 이어지고, SAC에서는 자동으로 조정되는 temperature와 함께 entropy 항이 reward 안에 들어갑니다. 시뮬레이션이 값싸고 병렬이거나 action이 discrete하면 PPO를, sample이 비싸면 SAC나 TD3를 고르세요.
+@@ 162
+<a href="https://arxiv.org/abs/1707.06347">Proximal Policy Optimization Algorithms</a> — Schulman, Wolski, Dhariwal, Radford &amp; Klimov, OpenAI, 2017. Equation 6–12, Algorithm 1, Table 1–5. Figure 1이 위젯이 재현하는 그림입니다.
+@@ 163
+<a href="https://arxiv.org/abs/1502.05477">Trust Region Policy Optimization</a> — Schulman, Levine, Moritz, Jordan &amp; Abbeel, ICML 2015. Theorem 1, δ = 0.01을 쓰는 실용 알고리즘, MuJoCo와 Atari 결과.
+@@ 164
+<a href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">The 37 Implementation Details of Proximal Policy Optimization</a> — Huang, Dossa, Raffin, Kanervisto &amp; Wang, ICLR Blog Track, 2022. PPO를 직접 구현하기 전에 읽어 보세요.
+@@ 165
+<a href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Trust Region Policy Optimization</a>과 <a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html">Proximal Policy Optimization</a> — OpenAI Spinning Up, 2018. Natural-gradient step, conjugate gradient, line search. PPO-Clip pseudocode와 approximate-KL early stop.
+@@ 166
+<a href="https://arxiv.org/abs/1912.06680">Dota 2 with Large Scale Deep Reinforcement Learning</a> — Berner et al., OpenAI, 2019. 대규모 PPO: LSTM, GPU와 CPU 수, 180일의 훈련.
+@@ 167
+<a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback</a> — Ouyang et al., OpenAI, 2022. RLHF를 위해 per-token KL penalty를 더한 PPO.
+@@ 168
+=
+@@ 169
+<a href="https://arxiv.org/abs/1802.09477">Addressing Function Approximation Error in Actor-Critic Methods</a> — Fujimoto, van Hoof &amp; Meger, ICML 2018. TD3의 세 가지 수정과 Table 1.
+@@ 170
+<a href="https://arxiv.org/abs/1801.01290">Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor</a> — Haarnoja, Zhou, Abbeel &amp; Levine, ICML 2018. Maximum-entropy objective, twin critic, reward scale에 대한 민감도.
+@@ 171
+<a href="https://arxiv.org/abs/1812.05905">Soft Actor-Critic Algorithms and Applications</a> — Haarnoja et al., 2018. H̄ = −dim(A)를 쓰는 automatic temperature, 없앤 V 신경망, Minitaur와 밸브 실험.
+@@ 172
+<a href="https://spinningup.openai.com/en/latest/algorithms/ddpg.html">DDPG</a>, <a href="https://spinningup.openai.com/en/latest/algorithms/td3.html">TD3</a>, <a href="https://spinningup.openai.com/en/latest/algorithms/sac.html">SAC</a> — OpenAI Spinning Up, 2018. 깔끔한 pseudocode와 위에서 쓴 형태의 soft Bellman equation.

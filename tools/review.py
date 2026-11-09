@@ -1,15 +1,16 @@
 # Review one lesson or paper entry in a private copy of index.html: audit every SVG label (runs off the canvas, overlaps
 # another label, crossed by a line) and screenshot each diagram and widget on its own.
-# usage: python tools/review.py d8            (or p-dqn)   [dark] [noshot]
+# usage: python tools/review.py d8            (or p-dqn)   [dark] [noshot] [page=ko.html]
 # Prints the findings and the PNG paths (view them in any image viewer). Never writes index.html. Needs Microsoft Edge.
 import os, re, sys, json, html, shutil, subprocess, tempfile
 sys.stdout.reconfigure(encoding="utf-8")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); os.chdir(ROOT)
 target = sys.argv[1]; scheme = "0" if "dark" in sys.argv[2:] else "1"
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-out = os.path.join(tempfile.gettempdir(), "rlreview", target); shutil.rmtree(out, ignore_errors=True); os.makedirs(out)
+PAGE = next((a[5:] for a in sys.argv[2:] if a.startswith("page=")), "index.html")
+out = os.path.join(tempfile.gettempdir(), "rlreview", os.path.basename(PAGE)[:-5] + "-" + target); shutil.rmtree(out, ignore_errors=True); os.makedirs(out)
 shutil.copytree("img", os.path.join(out, "img"))
-base = open("index.html", encoding="utf8").read()
+base = open(PAGE, encoding="utf8").read()
 def run(js, name, size="1000,1000", shot=False):
     f = os.path.join(out, name + ".html"); open(f, "w", encoding="utf8").write(base.replace("</body>", "<script>" + js + "</script></body>", 1))
     url = "file:///" + f.replace("\\", "/") + "#" + target

@@ -1,0 +1,182 @@
+@@ 1
+<span class="eyebrow">2018 · Sutton &amp; Barto · MIT Press, 2nd edition</span>
+@@ 2
+Sutton &amp; Barto: Reinforcement Learning, An Introduction
+@@ 3
+The textbook the field is written in: 17 chapters in three parts, given away as a free PDF by the authors, and the source of the notation every other entry in this Paper Bible uses.
+@@ 4
+Taught in <a href="#d1">Day 1</a> · Read time of the original: about a week at two chapters a day
+@@ 5
+Sutton and Barto define reinforcement learning as "learning what to do—how to map situations to actions—so as to maximize a numerical reward signal", then show how to do it exactly with tables (Part I), approximately with function approximation (Part II), and what it has to do with brains, psychology and real systems (Part III). <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 6
+Imagine a thick guide for teaching a puppy tricks when nobody tells the puppy the rules, only when it gets a treat. The first part is for small games where you can keep score on one sheet of paper. The second part is for games with so many situations that you need a clever guesser instead of a sheet. The third part asks how real animals, and real brains, do the same thing. The two authors put the whole guide online for free.
+@@ 7
+Before this book, the ideas of RL lived in three separate literatures. Psychology had Thorndike's Law of Effect (1911), the "essence of trial-and-error learning". Control theory had Bellman's dynamic programming and Markov decision processes (1957). A third thread, <strong>temporal-difference learning</strong>, ran from Samuel's checkers player (1959) to Sutton's 1988 paper. The three were "fully brought together" only in Watkins's 1989 thesis on Q-learning. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The book's job is to teach the unified subject with one notation: return G<sub>t</sub>, discount γ, values v<sub>π</sub>(s) and q<sub>π</sub>(s,a), dynamics p(s′,r|s,a). The second edition is the one cited here; the authors' page lists the full PDF, errata, code and slides. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 8
+Two sentences carry the book. First, every estimate is updated the same way: <strong>NewEstimate ← OldEstimate + StepSize [Target − OldEstimate]</strong> (eq. 2.4); bandits, TD(0), Sarsa, Q-learning and semi-gradient methods only differ in what the target is. Second, <strong>generalised policy iteration</strong>: let policy evaluation and policy improvement interact at any granularity, because "almost all reinforcement learning methods are well described as GPI". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 9
+The book is a course, so "how it works" means how to read it. This is the order RL School follows, with the chapter each Day leans on.
+@@ 10
+<strong>Chapter 1 → <a href="#d1">Day 1</a>.</strong> The agent–environment loop, trial-and-error search and delayed reward as the two defining features, the history section (§1.7). <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 11
+<strong>Chapter 2 → <a href="#d2">Day 2</a>.</strong> Bandits; the 10-armed testbed where greedy earns about 1.0 per step against a possible 1.54. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 12
+<strong>Chapter 3 → <a href="#d3">Day 3</a>.</strong> Finite MDPs and the Bellman equations:
+@@ 13
+<strong>Chapter 4 → <a href="#d4">Day 4</a>.</strong> Dynamic programming; in the 4×4 gridworld the greedy policy is already optimal after 3 sweeps. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 14
+<strong>Chapters 5, 6, 7, 12 → <a href="#d5">Day 5</a>.</strong> Monte Carlo, TD(0), n-step returns, eligibility traces; the random walk with true values 1/6 … 5/6. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 15
+<strong>§6.4–6.7 and §16.5 → <a href="#d6">Day 6</a>.</strong> Sarsa, Q-learning, maximisation bias, and the DQN case study (see <a href="#p-qlearning">the Q-learning review</a> and <a href="#p-dqn">the DQN review</a>).
+@@ 16
+<strong>Chapter 13 → <a href="#d7">Day 7</a>.</strong> The policy gradient theorem and REINFORCE (<a href="#p-reinforce">the REINFORCE review</a>).
+@@ 17
+<strong>Chapters 9–11</strong> are background for Days 6–8: function approximation and the deadly triad (§11.3). Chapters 14–17 feed Day 1's history and the applications days.
+@@ 18 attr
+Map of the book: Chapter 1 Introduction on top; below it three boxes left to right, Part I Tabular Solution Methods chapters 2 to 8 used in Days 2 to 6, Part II Approximate Solution Methods chapters 9 to 13 used in Days 5 to 8, Part III Looking Deeper chapters 14 to 17 used in Days 1, 6, 13 and 14; arrows run from Part I to Part II to Part III
+@@ 19
+Chapter 1 · Introduction: the loop, tic-tac-toe, history → Day 1
+@@ 20
+Part I · Tabular
+@@ 21
+exact values in small tables
+@@ 22
+2 Multi-armed bandits
+@@ 23
+3 Finite MDPs
+@@ 24
+4 Dynamic programming
+@@ 25
+5 Monte Carlo methods
+@@ 26
+6 TD · Sarsa · Q-learning
+@@ 27
+7 n-step · 8 Planning
+@@ 28
+Days 2–6
+@@ 29
+Part II · Approximate
+@@ 30
+weights instead of tables
+@@ 31
+9 On-policy prediction
+@@ 32
+10 On-policy control
+@@ 33
+11 Off-policy · deadly triad
+@@ 34
+12 Eligibility traces
+@@ 35
+13 Policy gradient · REINFORCE
+@@ 36
+Days 5–8
+@@ 37
+Part III · Looking deeper
+@@ 38
+brains, animals, systems
+@@ 39
+14 Psychology
+@@ 40
+15 Neuroscience
+@@ 41
+16 Case studies (DQN, Go)
+@@ 42
+17 Frontiers
+@@ 43
+Days 1, 6, 13–14
+@@ 44
+One-week route: 1 → 2 → 3 → 4 → 6 → 5 → 13 → 16.5 · leave 14–15 for a second pass
+@@ 45
+The book in three boxes. Part I is where every algorithm is exact; Part II replaces the table with a parameter vector; Part III asks what it means. Chapter numbers follow the second edition's table of contents. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 46
+A textbook's "results" are the worked examples you can reproduce. These are the ones RL School's widgets re-run; if your code does not print these numbers, your code is wrong.
+@@ 47
+Example
+@@ 48
+Where
+@@ 49
+Number to hit
+@@ 50
+10-armed testbed, greedy
+@@ 51
+≈1.0 reward/step vs 1.54 possible; best arm found in ≈⅓ of tasks
+@@ 52
+Gridworld, random policy, γ=0.9
+@@ 53
+Example 3.5
+@@ 54
+v(A) = 8.8, below its +10 reward; v(B) = 5.3, above its +5
+@@ 55
+4×4 gridworld, policy evaluation
+@@ 56
+Figure 4.1
+@@ 57
+greedy policy optimal from sweep k = 3
+@@ 58
+Five-state random walk
+@@ 59
+Example 6.2
+@@ 60
+true values 1/6, 2/6, 3/6, 4/6, 5/6
+@@ 61
+Short corridor, policy gradient
+@@ 62
+Example 13.1
+@@ 63
+best ε-greedy ≈ −44; stochastic policy ≈ −11.6
+@@ 64
+All five come from the book's own text and figures. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 65
+The lineage of this Paper Bible runs through the book. Watkins's Q-learning (§6.5, 1989) is the update inside DQN (Nature, February 2015), which the book covers as a case study in §16.5. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> REINFORCE (§13.3, Williams 1992) is the ancestor of A3C, TRPO and PPO. <a class="src" href="https://link.springer.com/article/10.1007/BF00992696">Williams 1992</a> The authors are still setting the agenda: Sutton co-wrote the Alberta Plan (2022) and, with Silver, "Welcome to the Era of Experience" (2025), which argues agents "will inhabit streams of experience, rather than short snippets of interaction". <a class="src" href="https://storage.googleapis.com/deepmind-media/Era-of-Experience%20/The%20Era%20of%20Experience%20Paper.pdf">Silver &amp; Sutton 2025</a>
+@@ 66
+The book stops in 2018. The phrases "trust region" and "proximal policy" do not occur in it, so the whole of <a href="#d8">Day 8</a> (TRPO, PPO, SAC) is taught from the papers. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Deep networks appear mainly in the Chapter 16 case studies; Part II is built around linear features and tile coding. One slip to know: §16.5 says DQN reached human level on "29 of the 46 games", where the Nature paper reports 49 games. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> For the post-2018 arc (DQN → PPO/SAC → MuZero → offline RL → RLHF and reasoning models) a 2026 book-length treatment exists. <a class="src" href="https://arxiv.org/abs/2608.00133">Bista 2026</a>
+@@ 67
+Budget one week. Day one: Chapter 1 and §3.1–3.6 (3 h). Day two: Chapter 2 with the testbed coded (3 h). Day three: Chapter 4 (2 h). Day four: §6.1–6.5 before Chapter 5; TD first, then MC as the λ=1 special case (3 h). Day five: §6.6–6.7, §11.3, §16.5 (3 h). Day six: Chapter 13 (3 h). Day seven: Chapter 17. Skip Chapters 14–15 and the starred sections on a first pass; do the exercises marked with a value table, because the tables are the answer key.
+@@ 68
+Q1. In the 4×4 gridworld of Chapter 4, after how many sweeps of policy evaluation is the greedy policy already optimal?
+@@ 69
+Only in the limit k → ∞
+@@ 70
+After 10 sweeps
+@@ 71
+After 3 sweeps
+@@ 72
+After 1 sweep
+@@ 73
+Figure 4.1: the values keep changing until k → ∞, but the arg-max arrows stop changing at k = 3. That gap is why value iteration can truncate evaluation.
+@@ 74
+Q2. "The Bellman equation is an algorithm." Why is this wrong, in the book's framing?
+@@ 75
+It is an algorithm, but only for continuing tasks
+@@ 76
+It is a consistency condition the value function satisfies; DP, TD and Q-learning are different ways to solve it
+@@ 77
+It only applies to bandits
+@@ 78
+It requires neural networks
+@@ 79
+Chapter 3 presents the Bellman equations as equalities that v_π and v* must satisfy; Chapters 4–6 are three families of methods for finding functions that satisfy them.
+@@ 80
+Q3. Which of these is NOT covered in the 2018 second edition?
+@@ 81
+Q-learning
+@@ 82
+REINFORCE with a baseline
+@@ 83
+The DQN Atari results
+@@ 84
+PPO's clipped surrogate objective
+@@ 85
+Q-learning is §6.5, REINFORCE with baseline is §13.4, DQN is §16.5. Neither "trust region" nor "proximal policy" appears in the text; PPO is a 2017 paper the book does not treat.
+@@ 86
+Sutton, R. S. &amp; Barto, A. G. (2018). <em>Reinforcement Learning: An Introduction</em>, 2nd ed. MIT Press. Book page: <a href="http://incompleteideas.net/book/the-book-2nd.html">incompleteideas.net/book/the-book-2nd.html</a>; full PDF: <a href="http://incompleteideas.net/book/RLbook2020.pdf">RLbook2020.pdf</a>.
+@@ 87
+Watkins, C. J. C. H. &amp; Dayan, P. (1992). Q-learning. <em>Machine Learning</em> 8(3–4):279–292. <a href="https://link.springer.com/article/10.1007/BF00992698">doi:10.1007/BF00992698</a> (§6.5 of the book).
+@@ 88
+Williams, R. J. (1992). Simple statistical gradient-following algorithms for connectionist reinforcement learning. <em>Machine Learning</em> 8(3–4):229–256. <a href="https://link.springer.com/article/10.1007/BF00992696">doi:10.1007/BF00992696</a> (§13.3).
+@@ 89
+Mnih, V. et al. (2015). Human-level control through deep reinforcement learning. <em>Nature</em> 518:529–533. <a href="https://www.nature.com/articles/nature14236">nature.com/articles/nature14236</a> (§16.5).
+@@ 90
+Silver, D. &amp; Sutton, R. S. (2025). Welcome to the Era of Experience. <a href="https://storage.googleapis.com/deepmind-media/Era-of-Experience%20/The%20Era%20of%20Experience%20Paper.pdf">PDF</a>.
+@@ 91
+Bista, S. (2026). Deep RL: From First Principles to Reasoning Models. <a href="https://arxiv.org/abs/2608.00133">arXiv:2608.00133</a>.

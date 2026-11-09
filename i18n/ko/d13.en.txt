@@ -1,0 +1,444 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 13</span>
+@@ 2
+RL in the wild: robots, chips, fusion, and recommenders
+@@ 3
+After today you can state the state, action and reward of eight real RL deployments, name each one's algorithm, headline number and caveat, explain sim-to-real transfer and domain randomisation, and describe how RL fine-tunes a vision-language-action robot policy.
+@@ 4
+About 90 min · Needs Day 12
+@@ 5
+Every RL system that works outside a game has three ingredients: a place to try millions of things cheaply (usually a simulator), a reward you can measure, and an evaluation honest enough to separate skill from luck. Where a deployment is weak, it is weak on one of these. The algorithms are ones you know: PPO almost everywhere, an actor-critic for the tokamak, REINFORCE at YouTube, AlphaZero's search for algorithm discovery.
+@@ 6
+1. What a real deployment needs
+@@ 7
+In <a href="#d12">Day 12</a> the environment was a sandbox you could call a billion times. The physical world is not: a robot hand breaks, a tokamak shot lasts under three seconds and needs fifteen minutes to cool down, and a recommender's environment is two billion people. <a class="src" href="https://www.nature.com/articles/s41586-021-04301-9">Degrave 2022</a> So ask three questions of every deployment story.
+@@ 8
+<strong>Where did the experience come from?</strong> Almost always a <strong>simulator</strong>; otherwise logged data, with its off-policy traps. <strong>What was the reward, and who measured it?</strong> "Energy saved", "view time" and "mortality" are a meter reading, a proxy, and an outcome nobody was allowed to randomise. <strong>How was skill separated from luck?</strong> Ten trials on one robot, a live A/B test over millions of users, and a retrospective match against clinicians' decisions carry very different weight.
+@@ 9
+Learning to ride a bike by falling off ten thousand times would hurt. So you practise on a video-game bike first, and you make the game bike a bit random, sometimes heavier, sometimes with a wobbly wheel, so that when you ride the real one, whatever it does, you have already met something like it.
+@@ 10
+2. Robots I: sim-to-real and domain randomisation
+@@ 11
+OpenAI's <strong>Dactyl</strong> (August 2018) taught a 24-joint Shadow Hand to rotate a block to a target orientation, in-hand, from simulation alone. <a class="src" href="https://arxiv.org/abs/1808.00177">OpenAI 2018</a> <strong>State</strong>: 15 fingertip coordinates, the block's position and the target orientation, all noisy. <strong>Action</strong>: 20 relative joint targets, each discretised into 11 bins. <strong>Reward</strong>: the decrease in angle to the target, +5 on reaching it, −20 for dropping the block. Algorithm: PPO (clip 0.2, γ = 0.998, GAE λ = 0.95) with a 512-unit LSTM, on 6,144 CPU cores and 8 GPUs, about 22 years of simulated hand time per hour. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1808.00177">OpenAI 2018</a>
+@@ 12
+The <strong>sim-to-real gap</strong>: friction, motor delays, camera colours and cable stretch are all slightly wrong in the simulator, and a policy tuned to its exact values fails at the first real contact. The fix is <strong>domain randomisation</strong>: train on thousands of simulators at once, each with different physics, appearance, noise and unmodelled forces. Since the policy cannot see which simulator it is in, it needs memory; the LSTM infers the dynamics from the first few steps. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1808.00177">OpenAI 2018</a>
+@@ 13
+The ablations are the lesson. On the real hand (10 trials) the full system managed a median of 13 consecutive rotations, max 50. Without randomisation: 0. Without physics randomisation: 2. Feed-forward instead of LSTM: 3. In simulation the same policy scored 50, so 50 versus 13 is the gap in one number. The price: about 100 years of simulated experience (50 hours) to converge, against 3 years (1.5 hours) without. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1808.00177">OpenAI 2018</a>
+@@ 14
+Try it: a one-dimensional version of the same problem. Set a randomisation range, train, deploy, and watch what the hidden real friction does.
+@@ 15
+Notice that with range 0 or 0.05 real success is 0%: the real friction (0.62) lands in a bucket training never visited, so the policy pushes with the simulator's default force and stops short. From ±0.15 upward it is 100%, but the episodes needed to reach 90% rise from 120 to about 250 as the range widens, because the same budget is spread over more buckets. Dactyl's 3 years versus 100, in miniature.
+@@ 16
+The 2019 sequel, <strong>Solving Rubik's Cube with a Robot Hand</strong>, learned the ranges. <strong>Automatic Domain Randomisation (ADR)</strong> starts from one environment and widens each range whenever performance at its edge passes a threshold: an open-ended curriculum. Same reward shape, a 1,024-unit LSTM, PPO on 64 V100s and 920 × 32 CPU cores, roughly 13,000 simulated years. <a class="src" href="https://arxiv.org/abs/1910.07113">OpenAI 2019</a> Results, 10 trials each: with the cube's built-in sensor supplying face angles, 60% on 15-rotation scrambles and 20% on the hardest 26-rotation ones; from vision alone, 20% and 0%. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1910.07113">OpenAI 2019</a>
+@@ 17
+<strong>"RL solved the Rubik's cube."</strong> The move sequence came from a classical solver (Kociemba). RL learned the finger motions, and finished the hardest scrambles 20% of the time, with a sensor inside the cube. <a class="src" href="https://arxiv.org/abs/1910.07113">OpenAI 2019</a>
+@@ 18
+<strong>"Sim-to-real is a compute problem."</strong> Randomisation and memory moved Dactyl's real median from 0 to 13; compute mostly paid for the randomisation. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1808.00177">OpenAI 2018</a>
+@@ 19
+<strong>"The simulator must match reality."</strong> It only needs to contain reality somewhere inside its range, which is why ADR works without anyone measuring the real friction.
+@@ 20
+3. Robots II: massively parallel simulation
+@@ 21
+Dactyl ran physics on CPUs and shipped observations to GPUs. <strong>Isaac Gym</strong> (NVIDIA, August 2021) put the physics on the GPU too: "tens of thousands of simultaneous environments on a single GPU", 2–3 orders of magnitude faster than CPU pipelines, with sweet spots of 8,192 environments for Ant, 4,096 for Humanoid and ANYmal, 16,384 for the Shadow Hand. A Humanoid reaches reward 5,000 in under 4 minutes on one A100; the Shadow Hand cube task reaches 20 consecutive successes in under 35 minutes, where Dactyl needed 50 hours on a cluster. <a class="src" href="https://arxiv.org/abs/2108.10470">Makoviychuk 2021</a>
+@@ 22
+Rudin et al. made a quadruped walk in "under four minutes" on flat ground and twenty minutes on rough terrain (1,500 updates) with 4,096 simulated ANYmals on one RTX A6000, then deployed on the real ANYmal C unchanged. <strong>State</strong>: base velocities, gravity direction, joint positions and velocities, the previous action, 108 terrain heights around the body. <strong>Action</strong>: joint targets for a PD controller. <strong>Reward</strong>: nine weighted terms, tracking the commanded velocity, penalising torques, joint accelerations, action changes, body wobble and collisions, rewarding feet-in-air time. Caveat: the lidar height map was imperfect on hardware, so the real robot was capped at 0.6 m/s. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2109.11978">Rudin 2021</a>
+@@ 23
+Since then: ANYmal parkour at 2 m/s (June 2023). <a class="src" href="https://arxiv.org/abs/2306.14874">Hoeller 2023</a> A 20-joint humanoid footballer walking 181% faster and turning 302% faster than a scripted controller, zero-shot (April 2023). <a class="src" href="https://arxiv.org/abs/2304.13653">Haarnoja 2023</a> Humanoid locomotion for Unitree G1 and Booster T1 in "just 15 minutes with a single RTX 4090 GPU", with fast off-policy SAC/TD3 recipes (December 2025). <a class="src" href="https://arxiv.org/abs/2512.01996">Seo 2025</a> A Unitree Go1 at 2.0 m/s zero-shot from Isaac (July 2026). <a class="src" href="https://arxiv.org/abs/2607.18135">Dowdy 2026</a> The algorithm family barely changed; the simulator moved from a cluster to a card, and days became a quarter of an hour.
+@@ 24
+Dactyl was a driving school with 6,000 instructors phoning results to one examiner. Isaac Gym is 4,096 driving simulators bolted to the examiner's desk. The student (PPO) did not get smarter; the school got faster.
+@@ 25
+4. Robots III: vision-language-action models, then RL on top
+@@ 26
+Walking has a reward you can write down. "Put the bowl in the sink" does not, and no simulator holds every bowl. So manipulation took <a href="#d12">Day 12</a>'s route: imitation first, RL after. A <strong>vision-language-action model (VLA)</strong> is a vision-language model fine-tuned to output robot actions from camera images and an instruction. <a class="src" href="https://arxiv.org/abs/2307.15818">Brohan 2023</a>
+@@ 27
+Model
+@@ 28
+Date
+@@ 29
+Backbone, size
+@@ 30
+Data
+@@ 31
+Headline
+@@ 32
+RT-2 (Google DeepMind)
+@@ 33
+Jul 2023
+@@ 34
+PaLI-X 5B/55B, PaLM-E 12B; actions as text tokens (8 integers, 256 bins)
+@@ 35
+robot data co-fine-tuned with web data
+@@ 36
+62% on unseen-generalisation tests vs 32% for RT-1, 6k trials; the 55B model runs at 1–3 Hz <a class="src" href="https://arxiv.org/html/2307.15818">Brohan 2023</a>
+@@ 37
+OpenVLA
+@@ 38
+Jun 2024
+@@ 39
+7B: Llama 2 + DINOv2 + SigLIP
+@@ 40
+970k real demonstrations
+@@ 41
++16.5 points over 55B RT-2-X on 29 tasks; LIBERO 76.5% <a class="src" href="https://arxiv.org/abs/2406.09246">Kim 2024</a>
+@@ 42
+π0 (Physical Intelligence)
+@@ 43
+Oct 2024
+@@ 44
+PaliGemma 3B + 300M action expert; flow matching, 50-step chunks at 50 Hz, 10 Euler steps
+@@ 45
+~10,000 h, 7 robot types, 68 tasks
+@@ 46
+folds laundry; beats OpenVLA and Octo "by a large margin" <a class="src" href="https://arxiv.org/abs/2410.24164">Black 2024</a>
+@@ 47
+Apr 2025
+@@ 48
+π0 + co-training on mobile, multi-environment and web data
+@@ 49
+~400 h in ~100 homes
+@@ 50
+cleans unseen kitchens and bedrooms; the 104-home model matches one trained on the test homes <a class="src" href="https://arxiv.org/abs/2504.16054">Intelligence 2025</a>
+@@ 51
+Two designs recur. RT-2 writes actions as text so one Transformer does everything, at 1–3 Hz. π0 keeps a stock VLM and attaches an <strong>action expert</strong> that denoises a chunk of 50 future actions by <strong>flow matching</strong>, a cousin of <a href="#p-diffusion-policy">Diffusion Policy</a>, for smooth 50 Hz control. <a class="src" href="https://arxiv.org/html/2410.24164">Black 2024</a>
+@@ 52
+Imitation has a ceiling: the policy is at best as good as its demonstrations and has never seen its own mistakes. RL fills that gap, and 2025–26 is when it was filled for VLAs. The obstacle: PPO needs π<sub>new</sub>(a|s)/π<sub>old</sub>(a|s), and a flow-matching head has no tractable likelihood for the chunk it produced. <strong>πRL</strong> (October 2025) gives two fixes. <em>Flow-Noise</em> treats the 10 denoising steps as a small MDP with a learned noise scale, so each step has a Gaussian density and the chain an exact log-likelihood. <em>Flow-SDE</em> turns the deterministic ODE into a stochastic one. Either way PPO then runs. <a class="src" href="https://arxiv.org/abs/2510.25889">Chen 2025</a> From few-shot imitation, π0.5 on LIBERO goes 77.1% → 98.3% (Flow-Noise), π0 57.6% → 97.6%, and on ManiSkill's 4,352 pick-and-place combinations π0.5 40.1% → 90.9%. Full-dataset imitation reached 94.2% and 96.9%, so RL from a handful of demos beat imitation from all of them. All in simulation. <a class="src" href="https://arxiv.org/html/2510.25889">Chen 2025</a>
+@@ 53
+Try it: step through one VLA episode, then switch on RL fine-tuning.
+@@ 54
+Notice which box the gradient arrow reaches: the action head only. The 3B backbone that knows what a bowl is stays frozen, so RL teaches dexterity without erasing language.
+@@ 55
+Two 2026 papers carried this to real robots. <strong>RL-Co</strong> (February 2026): imitation on mixed real and simulated demos, then RL in ManiSkill3 with a supervised loss on the real demos so the policy keeps real-world appearance. On four real tabletop tasks OpenVLA went 9.1% (real-only imitation) → 40.0% (sim-real co-training) → 64.0% (RL-Co); π0.5 26.7% → 45.9% → 66.1%, with 20–50 real demos per task and 20–64 trials per checkpoint. <a class="src" href="https://arxiv.org/abs/2602.12628">Shi 2026</a> <strong>Generative 3D worlds</strong> (CoRL 2026) attacks the missing simulator: GPT-4o designs scene graphs, a generative pipeline builds 100 interactive scenes from 516 assets (about 47 minutes each), and π0 is fine-tuned in them with a PPO variant plus randomisation. Real WidowX pick-and-place with distractors rose 21.7% → 75% over 240 trials, and success scaled with the number of scenes. One robot, one task family, one camera. <a class="src" href="https://arxiv.org/abs/2603.18532">Choi 2026</a>
+@@ 56
+5. Chips: AlphaChip
+@@ 57
+Placing a chip's large blocks (<strong>macros</strong>) is a game with one delayed reward. In Google's 2020–21 work, since named <strong>AlphaChip</strong>: <strong>state</strong> = a graph embedding of the netlist (what is placed and where), the next block, metadata, and a mask of cells where it fits; <strong>action</strong> = the grid cell (up to 128 × 128, typically 30 × 30) for that block; <strong>reward</strong> = zero until the end, then −(approximate wirelength + 0.01 × congestion), with density capped at 0.6 by the mask. <a class="src" href="https://arxiv.org/abs/2004.10746">Mirhoseini 2020</a> Algorithm: PPO with an <strong>edge-based graph convolutional</strong> encoder, first trained as a supervised predictor of placement quality on 10,000 placements of 5 netlists, then as a policy on 20 TPU blocks, then fine-tuned on new blocks. <a class="src" href="https://www.nature.com/articles/s41586-021-03544-w">Mirhoseini 2021</a>
+@@ 58
+Nature (June 2021): placements "in under six hours" matching or beating months of human effort; one example has 55.42 m of wire against the human 57.07 m. Against the academic placer RePlAce, RL wins wirelength on two of five blocks; RePlAce wins the other three but breaks the 1% congestion limit on some. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2004.10746">Mirhoseini 2020</a> DeepMind's September 2024 blog says it has been used in every TPU generation since 2020, including v5e, v5p and Trillium, that MediaTek extended it, and that a checkpoint and code are public. <a class="src" href="https://deepmind.google/discover/blog/how-alphachip-transformed-computer-chip-design/">DeepMind 2024</a>
+@@ 59
+The other side. Cheng, Kahng and colleagues (2023, updated March 2026) re-implemented the open-source version, report a well-tuned simulated-annealing baseline stronger than the paper's comparisons suggest, and call the scalability and pre-training claims "still-missing confirmations", since the TPU training blocks are private. <a class="src" href="https://arxiv.org/abs/2302.11014">Cheng 2023</a> Google's reply is a Nature Addendum (September 2024) that names the method and points to the blog, where per-generation use is a bar chart, not a stated count. <a class="src" href="https://www.nature.com/articles/s41586-024-08032-5">Mirhoseini 2024</a> Undisputed: the MDP is sound and the method ran in production. Also undisputed: no outside group has reproduced the headline comparison on the original data.
+@@ 60
+6. Fusion: steering a plasma 10,000 times a second
+@@ 61
+A tokamak's coils hold a 100-million-degree plasma away from the walls. DeepMind and the Swiss Plasma Center (Nature, February 2022) replaced the hand-designed controller on the TCV tokamak with a learned one. <strong>State</strong>: 34 flux loops, 38 magnetic probes, 19 coil currents, and the targets. <strong>Action</strong>: a voltage for each of the 19 coils every 100 µs, a 10 kHz loop with about 50 µs of compute per step. <strong>Reward</strong>: quality terms in [0, 1] for plasma current, shape and position, combined and normalised so a perfect second scores 100, with a large penalty if the plasma is lost. <a class="src" href="https://www.nature.com/articles/s41586-021-04301-9">Degrave 2022</a>
+@@ 62
+Algorithm: <strong>MPO</strong> (maximum a posteriori policy optimisation), an off-policy actor-critic in <a href="#p-sac">SAC</a>'s family, trained only in a plasma simulator with 5,000 actors for 1–3 days. The design is <strong>asymmetric</strong>: the critic is a 256-unit LSTM (about 718k parameters) that never leaves the lab; the deployed actor is an MLP of about 266k parameters that fits the 50 µs budget. It transferred zero-shot. Results: plasma-current error 0.62 kA RMS and shape error 0.75 cm; an elongation of 1.9 (unstable, growing at over 1.4 kHz) held steady; negative triangularity of −0.8; a snowflake whose X-points were moved from 34 cm apart to 6.6 cm; and two separate "droplet" plasmas sustained together for the full 200 ms window, a first. <a class="src" href="https://deepmind.google/discover/blog/accelerating-fusion-science-through-learned-plasma-control/">DeepMind 2022</a>
+@@ 63
+The authors' caveats: steady-state errors in elongation, a simulator without heat and current transport, no guarantee against disruptions (a machine-protection layer is recommended), and a conventional controller still handling breakdown and ramp-up. <a class="src" href="https://www.nature.com/articles/s41586-021-04301-9">Degrave 2022</a> What made it tractable: a good simulator, a dense physical reward, no humans in the loop.
+@@ 64
+7. Data-centre cooling: a lesson in reading claims
+@@ 65
+You will hear that "DeepMind's RL cut Google's data-centre cooling energy by 40%". Read the two primary posts. July 2016: "up to 40 percent" less energy for cooling and a 15 percent reduction in overall PUE overhead, at one data centre, using ensembles of neural networks trained on historical sensor data to predict future PUE and temperatures, with recommendations checked against constraints. <a class="src" href="https://deepmind.google/discover/blog/deepmind-ai-reduces-google-data-centre-cooling-bill-by-40/">DeepMind 2016</a> August 2018: the system takes direct control under operator supervision, every five minutes screening candidate actions against safety constraints with two-layer verification and human override, for "consistent energy savings of around 30 percent on average", up from about 12% at launch. <a class="src" href="https://deepmind.google/discover/blog/safety-first-ai-for-autonomous-data-centre-cooling-and-industrial-control/">DeepMind 2018</a>
+@@ 66
+Neither post calls this reinforcement learning; "predict the consequences of candidate actions, pick the best that passes the constraints" is prediction plus optimisation. Good engineering, with a safety architecture worth copying. But "RL saves 40%" fails all three of section 1's questions: cooling energy, not total; one site; not RL. Find the primary source; check the denominator, the scope and the method.
+@@ 67
+8. Recommenders: REINFORCE at YouTube scale
+@@ 68
+The one large consumer deployment with a published RL objective is YouTube's "Top-K Off-Policy Correction for a REINFORCE Recommender System" (WSDM, February 2019). <strong>State</strong>: a user vector from a recurrent network over the user's history of recommendations and reactions, plus context (page, device, time). <strong>Action</strong>: one video from millions; a page shows K = 16. <strong>Reward</strong>: engagement with that item (zero if not clicked), aggregated over a 4–10 hour horizon. <a class="src" href="https://arxiv.org/abs/1812.02353">Chen 2019</a>
+@@ 69
+Two corrections make <a href="#p-reinforce">REINFORCE</a> work on logged data. The data came from other recommenders, so each gradient term is weighted by π(a|s)/β(a|s), with β estimated by a separate softmax head and the weight capped at e³. And because K items are shown together, item a's gradient is scaled by λ<sub>K</sub>, which stops the policy piling probability onto an item that will be on the page anyway. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.02353">Chen 2019</a>
+@@ 70
+Live A/B: the top-K correction added 0.85% view time over the standard correction; a K = 1 model was 0.66% worse than K = 16; raising the cap to e⁵ cost 0.52%. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.02353">Chen 2019</a> The caveats are in the MDP: fractions of a percent (large at YouTube's scale, tiny per user), engagement as the reward, a horizon of hours. This is one-step REINFORCE with a learned state, not long-horizon planning.
+@@ 71
+9. Algorithm discovery: two RL systems and one that is not
+@@ 72
+System
+@@ 73
+Game
+@@ 74
+Result
+@@ 75
+AlphaTensor
+@@ 76
+Oct 2022
+@@ 77
+RL: AlphaZero-style search
+@@ 78
+state = tensor left to decompose; action = subtract a rank-one term; reward −1 per step
+@@ 79
+4×4 matrix multiply in 47 multiplications in Z<sub>2</sub> (Strassen squared: 49); 4×5 by 5×5 in 76 vs 80; 70+ tensor sizes improved <a class="src" href="https://www.nature.com/articles/s41586-022-05172-4">Fawzi 2022</a>
+@@ 80
+AlphaDev
+@@ 81
+Jun 2023
+@@ 82
+RL: AlphaZero-style MCTS, value heads for correctness and latency
+@@ 83
+state = program so far + CPU state on test inputs; action = append an x86 instruction; reward = correctness + latency
+@@ 84
+shorter sort3/sort5 than human sorting networks; libc++ std::sort "up to about 70% faster" on 5 elements, 1.7% on 250k+; 30% faster hashing in Abseil <a class="src" href="https://www.nature.com/articles/s41586-023-06004-9">Mankowitz 2023</a>
+@@ 85
+AlphaEvolve
+@@ 86
+May 2025
+@@ 87
+<strong>Evolutionary</strong>: Gemini mutates code, evaluators score, a population evolves. Not RL.
+@@ 88
+none; programs are scored, not stepped
+@@ 89
+4×4 complex matrices in 48 multiplications; 0.7% of Google's compute recovered; 23% faster Gemini kernel; improved 20% of 50+ open problems <a class="src" href="https://deepmind.google/discover/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/">DeepMind 2025</a>
+@@ 90
+The first two are <a href="#p-muzero">AlphaZero</a>'s children: a single-player game with a correct-by-construction state, a terminal check, and search over actions; training ran up to two days on TPUs with up to 512 actors. <a class="src" href="https://www.nature.com/articles/s41586-023-06004-9">Mankowitz 2023</a> Three cautions. AlphaTensor's 47 is in modular arithmetic, so "beat Strassen" holds only in Z<sub>2</sub>; the standard-arithmetic record (48, complex matrices) came from AlphaEvolve. AlphaDev's speed-ups are architecture-specific, and "a single, wrong move can invalidate the entire algorithm", which is why correctness sits in the reward. <a class="src" href="https://www.nature.com/articles/s41586-023-06004-9">Mankowitz 2023</a> And AlphaEvolve used no policy gradient and no value function; by 2026 the discovery frontier had moved to a method that is not RL. <a class="src" href="https://deepmind.google/discover/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/">DeepMind 2025</a>
+@@ 91
+10. Driving, healthcare, finance: three cautions
+@@ 92
+<strong>Driving.</strong> The verifiable result is Waymo-affiliated: "Imitation Is Not Enough" (December 2022) trains behaviour cloning plus RL on over 100k miles of urban driving logs and reports over 38% fewer failures on the hardest scenarios than imitation alone. <a class="src" href="https://arxiv.org/abs/2212.11419">Lu 2022</a> Any claim that a deployed Waymo or Tesla stack is "trained with RL" is, as of October 2026, unsupported by a primary source.
+@@ 93
+<strong>Healthcare.</strong> The AI Clinician (Nature Medicine, October 2018) learned a sepsis treatment policy from ICU records by offline RL; "mortality was lowest in patients for whom clinicians' actual doses matched the AI decisions". <a class="src" href="https://www.nature.com/articles/s41591-018-0213-5">Komorowski 2018</a> A 2019 critique examined the individual treatment profiles it recommended and the evaluation's assumptions. <a class="src" href="https://arxiv.org/abs/1902.03271">Jeter 2019</a> Section 1's third question again: observational data allows only off-policy evaluation, "clinician agreed with the policy" is confounded with easier patients, and the policy was never deployed. Lower mortality in the agreeing subgroup is not a mortality reduction.
+@@ 94
+<strong>Finance.</strong> A 2021 survey covers RL for execution, portfolio choice, hedging and market making with methods that "do not require any model assumptions". <a class="src" href="https://arxiv.org/abs/2112.04553">Hambly 2021</a> The caution is the environment: markets are non-stationary and adversarial, data per regime is small, and a backtest is one trajectory, not a simulator you can re-sample.
+@@ 95
+Going deeper (optional): why offline evaluation is the hard part
+@@ 96
+Every deployment without a simulator must estimate how a new policy would do from data gathered by an old one, using importance weights (YouTube's π/β) or a learned model. Both have high variance exactly where the new policy differs most from the old, which is where the gains are. The cap at e³, and the 0.52% lost by raising it to e⁵, is that trade-off measured live. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.02353">Chen 2019</a> Distrust an offline-RL result in proportion to how far its policy strays from the data.
+@@ 97
+11. Architecture
+@@ 98 attr
+Sim-to-real pipeline. A simulator with randomised parameters feeds thousands of parallel environments on a GPU; observations and rewards flow to PPO, which has an actor with memory and a critic that sees privileged simulator state; parameters flow to the policy; actions flow back to the environments. Only the policy network is deployed to the real robot. An ADR loop below reads the policy's success rate and widens the randomisation ranges in the simulator.
+@@ 99
+simulator
+@@ 100
+friction, mass, delay, visuals
+@@ 101
+sampled from ranges
+@@ 102
+4,096 envs on one GPU
+@@ 103
+each with its own physics
+@@ 104
+98k samples per update
+@@ 105
+obs, r
+@@ 106
+actions
+@@ 107
+actor: LSTM (infers dynamics)
+@@ 108
+critic: sees true sim state
+@@ 109
+policy π only
+@@ 110
+critic stays in the lab
+@@ 111
+no fine-tuning on hardware
+@@ 112
+zero-shot
+@@ 113
+real robot
+@@ 114
+10 trials, report median
+@@ 115
+sim 50 → real 13 (Dactyl)
+@@ 116
+success rate at range edge
+@@ 117
+ADR
+@@ 118
+success &gt; threshold → widen range
+@@ 119
+success &lt; threshold → narrow it
+@@ 120
+training runs for minutes (locomotion) to days (hand); deployment is a one-way copy of π
+@@ 121
+Dactyl 2018: 6,144 CPU cores + 8 GPUs, 50 h · Rudin 2021: one RTX A6000, 4 min · Seo 2025: one RTX 4090, 15 min
+@@ 122
+The sim-to-real pipeline, 2018–2026. Randomised simulators feed parallel environments; PPO's critic may see privileged state the real robot never will; only the actor is deployed. ADR (red loop) turns the randomisation ranges into a curriculum.
+@@ 123
+Left to right: the simulator samples physics and appearance from ranges; thousands of copies run on the GPU and send observations and rewards to PPO, whose actions flow back. The actor has memory to work out which simulator it is in; the critic may cheat with the true simulator state because it is never deployed. The trained actor is copied once to the real robot. The red loop is ADR: success at each range's edge decides whether it grows, so the curriculum writes itself.
+@@ 124 attr
+VLA plus RL fine-tuning loop. Camera images and a language instruction enter a frozen VLM backbone, whose embedding feeds a trained action head that denoises a 50-step action chunk; the actions drive a robot in thousands of simulated scenes or a real arm; the simulator returns a 0 or 1 success reward; a PPO update on the denoising MDP sends gradients to the action head only; real demonstrations provide a supervised anchor loss into the same head.
+@@ 125
+images + text
+@@ 126
+2–3 cameras, 1 instruction
+@@ 127
++ joint angles
+@@ 128
+VLM backbone
+@@ 129
+PaliGemma 3B · frozen
+@@ 130
+(or LoRA for OpenVLA)
+@@ 131
+embedding
+@@ 132
+action head
+@@ 133
+300M flow expert · trained
+@@ 134
+10 steps → 50-action chunk
+@@ 135
+robot
+@@ 136
+sim: ManiSkill3, 1000s of scenes
+@@ 137
+real: WidowX / Franka, for eval
+@@ 138
+next images (50 Hz control, chunk replanned)
+@@ 139
+reward r ∈ {0, 1}
+@@ 140
+task success at episode end
+@@ 141
+PPO on denoising MDP
+@@ 142
+Flow-Noise / Flow-SDE
+@@ 143
+/ ReinFlow
+@@ 144
+gradients → head only
+@@ 145
+real demos
+@@ 146
+20–50 per task · supervised loss
+@@ 147
+RL-Co anchor
+@@ 148
+before RL: SFT
+@@ 149
+10k h demos (π0)
+@@ 150
+frozen: VLM · trained: action head · the critic (not shown) is discarded after training
+@@ 151
+LIBERO 77.1 → 98.3 (sim, πRL) · real OpenVLA 9.1 → 40.0 → 64.0 (RL-Co) · real WidowX 21.7 → 75 (generated worlds)
+@@ 152
+A VLA with RL fine-tuning. Pixels and words pass through a frozen VLM; a flow-matching head produces chunks of actions; a 0/1 success reward from thousands of simulated scenes drives a PPO update that touches only the head, while real demonstrations hold it near real-world appearance.
+@@ 153
+Top row: observation, frozen backbone, trained action head, robot. Bottom row: the training signal. The simulator reports success or failure; PPO, made possible by treating denoising steps as actions with known densities, pushes gradients into the action head and nowhere else; a supervised loss on a few dozen real demos shares the update so what is learned in a generated kitchen holds in a real one. The SFT box on the left is where it starts, as in <a href="#d12">Day 12</a>.
+@@ 154
+Locomotion: 4,096 environments plus PPO on one RTX A6000 (6–9 GB VRAM), 98,304 samples per update, 1,500 updates in 20 minutes. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2109.11978">Rudin 2021</a> Dexterity: 6,144 CPU cores and 8 GPUs for 50 hours in 2018; under 35 minutes on one A100 with 16,384 GPU environments in 2021. <a class="src" href="https://arxiv.org/abs/2108.10470">Makoviychuk 2021</a> Tokamak: 5,000 simulator actors for 1–3 days; a 266k-parameter actor inside a 50 µs budget. <a class="src" href="https://www.nature.com/articles/s41586-021-04301-9">Degrave 2022</a> AlphaChip: under six hours per new block after pre-training on 20. <a class="src" href="https://www.nature.com/articles/s41586-021-03544-w">Mirhoseini 2021</a> VLA RL: a 3.3B policy across thousands of ManiSkill3 scenes, only the 300M head carrying optimizer state. <a class="src" href="https://arxiv.org/html/2510.25889">Chen 2025</a> The common shape: many cheap environments, one learner, a deployed network smaller than what was trained.
+@@ 155
+Q1. In Dactyl's real-robot ablations, which change dropped the median number of consecutive rotations from 13 to 0?
+@@ 156
+Replacing PPO with an off-policy method
+@@ 157
+Using the vision-based pose estimator instead of motion capture
+@@ 158
+Removing domain randomisation
+@@ 159
+Cutting compute from 6,144 cores to 384
+@@ 160
+Without randomisation the real-hand median was 0; without physics randomisation 2; without the LSTM 3. Vision-based pose gave a median of 11.5, nearly as good as state-based.
+@@ 161
+Q2. How should "a robot hand solved the Rubik's cube" be corrected?
+@@ 162
+The hand only rotated a block; the cube work was simulation-only
+@@ 163
+A classical solver chose the moves; RL learned the hand motions and finished 20% of the hardest scrambles, with a sensor in the cube
+@@ 164
+The cube was solved in 100% of trials, but only from vision
+@@ 165
+ADR replaced PPO as the learning algorithm
+@@ 166
+Kociemba's algorithm chose the moves; the policy executed them: 60% on 15-rotation and 20% on 26-rotation scrambles with the sensor, 0% full solves from vision. ADR is a curriculum over ranges, not a replacement for PPO.
+@@ 167
+Q3. Why is PPO hard to apply to a flow-matching action head, and how does πRL get around it?
+@@ 168
+The chunk's log-likelihood is intractable, so π_new/π_old cannot be computed; πRL treats each denoising step as a Gaussian action so the chain has an exact likelihood
+@@ 169
+Flow heads output discrete tokens, so clipping does not apply; πRL switches to REINFORCE
+@@ 170
+The VLM backbone must be unfrozen, which is too expensive; πRL distils it to 300M parameters
+@@ 171
+The reward is continuous, so GAE diverges; πRL binarises it
+@@ 172
+Flow-Noise models the 10 denoising steps as a small MDP with a learned noise scale; Flow-SDE converts the ODE to an SDE. Both recover a PPO ratio. The backbone stays frozen and the reward is already 0/1.
+@@ 173
+Q4. What is AlphaChip's reward, and when is it paid?
+@@ 174
+Minus wirelength at every macro placement step
+@@ 175
+Plus one for each macro placed without overlap
+@@ 176
+Measured timing from a full place-and-route run after each step
+@@ 177
+Zero at every step; at the end, −(approximate wirelength + 0.01 × congestion), with density enforced by a mask
+@@ 178
+The reward is terminal only, which is why the graph encoder is first pre-trained as a supervised predictor of placement quality: the sparse end-of-episode signal is otherwise slow to learn from.
+@@ 179
+Q5. A slide says "DeepMind's RL cut Google's data-centre energy by 40%". Which correction do the primary sources support?
+@@ 180
+The method was MPO, the same as the tokamak controller
+@@ 181
+The figure was 15% of cooling energy and 40% of total PUE
+@@ 182
+Neither post calls the method RL; the 40% is cooling energy at one site (15% of PUE overhead), and the 2018 autonomous system reports about 30%
+@@ 183
+The system never ran in a live data centre
+@@ 184
+The 2016 and 2018 posts describe neural-network prediction of PUE and temperatures plus constrained optimisation of candidate actions under human supervision: "up to 40%" of cooling energy, 15% of PUE overhead, later about 30% average.
+@@ 185
+Q6. With K = 16, YouTube's top-K correction scales an item's gradient by K(1 − π)^(K−1). An item the policy already shows with π = 0.5 gets roughly what multiplier?
+@@ 186
+About 7.4, the same as a 5% item
+@@ 187
+About 0.0005: almost no further push
+@@ 188
+Exactly 16
+@@ 189
+Exactly 1, because K cancels
+@@ 190
+16 × 0.5^15 = 16/32768 ≈ 0.0005, versus 16 × 0.95^15 ≈ 7.4 for π = 0.05. The correction stops the policy concentrating probability on items that will be on the page anyway.
+@@ 191
+Every working deployment has a cheap place to practise, a measurable reward, and an evaluation that separates skill from luck; check all three before believing a claim.
+@@ 192
+Sim-to-real works by domain randomisation plus memory, not by matching reality: Dactyl's real median went from 0 to 13 rotations with randomisation, at the price of 100 simulated years instead of 3. ADR learns the ranges.
+@@ 193
+GPU simulation changed the economics, not the algorithm: 4,096 ANYmals walk in under 4 minutes on one card (2021); a humanoid in 15 minutes on a 4090 (2025).
+@@ 194
+VLAs (RT-2, OpenVLA, π0, π0.5) are imitation-trained; RL on the action head alone lifts π0.5 on LIBERO from 77.1% to 98.3% in simulation and roughly doubles real-robot success in 2026 co-training work.
+@@ 195
+Read the MDP and the caveat together: AlphaChip's terminal reward and disputed baselines; the tokamak's 10 kHz MLP; YouTube's +0.85% on an engagement proxy; AlphaTensor's 47 in Z<sub>2</sub>; the data-centre "40%" that was not RL; the AI Clinician never deployed.
+@@ 196
+OpenAI, Learning Dexterous In-Hand Manipulation, 2018. <a href="https://arxiv.org/abs/1808.00177">arXiv:1808.00177</a> · <a href="https://ar5iv.labs.arxiv.org/html/1808.00177">full text</a>
+@@ 197
+OpenAI, Solving Rubik's Cube with a Robot Hand, 2019. <a href="https://arxiv.org/abs/1910.07113">arXiv:1910.07113</a> · <a href="https://ar5iv.labs.arxiv.org/html/1910.07113">full text</a>
+@@ 198
+Makoviychuk et al. (NVIDIA), Isaac Gym, 2021. <a href="https://arxiv.org/abs/2108.10470">arXiv:2108.10470</a>
+@@ 199
+Rudin et al., Learning to Walk in Minutes Using Massively Parallel Deep RL, 2021. <a href="https://arxiv.org/abs/2109.11978">arXiv:2109.11978</a> · <a href="https://ar5iv.labs.arxiv.org/html/2109.11978">full text</a>
+@@ 200
+Hoeller et al., ANYmal Parkour, 2023. <a href="https://arxiv.org/abs/2306.14874">arXiv:2306.14874</a>
+@@ 201
+Haarnoja et al., Learning Agile Soccer Skills for a Bipedal Robot with Deep RL, 2023. <a href="https://arxiv.org/abs/2304.13653">arXiv:2304.13653</a>
+@@ 202
+Seo et al., Learning Sim-to-Real Humanoid Locomotion in 15 Minutes, 2025. <a href="https://arxiv.org/abs/2512.01996">arXiv:2512.01996</a>
+@@ 203
+Dowdy and Chagas Vaz, Isaac Sim-to-Real: RL Locomotion for Quadrupeds, 2026. <a href="https://arxiv.org/abs/2607.18135">arXiv:2607.18135</a>
+@@ 204
+Brohan et al. (Google DeepMind), RT-2, 2023. <a href="https://arxiv.org/abs/2307.15818">arXiv:2307.15818</a> · <a href="https://arxiv.org/html/2307.15818">full text</a>
+@@ 205
+Kim et al., OpenVLA, 2024. <a href="https://arxiv.org/abs/2406.09246">arXiv:2406.09246</a>
+@@ 206
+Black et al. (Physical Intelligence), π0: A Vision-Language-Action Flow Model, 2024. <a href="https://arxiv.org/abs/2410.24164">arXiv:2410.24164</a> · <a href="https://arxiv.org/html/2410.24164">full text</a>
+@@ 207
+Physical Intelligence, π0.5: a VLA with Open-World Generalization, 2025. <a href="https://arxiv.org/abs/2504.16054">arXiv:2504.16054</a>
+@@ 208
+Chen et al., π_RL: Online RL Fine-tuning for Flow-based VLA Models, 2025. <a href="https://arxiv.org/abs/2510.25889">arXiv:2510.25889</a> · <a href="https://arxiv.org/html/2510.25889">full text</a>
+@@ 209
+Shi et al., Beyond Imitation: RL-Based Sim-Real Co-Training for VLA Models, 2026. <a href="https://arxiv.org/abs/2602.12628">arXiv:2602.12628</a>
+@@ 210
+Choi et al., Scaling Sim-to-Real VLA RL with Generative 3D Worlds, 2026. <a href="https://arxiv.org/abs/2603.18532">arXiv:2603.18532</a>
+@@ 211
+Mirhoseini, Goldie et al., Chip Placement with Deep RL, 2020. <a href="https://arxiv.org/abs/2004.10746">arXiv:2004.10746</a> · <a href="https://ar5iv.labs.arxiv.org/html/2004.10746">full text</a>
+@@ 212
+Mirhoseini, Goldie et al., A graph placement methodology for fast chip design, Nature 594, 2021. <a href="https://www.nature.com/articles/s41586-021-03544-w">nature.com</a> · <a href="https://www.nature.com/articles/s41586-024-08032-5">Addendum 2024</a> · <a href="https://deepmind.google/discover/blog/how-alphachip-transformed-computer-chip-design/">DeepMind blog 2024</a>
+@@ 213
+Cheng, Kahng et al., An Updated Assessment of Reinforcement Learning for Macro Placement, 2023 (v3 2026). <a href="https://arxiv.org/abs/2302.11014">arXiv:2302.11014</a>
+@@ 214
+Degrave et al., Magnetic control of tokamak plasmas through deep RL, Nature 602, 2022. <a href="https://www.nature.com/articles/s41586-021-04301-9">nature.com</a> · <a href="https://deepmind.google/discover/blog/accelerating-fusion-science-through-learned-plasma-control/">DeepMind blog</a>
+@@ 215
+DeepMind, data-centre cooling posts. <a href="https://deepmind.google/discover/blog/deepmind-ai-reduces-google-data-centre-cooling-bill-by-40/">2016</a> · <a href="https://deepmind.google/discover/blog/safety-first-ai-for-autonomous-data-centre-cooling-and-industrial-control/">2018</a>
+@@ 216
+Chen et al. (Google), Top-K Off-Policy Correction for a REINFORCE Recommender System, WSDM 2019. <a href="https://arxiv.org/abs/1812.02353">arXiv:1812.02353</a> · <a href="https://ar5iv.labs.arxiv.org/html/1812.02353">full text</a>
+@@ 217
+Fawzi et al., AlphaTensor, Nature 610, 2022. <a href="https://www.nature.com/articles/s41586-022-05172-4">nature.com</a> · <a href="https://deepmind.google/discover/blog/discovering-novel-algorithms-with-alphatensor/">blog</a>
+@@ 218
+Mankowitz et al., AlphaDev, Nature 618, 2023. <a href="https://www.nature.com/articles/s41586-023-06004-9">nature.com</a> · <a href="https://deepmind.google/discover/blog/alphadev-discovers-faster-sorting-algorithms/">blog</a>
+@@ 219
+DeepMind, AlphaEvolve, 2025. <a href="https://deepmind.google/discover/blog/alphaevolve-a-gemini-powered-coding-agent-for-designing-advanced-algorithms/">blog</a>
+@@ 220
+Lu et al. (Waymo), Imitation Is Not Enough, 2022. <a href="https://arxiv.org/abs/2212.11419">arXiv:2212.11419</a>
+@@ 221
+Komorowski et al., The Artificial Intelligence Clinician, Nature Medicine 24, 2018. <a href="https://www.nature.com/articles/s41591-018-0213-5">nature.com</a> · critique: Jeter et al., 2019. <a href="https://arxiv.org/abs/1902.03271">arXiv:1902.03271</a>
+@@ 222
+Hambly, Xu, Yang, Recent Advances in RL in Finance, 2021. <a href="https://arxiv.org/abs/2112.04553">arXiv:2112.04553</a>

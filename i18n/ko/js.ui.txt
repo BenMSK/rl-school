@@ -1,0 +1,38 @@
+@@ *
+const LOCALE="en-US";
+==
+const LOCALE="ko-KR";
+@@ *
+const T={ start:"Start", day:"Day", week:"Week", overview:"Overview", back:"← All entries", dark:"Dark", light:"Light",
+  markDone:n=>"Mark Day "+n+" done", doneOn:(n,d)=>"Day "+n+" done ✓ "+d+" · tap to undo", progress:(n,N)=>n+" of "+N+" days done",
+  begin:"Start Day 1", cont:n=>"Continue with Day "+n, allDone:N=>"All done · review Day "+N, next:(n,t)=>"Next: Day "+n+" — "+t,
+  cols:["Day","Lesson","You will be able to…"], all:n=>"All ("+n+")", noViz:n=>"(widget "+n+" not available)", vizFail:m=>"This widget failed to load: "+m };
+==
+const T={ start:"시작", day:"Day", week:"Week", overview:"개요", back:"← 전체 목록", dark:"다크", light:"라이트",
+  markDone:n=>"Day "+n+" 완료로 표시", doneOn:(n,d)=>"Day "+n+" 완료 ✓ "+d+" · 누르면 취소", progress:(n,N)=>N+"일 중 "+n+"일 완료",
+  begin:"Day 1 시작", cont:n=>"Day "+n+" 이어서 하기", allDone:N=>"모두 완료 · Day "+N+" 복습", next:(n,t)=>"다음: Day "+n+" — "+t,
+  cols:["Day","레슨","배우고 나면 할 수 있는 것"], all:n=>"전체 ("+n+")", noViz:n=>"(위젯 "+n+"을(를) 쓸 수 없습니다)", vizFail:m=>"이 위젯을 불러오지 못했습니다: "+m };
+@@ *
+"← Back"
+==
+"← 이전"
+@@ *
+"Next →"
+==
+"다음 →"
+@@ *
+"Reset"
+==
+"초기화"
+@@ *
+.length+" interactive"
+==
+.length+"개 인터랙티브"
+@@ *
+.length+" reviews"
+==
+.length+"편 리뷰"
+@@ *
+T.week+" "+((i-1)/WEEK+1)
+==
+((i-1)/WEEK+1)+"주차"

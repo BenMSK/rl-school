@@ -1,0 +1,152 @@
+@@ explore
+"Thirty bars, one per corridor cell, showing how many times each cell was visited; the reward cell is the last one on the right."
+==
+"복도의 칸마다 하나씩, 막대 30개가 각 칸의 방문 횟수를 보여 줍니다. reward가 있는 칸은 오른쪽 맨 끝입니다."
+@@ explore
+"start (cell 0)"
+==
+"시작 (0번 칸)"
+@@ explore
+"reward +1 (cell 29)"
+==
+"reward +1 (29번 칸)"
+@@ explore
+"ε-greedy, ε = 0.1, no bonus"
+==
+"ε-greedy, ε = 0.1, bonus 없음"
+@@ explore
+"ε-greedy plus bonus β/√(N(s)+0.01), β = 1"
+==
+"ε-greedy에 bonus β/√(N(s)+0.01) 추가, β = 1"
+@@ explore
+"furthest cell"
+==
+"가장 멀리 간 칸"
+@@ explore
+"of 29"
+==
+"끝은 29번 칸"
+@@ explore
+"reward found?"
+==
+"reward를 찾았나?"
+@@ explore
+"yes, at step "+found
+==
+"예, "+found+"번째 step"
+@@ explore
+"not yet"
+==
+"아직"
+@@ explore
+hits+" time"+(hits>1?"s":"")+" in total"
+==
+"모두 "+hits+"번"
+@@ explore
+"every Q-value is still 0, so greedy has nothing to prefer"
+==
+"모든 Q-value가 아직 0이라 greedy가 고를 기준이 없습니다"
+@@ explore
+"Q-values are growing toward the unvisited frontier"
+==
+"Q-value가 아직 가 보지 않은 frontier 쪽으로 커지고 있습니다"
+@@ explore
+"A 30-cell corridor with one reward at the end"
+==
+"끝에 reward 하나가 있는 30칸 복도"
+@@ explore
+"Q-learning (α = 0.5, γ = 0.9) walks a corridor. Extrinsic reward is 0 everywhere except +1 at cell 29, then the agent is sent back to cell 0. Both modes use the same ε-greedy policy (ε = 0.1, untried actions first). The only difference: count mode adds β/√(N(s)+0.01) to the reward for entering cell s, where N(s) is how often s has been visited before."
+==
+"Q-learning(α = 0.5, γ = 0.9)이 복도를 걷습니다. Extrinsic reward는 29번 칸의 +1을 빼면 어디서나 0이고, 29번 칸에 닿으면 agent는 0번 칸으로 돌아갑니다. 두 모드 모두 같은 ε-greedy policy를 씁니다(ε = 0.1, 아직 해 보지 않은 action 먼저). 차이는 하나뿐입니다. count 모드는 칸 s에 들어갈 때 reward에 β/√(N(s)+0.01)을 더합니다. N(s)는 그전까지 s를 방문한 횟수입니다."
+@@ explore
+"ε-greedy only"
+==
+"ε-greedy만"
+@@ explore
+"Run 200 steps"
+==
+"200 step 실행"
+@@ selfplay
+"MCTS wins"
+==
+"MCTS 승"
+@@ selfplay
+"draws"
+==
+"무승부"
+@@ selfplay
+"MCTS loses"
+==
+"MCTS 패"
+@@ selfplay
+"win rate"
+==
+"승률"
+@@ selfplay
+sims+" simulations per move"
+==
+"한 수당 simulation "+sims+"회"
+@@ selfplay
+"never lost?"
+==
+"한 번도 안 졌나?"
+@@ selfplay
+"no: "+res.loss+" losses"
+==
+"아니요: "+res.loss+"패"
+@@ selfplay
+"yes"
+==
+"예"
+@@ selfplay
+"vs "+(opp==="random"?"random":"1-ply")+" player, MCTS moves first in half the games"
+==
+(opp==="random"?"무작위":"1-ply")+" 상대, 게임의 절반은 MCTS가 선공"
+@@ selfplay
+"Win rate of the MCTS player against the chosen opponent, 300 games per point, as simulations per move rise from 10 to 500 on a log axis."
+==
+"선택한 상대에 대한 MCTS 플레이어의 승률. 점마다 300 게임이고, 한 수당 simulation 수가 log 축에서 10부터 500까지 늘어납니다."
+@@ selfplay
+"simulations per move"
+==
+"한 수당 simulation 수"
+@@ selfplay
+"MCTS win %"
+==
+"MCTS 승률 %"
+@@ selfplay
+x+" sims"
+==
+"simulation "+x+"회"
+@@ selfplay
+"Same seed every time, so the numbers are reproducible. A win rate below 100% at low simulation counts is not bad luck: with 10 rollouts the visit counts are nearly random."
+==
+"매번 같은 seed를 쓰므로 숫자가 그대로 재현됩니다. simulation 수가 적을 때 승률이 100%에 못 미치는 것은 운이 나빠서가 아닙니다. rollout 10번으로는 visit count가 거의 무작위이기 때문입니다."
+@@ selfplay
+"Self-play's engine: MCTS on tic-tac-toe"
+==
+"Self-play의 엔진: 틱택토에서 돌리는 MCTS"
+@@ selfplay
+"The MCTS player (X) runs n random-rollout simulations from the current board, picks the most-visited move, and plays 100 games against a weak opponent. More simulations, better play, nothing else changes."
+==
+"MCTS 플레이어(X)는 현재 판에서 random rollout simulation을 n번 돌리고 가장 많이 방문한 수를 둡니다. 이런 식으로 약한 상대와 100 게임을 둡니다. simulation이 많을수록 더 잘 두고, 그 밖에는 아무것도 바뀌지 않습니다."
+@@ selfplay
+"Simulations per move"
+==
+"한 수당 simulation 수"
+@@ selfplay
+"Opponent"
+==
+"상대"
+@@ selfplay
+"random player"
+==
+"무작위 상대"
+@@ selfplay
+"1-ply player (takes a win, else random)"
+==
+"1-ply 상대 (이기는 수가 있으면 두고, 없으면 무작위)"
+@@ selfplay
+"Play 100 games"
+==
+"100 게임 두기"

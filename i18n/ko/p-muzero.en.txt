@@ -1,0 +1,92 @@
+@@ 1
+<span class="eyebrow">2020 · Schrittwieser et al. · Nature 588 (arXiv 1911.08265, Nov 2019)</span>
+@@ 2
+MuZero: Planning with a learned model
+@@ 3
+AlphaZero's search run inside a learned latent model, with no rules given: median 2041.1% human-normalised on 57 Atari games (R2D2: 1920.6%) and AlphaZero-level Elo in Go, chess and shogi.
+@@ 4
+Taught in <a href="#d9">Day 9</a> · Read time of the original: ~50 min
+@@ 5
+MuZero learns three networks, one that encodes observations into a hidden state, one that steps the hidden state forward given an action and predicts the reward, and one that reads a policy and value off any hidden state, and runs Monte Carlo tree search entirely in that hidden space, training the model only to be right about rewards, values and policies, never about pixels.
+@@ 6
+AlphaGo was given the rulebook so it could imagine future moves. MuZero is not. It builds its own imaginary version of the game in its head, one that looks nothing like the real screen but is good at answering the questions that matter: "what score will I get?" and "which moves look good?" Then it plans inside that imaginary game.
+@@ 7
+AlphaZero planned with a perfect simulator: the rules of Go, chess and shogi. <a class="src" href="https://arxiv.org/abs/1712.01815">Silver 2017</a> Most problems have no such simulator, and learned pixel-space models had not matched model-free methods on Atari: a model that gets every pixel right wastes capacity on what does not affect the score and still drifts over long rollouts (the compounding error of <a href="#d9">Day 9</a>). What must a model predict for planning to work?
+@@ 8
+Only what the search uses. The hidden state is under no obligation to reconstruct the observation or match the true environment state; it may represent whatever helps predict rewards, values and policies. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a> Training the model end to end on those three targets, through the same unrolled search that will later use it, makes the model and the planner agree by construction.
+@@ 9
+<strong>Three functions.</strong> Representation h: past observations o<sub>1..t</sub> → root hidden state s<sup>0</sup>. Dynamics g: (s<sup>k</sup>, a) → (reward r<sup>k</sup>, next hidden state s<sup>k+1</sup>). Prediction f: s<sup>k</sup> → (policy p<sup>k</sup>, value v<sup>k</sup>). <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a>
+@@ 10
+<strong>Plan.</strong> From s<sup>0</sup>, run MCTS as in AlphaZero but every edge is one call to g and every new node one call to f. Selection uses a pUCT rule with constants c<sub>1</sub> = 1.25 and c<sub>2</sub> = 19652; because Atari values are unbounded, Q is rescaled to [0, 1] with the minimum and maximum seen in the tree so far. 800 simulations per move in board games, 50 in Atari. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a>
+@@ 11
+<strong>Act.</strong> Sample the real action from the root visit-count distribution π<sub>t</sub>; store the observation, action, reward and search statistics.
+@@ 12
+<strong>Train.</strong> Pick a stored position, unroll the model K = 5 steps along the actions that were actually taken, and match each step's outputs to what happened. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a>
+@@ 13
+Here z is the game outcome (board games) or an n-step return (Atari), u the observed reward, π the search policy.
+@@ 14
+<strong>Networks.</strong> h and g each use 16 residual blocks with 256 planes, against 20 blocks in AlphaZero; Atari training uses batches of 1024 and a replay of the latest 125 thousand sequences of 200 steps. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a>
+@@ 15 attr
+MuZero: observations enter the representation network h, producing hidden state s0; the dynamics network g steps hidden states forward with actions and emits rewards; the prediction network f outputs policy and value at each hidden state; MCTS runs over these hidden states
+@@ 16
+represent
+@@ 17
+dynamics
+@@ 18
+MCTS runs here, in hidden-state space
+@@ 19
+one g call per edge, one f call per node; no rules, no pixels
+@@ 20
+Observations are encoded once (h); the search then steps only through learned hidden states (g) and reads policy and value from each (f). Training unrolls the same chain K = 5 steps along the actions really taken.
+@@ 21 attr
+Three panels: A, planning with the learned model (h, g, f unrolled in a tree); B, acting in the environment using the search policy; C, training the model by unrolling it K steps along stored actions and matching policy, value and reward targets
+@@ 22
+<a class="src" href="https://arxiv.org/abs/1911.08265">Figure 1, Schrittwieser 2020</a> Planning (A), acting (B) and training (C) with a learned model. Panel C is the loss in step 4 drawn out.
+@@ 23 attr
+Four panels of performance against millions of training steps: Elo in chess, shogi and Go with AlphaZero's final Elo as a horizontal line that MuZero reaches, and Atari mean and median human-normalised score climbing past R2D2
+@@ 24
+<a class="src" href="https://arxiv.org/abs/1911.08265">Figure 2, Schrittwieser 2020</a> Evaluation through training. Board games: Elo, both players at 800 simulations per move, AlphaZero as the orange line. Atari: mean (solid) and median (dashed) human-normalised score over 57 games.
+@@ 25
+On Atari at 20.0 billion frames, MuZero reached a median human-normalised score of 2041.1% and a mean of 4999.2%, against 1920.6% and 4024.9% for R2D2 at 37.5 billion frames (Table 1). <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a> In the small-data setting, MuZero Reanalyze, which re-runs search on stored trajectories to refresh their targets, reached a median of 731.1% at 200 million frames, against 231.1% for Rainbow and 431% for LASER. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a> In chess and shogi it matched AlphaZero's Elo and in Go slightly exceeded it while using less computation per node (16 residual blocks against 20). <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a> Compute: 16 TPUs for training and 1000 for self-play per board game; 8 and 32 per Atari game. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a> Go strength rose by more than 1000 Elo as thinking time went from 0.1 to 50 seconds per move. <a class="src" href="https://deepmind.google/discover/blog/muzero-mastering-go-chess-shogi-and-atari-without-rules/">DeepMind 2020</a>
+@@ 26
+MuZero settled what a world model is for: in late 2019 it showed that a model trained only on value-relevant targets can plan as well as the true rules. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> The decoder-free idea returns in TD-MPC2 (2023); the Dreamer line kept a decoder and found it useful (<a href="#p-dreamer">the Dreamer review</a>). <a class="src" href="https://arxiv.org/abs/2310.16828">Hansen 2023</a>
+@@ 27
+The dynamics function is deterministic, one (s, a) gives one next state, which fits board games better than stochastic worlds. The compute is enormous (20 billion frames per Atari game on 40 TPUs), and the model is trained only along actions actually taken, so its predictions on the untried branches the search visits are extrapolations. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a> Reanalyze cuts the data need by about 100× but not the compute. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a>
+@@ 28
+Figure 1 first, slowly; it is the whole method. Then Section 3 for the loss, Appendix B for the search, Table 1 and Figure 2 for results. Skip Appendices D–G unless implementing; read Appendix H (Reanalyze) if you care about sample efficiency. About 50 minutes.
+@@ 29
+Q1. What is MuZero's hidden state required to predict?
+@@ 30
+The next frame, pixel by pixel
+@@ 31
+Only reward, value and policy
+@@ 32
+The true environment state (e.g. the full board)
+@@ 33
+The opponent's next move
+@@ 34
+The paper imposes no reconstruction or state-matching constraint; the hidden state may be anything that predicts rewards, values and policies.
+@@ 35
+Q2. MuZero's Atari median human-normalised score at 20 billion frames was about:
+@@ 36
+2041.1% median (4999.2% mean). 731.1% is Reanalyze at 200M frames; 231.1% is Rainbow.
+@@ 37
+Q3. "MuZero and AlphaZero are the same algorithm." What is the real difference?
+@@ 38
+AlphaZero is given the rules as a simulator; MuZero learns a latent model
+@@ 39
+MuZero uses no tree search
+@@ 40
+AlphaZero learns from human games; MuZero does not
+@@ 41
+MuZero only works on Atari
+@@ 42
+Both search with MCTS and train from self-play; MuZero replaces the rule-based simulator with learned h, g, f, and so also runs on Atari.
+@@ 43
+Schrittwieser et al. Mastering Atari, Go, chess and shogi by planning with a learned model. Nature 588, 23 Dec 2020. <a href="https://arxiv.org/abs/1911.08265">arXiv 1911.08265</a> · <a href="https://www.nature.com/articles/s41586-020-03051-4">nature.com</a>
+@@ 44
+DeepMind. MuZero: Mastering Go, chess, shogi and Atari without rules. Blog, 23 Dec 2020. <a href="https://deepmind.google/discover/blog/muzero-mastering-go-chess-shogi-and-atari-without-rules/">deepmind.google</a>
+@@ 45
+Silver et al. Mastering Chess and Shogi by Self-Play with a General RL Algorithm (AlphaZero). 2017. <a href="https://arxiv.org/abs/1712.01815">arXiv 1712.01815</a>
+@@ 46
+Hansen, Su, Wang. TD-MPC2: Scalable, Robust World Models for Continuous Control. 2023. <a href="https://arxiv.org/abs/2310.16828">arXiv 2310.16828</a>

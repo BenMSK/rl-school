@@ -1,0 +1,400 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 1</span>
+@@ 2
+강화학습이란 무엇인가?
+@@ 3
+오늘 레슨을 마치면 agent–environment loop를 그릴 수 있고, γ가 얼마든 discounted return을 손으로 계산할 수 있으며, 강화학습이 왜 지도학습이 아닌지 정확히 설명할 수 있습니다.
+@@ 4
+약 90분 · 선수 지식 없음
+@@ 5
+강화학습은 자신이 한 일의 결과로부터 무엇을 해야 할지 배우는 학습입니다. agent는 어떤 action이 옳았는지 한 번도 듣지 못합니다. action을 할 때마다 숫자 하나, 즉 reward만 받습니다. 앞으로 받을 reward의 합이 최대한 커지도록 행동하는 것이 agent의 일입니다. 정답을 건네주는 사람이 없으니 이것저것 직접 시도해서 찾아야 합니다. 또 reward는 그것을 벌어들인 action보다 한참 뒤에 올 수 있으므로, 과거의 action 가운데 어느 것에 공을 돌려야 하는지도 알아내야 합니다.
+@@ 6
+1. 결과로부터 배우기
+@@ 7
+1890년대에 심리학자 Edward Thorndike는 고양이를 "퍼즐 상자(puzzle box)"에 넣었습니다. 고양이가 고리를 당기거나 레버를 누르면 열리는 상자였습니다. 고양이는 아무렇게나 긁어 대다가 우연히 걸쇠를 건드렸습니다. 상자에 다시 넣을 때마다 조금씩 더 빨리 빠져나왔고, 수십 번 시도한 뒤에는 곧장 걸쇠로 향했습니다. Thorndike의 <strong>Law of Effect</strong>는 이를 이렇게 요약합니다. 같은 상황에서 나온 여러 반응 가운데 "동물에게 만족을 동반하거나 만족이 바로 뒤따르는" 반응은 그 상황과 더 단단히 연결되고, 불편이 뒤따르는 반응은 약해집니다. <a class="src" href="https://psychclassics.yorku.ca/Thorndike/Animal/chap5.htm">Thorndike 1911</a> 이 코스가 따르는 교과서의 저자 Sutton과 Barto는 이 문장을 "학습 원리로서 trial-and-error learning의 본질"이라고 부릅니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 8
+고양이 이야기에서 두 가지는 이 코스의 알고리즘에 그대로 이어집니다. 고양이는 해법을 본 적이 없고, 스스로 <em>탐색</em>해서 찾았습니다. 그리고 만족은 action 하나하나가 아니라 action이 여러 번 이어진 뒤에야 왔으므로, 고양이는 reward를 그것을 불러온 앞선 동작과 연결해야 했습니다. Sutton과 Barto는 바로 이 둘을 강화학습을 "구별 짓는 가장 중요한 특징"으로 꼽습니다. <strong>trial-and-error search</strong>(시행착오 탐색)와 <strong>delayed reward</strong>(지연된 보상)입니다. 두 사람이 한 문장으로 쓴 정의는 외워 둘 만합니다. RL은 "수치로 된 reward signal을 최대화하도록 무엇을 할지, 곧 상황을 action에 어떻게 대응시킬지를 배우는 것"입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 9
+강아지에게 '앉아'를 가르친다고 생각해 봐요. 강아지에게 교과서를 건네주지는 않죠. 강아지는 이것저것 해 보다가, 맞는 행동을 하면 간식을 받아요. 간식이 조금 늦게 올 때도 있어요. 이미 다른 행동을 두세 가지 더 한 뒤에요. 그러면 강아지는 어떤 행동 덕분에 간식을 받았는지 알아내야 해요. 강화학습은 컴퓨터 프로그램이 바로 이 일을 하는 거예요. 이것저것 해 보고, 점수를 받고, 어떤 행동이 점수를 가장 많이 주는지 조금씩 배워 가요.
+@@ 10
+2. agent–environment loop, 정확하게
+@@ 11
+RL의 모든 것은 두 가지 요소로 기술됩니다. <strong>agent</strong>(에이전트)는 배우고 결정을 내리는 주체입니다. <strong>environment</strong>(환경)는 agent가 상호작용하는 모든 것입니다. 게임, 로봇의 몸과 방, 주식 시장, 챗봇의 답을 읽는 사용자가 모두 environment입니다. 둘은 이산적인 time step t = 0, 1, 2, …로 이어지는 loop 안에서 서로 주고받습니다.
+@@ 12
+step t에서 agent는 <strong>state</strong>(상태) S<sub>t</sub>, 곧 상황에 대한 기술을 받고 <strong>action</strong>(행동) A<sub>t</sub>를 고릅니다. 한 step 뒤에 그 결과로 <strong>reward</strong>(보상) R<sub>t+1</sub>을 받습니다. reward는 실수 하나이고, 다음 state S<sub>t+1</sub>과 함께 옵니다. 그러고 나서 agent는 다시 고릅니다. 상호작용 전체는 다음과 같은 하나의 긴 수열입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 13
+첨자에 주목하세요. action A<sub>t</sub>가 불러온 reward는 R<sub>t</sub>가 아니라 R<sub>t+1</sub>로 씁니다. reward와 다음 state가 action보다 한 tick 뒤에 함께 도착하기 때문입니다. 같은 양을 R<sub>t</sub>로 쓰는 책도 있지만, 이 코스는 Sutton과 Barto를 따릅니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> agent가 action을 고르는 규칙이 <strong>policy</strong>(정책) π입니다. 결정론적 함수 a = μ(s)일 수도 있고, 더 흔하게는 state가 주어졌을 때 action에 대한 확률분포 π(a | s)입니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">OpenAI 2018</a> RL에서 학습이란 policy를 개선하는 것입니다.
+@@ 14
+상호작용에는 두 가지 형태가 있습니다. <strong>episodic</strong> task에서는 loop가 <strong>episode</strong>(에피소드)들로 나뉩니다. "게임 한 판, 미로를 한 번 통과하는 것 같은" 단위이고, 각 episode는 <strong>terminal state</strong>(종료 상태)에서 끝나며 그 뒤에 environment가 초기화됩니다. <strong>continuing</strong> task에서는 상호작용이 "한계 없이 계속 이어집니다". 공정 제어나 "수명이 긴 로봇"이 그 예입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> episode의 끝을, reward 0을 내면서 영원히 자기 자신으로만 이어지는 <strong>absorbing state</strong>(흡수 상태)로 취급하면 하나의 표기법으로 둘 다 다룰 수 있습니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 15
+직접 해 보기: 화살표로 agent를 움직여 보세요. 한 번 움직일 때마다 −1이 듭니다. 목표 G는 +10을 주고 episode를 끝내며, 함정 T는 −10을 주고 역시 episode를 끝냅니다. trajectory가 위에서 본 S, A, R 순서 그대로 쌓이는 모습을 보고, γ를 드래그할 때 두 return이 어떻게 달라지는지도 지켜보세요.
+@@ 16
+눈여겨볼 점: 벽에 부딪혀도 step 하나의 비용은 그대로 치릅니다. 또 둘 다 +10으로 끝나는데도 목표까지 돌아가는 경로는 짧은 경로보다 return이 낮습니다. step 비용은 설계자가 agent에게 시간이 중요하다고 알려 주는 방법입니다.
+@@ 17
+3. reward, return, discount, 그리고 풀이 예제
+@@ 18
+reward는 언제나 그냥 숫자 하나입니다. "매 time step에서 reward는 단순한 숫자 R<sub>t</sub> ∈ ℝ이다". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 하지만 agent가 최대화하는 것은 지금 당장 받는 reward가 아닙니다. 지금부터 앞으로 모을 전부를 최대화합니다. 그 총합이 <strong>return</strong>(수익) G<sub>t</sub>입니다. step T에서 끝나는 episode라면 가장 단순한 형태는 다음과 같은 합입니다.
+@@ 19
+continuing task에서는 이 합이 무한대가 될 수 있고, episodic task에서도 먼 미래의 reward에는 신경을 조금 덜 쓰는 편이 유용합니다. 그래서 미래의 reward마다 <strong>discount</strong>(할인) factor γ(gamma)를 그 reward가 떨어져 있는 step 수만큼 거듭제곱해서 곱합니다. γ는 0과 1 사이의 수입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 20
+k step 뒤의 reward는 당장 받을 때 가치의 γ<sup>k−1</sup>배입니다. γ = 0이면 agent는 "근시안적"이어서 바로 다음 reward에만 신경 쓰고, γ가 1에 가까워질수록 "멀리 내다보게" 됩니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 대수 한 줄이면 return에 관한 가장 쓸모 있는 사실이 나옵니다. 각 return은 다음 reward에 그 뒤의 return을 discount해서 더한 것입니다. 즉 G<sub>t</sub> = R<sub>t+1</sub> + γ G<sub>t+1</sub>이고, episode가 끝나는 시점에서는 G<sub>T</sub> = 0입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> <a href="#d3">Day 3</a>에서는 이 한 줄이 이 분야의 뼈대인 Bellman equation이 됩니다.
+@@ 21
+<strong>풀이 예제.</strong> 위 위젯에서 가장 짧은 경로를 봅시다. 세 step을 간 다음 목표로 들어가므로 reward는 −1, −1, −1, +10입니다. γ = 0.9이면(γ² = 0.81, γ³ = 0.729) 출발점에서의 return은 다음과 같습니다.
+@@ 22
+γ = 1이면 같은 경로의 return은 7이고, γ = 0이면 −1입니다. David Silver의 강의에 나오는 두 번째 예는 출발점이 같아도 return이 크게 달라질 수 있음을 보여 줍니다. γ = ½인 그의 "Student" chain에서 Class 1 → Class 2 → Class 3 → Pass → Sleep으로 가는 학생은 −2, −2, −2, +10을 모으므로 G<sub>1</sub> = −2 − 2·½ − 2·¼ + 10·⅛ = −2.25입니다. Class 1 → Facebook → Facebook → Class 1 → Class 2 → Sleep으로 가는 학생은 −2, −1, −1, −2, −2를 모아 −2 − ½ − ¼ − ¼ − ⅛ = −3.125를 얻습니다. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a> 출발점은 같아도 운이 다르면 return이 다릅니다. 한 state에서 얻는 return의 <em>평균</em>이 그 state의 <strong>value</strong>(가치)이고, <a href="#d3">Day 3</a>에서 이를 계산하는 법을 다룹니다.
+@@ 23
+머릿속에 넣어 둘 숫자가 둘 더 있습니다. reward가 매 step +1로 영원히 이어진다면 return은 등비급수 1 + γ + γ² + … = 1/(1−γ)입니다. γ = 0.9이면 정확히 10, γ = 0.99이면 100입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 이 비율은 agent의 <strong>effective horizon</strong>, 곧 agent가 실질적으로 내다보는 거리를 가늠하는 좋은 어림 규칙입니다. 0.9<sup>10</sup> ≈ 0.35이고 0.99<sup>100</sup> ≈ 0.37이므로, horizon 하나만큼 떨어진 reward는 액면가의 삼분의 일 정도로 계산됩니다.
+@@ 24
+직접 해 보기: reward 패턴을 고르고(또는 reward 열 개를 직접 입력하고) γ를 드래그해 보세요. 막대는 discount가 적용된 항 γ<sup>k</sup>·r<sub>k</sub>이고, 큰 숫자는 그 합입니다.
+@@ 25
+눈여겨볼 점: γ가 작아질수록 step 8의 +10 하나가 얼마나 빨리 줄어드는지 보세요. γ = 0.9에서는 4.3의 가치가 있지만 γ = 0.5에서는 0.04입니다. γ를 조금만 바꿔도 agent가 기꺼이 기다리려는 정도는 크게 달라집니다.
+@@ 26
+discount는 이자를 거꾸로 돌린 것입니다. 내년에 받기로 한 1달러는 오늘의 1달러보다 가치가 낮습니다. 오늘의 1달러는 투자할 수 있고, 약속은 지켜지지 않을 수도 있기 때문입니다. γ = 0.9는 "한 step 뒤의 reward는 나에게 1달러당 90센트의 가치가 있다"는 뜻입니다. Spinning Up은 이를 한마디로 정리합니다. "지금의 현금이 나중의 현금보다 낫다". <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">OpenAI 2018</a> Silver가 드는 discount의 이유는 이렇습니다. 무한한 합을 유한하게 유지하고, 미래에 대한 불확실성을 담아내며, 동물과 사람이 행동하는 방식과 맞고, 수학적으로 편리합니다. 모든 episode가 반드시 끝난다면 γ = 1이어도 괜찮습니다. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a>
+@@ 27
+<strong>"agent는 지금 받는 reward를 최대화한다."</strong> agent가 최대화하는 것은 <em>return</em>, 곧 미래의 모든 reward를 discount해서 더한 합입니다. 당장의 가장 큰 reward를 움켜쥐면 "미래의 reward에 접근할 기회가 줄어들 수 있습니다". 이 문제가 흥미로운 이유가 바로 여기에 있습니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 28
+<strong>"γ는 대충 끼워 맞추는 숫자다."</strong> γ는 agent의 planning horizon(약 1/(1−γ) step)을 정합니다. 끝나지 않는 task의 return을 유한한 수로 만들어 주는 것도 γ입니다.
+@@ 29
+<strong>"A<sub>t</sub>에 대한 reward는 R<sub>t</sub>이다."</strong> 이 코스에서는 R<sub>t+1</sub>입니다. reward와 다음 state는 한 tick 뒤에 함께 도착합니다. 새 논문을 펼칠 때마다 표기 관례를 확인하세요.
+@@ 30
+<strong>"terminal state에는 얼마간의 가치가 있다."</strong> terminal state의 value는 언제나 0입니다. episode가 끝난 뒤에는 모을 것이 없기 때문입니다. 목표에 도달해서 받는 +10은 그 state로 <em>들어가는 transition</em>의 reward이지, state 자체의 속성이 아닙니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 31
+4. reward hypothesis, 그리고 RL이 어려운 이유
+@@ 32
+숫자 하나로 목표를 충분히 기술할 수 있을까요? 이 분야의 작업 가정은 그렇다고 답합니다. <strong>reward hypothesis</strong>(보상 가설)는 이렇습니다. "우리가 목표와 목적이라고 부르는 모든 것은, 받은 scalar signal(reward라고 부른다)의 누적 합의 기댓값을 최대화하는 것으로 잘 생각할 수 있다". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> Richard Sutton의 웹 페이지에도 같은 문장이 실려 있고, Michael Littman이 이를 reinforcement learning hypothesis라고 부른다는 말이 덧붙어 있습니다. <a class="src" href="http://incompleteideas.net/rlai.cs.ualberta.ca/RLAI/rewardhypothesis.html">Sutton n.d.</a> 이것은 정리가 아니라 가설이지만(<a href="#d14">Day 14</a>에서 곤란한 경우들을 다시 다룹니다) 적용 범위가 넓습니다. 걷는 로봇에게는 전진한 만큼에 비례하는 reward를 줍니다. 미로 로봇에게는 아직 미로 안에 있는 매 step마다 −1을 줍니다. 캔을 모으는 로봇에게는 캔 하나당 +1을 줍니다. 체스 프로그램에게는 이기면 +1, 지면 −1을 주고, 끝나기 전의 모든 수를 포함한 나머지 전부에는 0을 줍니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 중요한 것은 체스 예입니다. reward는 <em>무엇을</em> 이룰지를 말할 뿐, <em>어떻게</em> 이룰지는 결코 말하지 않습니다.
+@@ 33
+RL이 어려운 이유도 바로 이것입니다. Silver는 RL이 여러분이 이미 아는 머신러닝과 다른 점 네 가지를 꼽습니다. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/intro_rl.pdf">Silver 2015</a>
+@@ 34
+<strong>supervisor는 없고 reward만 있습니다.</strong> 아무도 "옳은 수는 e4였다"고 말해 주지 않습니다. agent는 어떤 수가 좋았는지를 숫자 하나로만 알게 되고, 그 숫자마저 대부분의 수에서 똑같은 경우가 많습니다.
+@@ 35
+<strong>피드백이 늦게 옵니다.</strong> 체스에서 0이 아닌 reward는 맨 끝에만 나옵니다. 40개의 수 가운데 어느 것이 +1을 벌어들였을까요? 이것이 <strong>credit assignment</strong>(신용 할당) 문제입니다.
+@@ 36
+<strong>시간이 중요합니다.</strong> 데이터는 서로 독립적으로 뽑은 표본이 아니라 순서가 있는 열입니다. agent가 step 50에서 보는 것은 step 49에서 한 일에 달려 있습니다.
+@@ 37
+<strong>자신의 action이 자신의 데이터를 바꿉니다.</strong> agent는 데이터를 스스로 모읍니다. 그래서 어떤 수를 한 번도 시도하지 않는 policy는 그 수가 좋았는지 끝내 배우지 못합니다.
+@@ 38
+마지막 항목은 "지도학습과 비지도학습에서는 아예 생기지도 않는" 딜레마를 만듭니다. 바로 <strong>exploration 대 exploitation</strong>(탐색 대 활용)입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> reward를 벌려면 효과가 있다고 이미 아는 것을 활용해야 합니다. 다른 것이 더 나은지 알아내려면 탐색해야 하는데, 그러면 당장의 reward를 포기해야 합니다. <a href="#d2">Day 2</a>에서는 이 딜레마만 따로 떼어 내서, 그것 하나 때문에 치르는 비용을 측정합니다.
+@@ 39
+더 깊이 (선택): 한 줄로 쓴 objective
+@@ 40
+Spinning Up은 목표를 간결하게 씁니다. trajectory는 τ = (s<sub>0</sub>, a<sub>0</sub>, s<sub>1</sub>, a<sub>1</sub>, …)이고 그 return은 R(τ)입니다. policy의 품질은 그 policy가 만들어 내는 trajectory의 expected return, 즉 J(π) = E<sub>τ∼π</sub>[R(τ)]이고, optimal policy는 π* = argmax<sub>π</sub> J(π)입니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">OpenAI 2018</a> <a href="#d4">Day 4</a>부터 <a href="#d12">Day 12</a>까지의 모든 알고리즘은 J(π)를 오르는 서로 다른 방법입니다. value를 추정한 뒤 그 value에 대해 greedy하게 행동하거나, policy의 파라미터를 J의 gradient 방향으로 밀어 올리거나, environment의 모델을 학습해서 planning을 합니다.
+@@ 41
+5. RL 대 지도학습 대 비지도학습
+@@ 42
+Sutton과 Barto는 RL을 "지도학습, 비지도학습과 나란히 놓이는 세 번째 머신러닝 패러다임"이라고 부릅니다. RL이 비지도학습의 한 종류가 아니라는 점도 분명히 합니다. RL은 "숨은 구조를 찾으려는 것이 아니라 reward signal을 최대화하려는 것"이기 때문입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 아래 표는 셋을 나란히 놓은 것입니다.
+@@ 43
+질문
+@@ 44
+지도학습
+@@ 45
+비지도학습
+@@ 46
+강화학습
+@@ 47
+주어지는 것
+@@ 48
+정답 label이 붙은 입력
+@@ 49
+label 없는 입력
+@@ 50
+직접 행동할 수 있는 loop, step마다 scalar reward 하나
+@@ 51
+데이터의 출처
+@@ 52
+고정된 데이터셋, 서로 독립인 sample
+@@ 53
+고정된 데이터셋
+@@ 54
+agent 자신의 action. policy가 바뀌면 데이터도 바뀜
+@@ 55
+피드백이 알려 주는 것
+@@ 56
+이 입력에 대한 정답
+@@ 57
+없음
+@@ 58
+이 action이 얼마나 좋았는지. 한참 뒤에야 알게 될 때가 많음
+@@ 59
+목표
+@@ 60
+새 입력의 label 예측
+@@ 61
+구조 찾기(cluster, 밀도, representation)
+@@ 62
+expected return 최대화
+@@ 63
+exploration이 중요한가?
+@@ 64
+아니요
+@@ 65
+예: 시도해 본 action에 대해서만 배울 수 있음
+@@ 66
+대표적인 예
+@@ 67
+이미지 분류, next-token prediction
+@@ 68
+고객 clustering
+@@ 69
+바둑 두기, 로봇 제어, 피드백으로 챗봇 조정하기
+@@ 70
+실전에서 뼈아픈 것은 둘째 행입니다. 상호작용하는 문제에서는 agent가 마주칠 상황들에 대해 "옳으면서 대표성도 갖춘, 바람직한 행동의 예를 얻기가 현실적으로 어려운 경우가 많습니다". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 체스 선생님은 그랜드마스터의 기보를 보여 줄 수는 있어도, 여러분이 실수를 해서 도달한 이상한 국면에서의 옳은 수를 보여 줄 수는 없습니다. LLM School을 들었다면 이 경계를 이미 본 적이 있습니다. 언어 모델의 pretraining은 고정된 corpus에 대한 지도학습 방식의 next-token prediction입니다. 반면 human feedback으로 모델을 조정하는 것은 RL입니다. 피드백이 모델 스스로 만든 텍스트에 매긴 scalar 점수이기 때문입니다(<a href="#d12">Day 12</a>).
+@@ 71
+6. 연도로 보는 짧은 역사
+@@ 72
+<strong>1911: Thorndike.</strong> 위에서 본 Law of Effect는 RL의 심리학적 조상입니다. 만족이 뒤따르는 행동은 반복되고, 불편이 뒤따르는 행동은 반복되지 않습니다. <a class="src" href="https://psychclassics.yorku.ca/Thorndike/Animal/chap5.htm">Thorndike 1911</a>
+@@ 73
+<strong>1957: Bellman.</strong> Richard Bellman의 책 <em>Dynamic Programming</em>은 결정 문제의 value에 대한 재귀식을 도입했고, 이 식을 오늘날 Bellman equation이라고 부릅니다. 그의 논문 "A Markovian Decision Process"는 <strong>Markov decision process</strong>를 도입했습니다. 1주차의 모든 레슨 밑에 깔려 있는 형식적 대상입니다. <a class="src" href="https://www.iumj.indiana.edu/IUMJ/FULLTEXT/1957/6/56038">Bellman 1957</a> <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> <a href="#d3">Day 3</a>, <a href="#d4">Day 4</a>가 Bellman의 날입니다.
+@@ 74
+<strong>1959: Samuel의 체커.</strong> IBM에서 Arthur Samuel이 만든 프로그램은 자기 자신과 대국하면서 실력을 키웠습니다. 한 국면의 평가를 그 뒤에 이어진 국면들의 평가 쪽으로 조금씩 옮기는 방식이었고, 이는 <strong>temporal-difference</strong> 아이디어의 첫 구현이었습니다. 이 프로그램은 "8시간 또는 10시간의 기계 대국 시간" 만에 "프로그램을 작성한 사람보다 체커를 더 잘 두는 법"을 배웠습니다. <a class="src" href="https://people.csail.mit.edu/brooks/idocs/Samuel.pdf">Samuel 1959</a> <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 75
+<strong>1989: Q-learning.</strong> Chris Watkins의 학위 논문은 trial-and-error 흐름과 optimal control 흐름을 하나의 알고리즘으로 "완전히 합쳤습니다". <a href="#d6">Day 6</a>에서 이 알고리즘을 처음부터 만들어 봅니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 76
+<strong>1992–1995: TD-Gammon.</strong> Gerald Tesauro는 temporal-difference learning을 쓴 self-play만으로 신경망이 백개먼을 두도록 훈련했습니다. 버전 2.1은 "strong master 수준"에 도달해, 최고의 인간 선수들과 게임당 백분의 몇 점 차이밖에 나지 않았습니다. 보드를 그대로 입력받는 신경망은 hidden unit이 40개였고 200,000판으로 훈련했습니다. <a class="src" href="https://www.bkgm.com/articles/tesauro/tdl.html">Tesauro 1995</a> Sutton과 Barto는 첫 성공을 1992년으로 봅니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 77
+<strong>2013–2015: DQN.</strong> DeepMind의 Deep Q-Network는 Q-learning을, Atari의 픽셀을 그대로 읽는 convolutional network와 결합했습니다. 2013년 12월 preprint는 7개 게임을 학습해 6개에서 이전 방법들을 앞섰고 3개에서 인간 전문가를 이겼습니다. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> 2015년 2월 <em>Nature</em> 논문은 하나의 아키텍처와 하나의 hyperparameter 세트로 49개 게임까지 넓혔고, "전문 게임 테스터와 견줄 만한" 수준이었습니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> deep RL은 여기서 시작됩니다. <a href="#d6">Day 6</a>, <a href="#p-dqn">DQN 논문 리뷰</a>를 보세요.
+@@ 78
+<strong>2016: AlphaGo.</strong> 인간 전문가의 기보로 훈련하고 이어서 self-play로 훈련한 policy network와 value network를 tree search와 결합했습니다. 다른 바둑 프로그램을 상대로 99.8%의 대국을 이겼고, 유럽 챔피언 Fan Hui를 5–0으로 꺾어 정식 크기 바둑판에서 프로 기사를 이긴 첫 프로그램이 되었습니다. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a> <a href="#d9">Day 9</a>, <a href="#p-alphago">AlphaGo 논문 리뷰</a>를 보세요.
+@@ 79
+<strong>2019: OpenAI Five와 AlphaStar.</strong> OpenAI Five는 "e스포츠 게임에서 세계 챔피언을 꺾은 첫 AI 시스템"이 되었습니다. 2초마다 약 200만 프레임의 속도로 10개월 동안 훈련한 뒤, 2019년 4월에 Dota 2 챔피언 OG를 이겼습니다. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> AlphaStar는 StarCraft II의 세 종족 모두에서 Grandmaster 등급에 도달해, 랭크에 오른 인간 플레이어의 99.8%를 넘어섰습니다. 서로를 상대로 훈련한 agent들의 league를 썼습니다. <a class="src" href="https://www.nature.com/articles/s41586-019-1724-z">Vinyals 2019</a> <a href="#d11">Day 11</a>에서 self-play를 다룹니다.
+@@ 80
+<strong>2022: InstructGPT와 ChatGPT.</strong> InstructGPT(2022년 3월)는 GPT-3를 인간의 demonstration으로 fine-tuning한 뒤, 순위를 매긴 출력에 RL from human feedback을 적용했습니다. 평가자들은 조정하지 않은 175B 모델보다 조정한 1.3B 파라미터 모델을 더 좋아했습니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> 2022년 11월 30일에 공개된 ChatGPT도 같은 계열의 방법을 썼습니다. <a class="src" href="https://en.wikipedia.org/wiki/ChatGPT">Wikipedia 2026</a> <a href="#d12">Day 12</a>, <a href="#p-instructgpt">InstructGPT 논문 리뷰</a>에서 선호가 어떻게 reward가 되는지 설명합니다.
+@@ 81
+<strong>2025: DeepSeek-R1.</strong> DeepSeek-R1-Zero는 "사전 단계인 supervised fine-tuning 없이 대규모 강화학습만으로" 훈련되어, 긴 chain of thought로 추론하는 법을 배웠습니다. R1은 OpenAI의 o1과 비슷한 성능을 냈습니다. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> <em>Nature</em> 판에서는 R1-Zero의 AIME 2024 수학 경시대회 정확도가 RL을 거치는 동안 15.6%에서 77.9%로 올랐습니다. <a class="src" href="https://www.nature.com/articles/s41586-025-09422-z">Guo 2025</a> 2026년 10월 기준, 이 방법은 frontier lab들이 reasoning model을 만드는 주된 방식입니다. <a href="#d12">Day 12</a>, <a href="#p-deepseek-r1">DeepSeek-R1 논문 리뷰</a>를 보세요.
+@@ 82
+패턴에 주목하세요. 아이디어들(trial and error, Bellman의 재귀, temporal difference, self-play)은 1992년에 이미 모두 갖춰져 있었습니다. 2013년 이후에 달라진 것은 function approximator, 곧 deep network와 그것을 훈련할 compute였습니다.
+@@ 83
+7. 이 코스의 지도
+@@ 84
+1주차는 고전적인 기계를 조립하고, 2주차는 현대의 도구와 그 쓰임새를 다룹니다. 하루 분량은 약 90분이고, 앞선 날들의 내용을 안다고 가정합니다.
+@@ 85
+=
+@@ 86
+주제
+@@ 87
+답하는 질문
+@@ 88
+=
+@@ 89
+=
+@@ 90
+state가 아예 없을 때 exploration과 exploitation 사이에서 어떻게 균형을 잡는가?
+@@ 91
+=
+@@ 92
+MDP와 Bellman equation
+@@ 93
+state의 value란 무엇이고, 어떤 방정식을 만족하는가?
+@@ 94
+=
+@@ 95
+=
+@@ 96
+세상이 어떻게 돌아가는지 안다면 최선의 policy를 어떻게 계산하는가?
+@@ 97
+=
+@@ 98
+Monte Carlo와 TD learning
+@@ 99
+경험만으로 value를 어떻게 학습하는가?
+@@ 100
+=
+@@ 101
+=
+@@ 102
+경험으로부터 행동하는 법을 어떻게 학습하는가? 신경망은 어떻게 픽셀만 보고 Atari를 배웠는가?
+@@ 103
+=
+@@ 104
+Policy gradient와 actor–critic
+@@ 105
+value 표 없이 policy를 직접 개선하려면 어떻게 하는가?
+@@ 106
+=
+@@ 107
+=
+@@ 108
+어떤 policy-gradient 방법이 대규모에서 실제로 통하고, 그 이유는 무엇인가?
+@@ 109
+=
+@@ 110
+Model-based RL과 world model
+@@ 111
+environment의 모델을 학습하면 무엇을 얻는가?
+@@ 112
+=
+@@ 113
+Offline RL과 generative policy
+@@ 114
+상호작용 없이 고정된 데이터셋만으로 policy를 학습할 수 있는가?
+@@ 115
+=
+@@ 116
+=
+@@ 117
+agent는 드문 reward를 어떻게 찾고, agent끼리 서로를 상대로 훈련하면 어떤 일이 일어나는가?
+@@ 118
+=
+@@ 119
+언어 모델과 agent를 위한 RL
+@@ 120
+RLHF와 verifiable reward를 쓰는 RL은 텍스트 예측기를 어떻게 assistant이자 reasoner로 바꾸는가?
+@@ 121
+=
+@@ 122
+로봇과 산업 현장의 RL
+@@ 123
+RL은 실제로 어디에 배포되어 있고, 그러려면 무엇이 필요한가?
+@@ 124
+=
+@@ 125
+미해결 문제
+@@ 126
+2026년 10월 기준, 이 분야가 아직 할 줄 모르는 것은 무엇인가?
+@@ 127
+이 코스의 모든 방법은 아래 두 상자를 채우는 저마다의 방식입니다. 첫째 그림은 loop 자체이고, 둘째 그림은 학습이 loop를 기준으로 어디에 놓이는지 보여 줍니다.
+@@ 128 attr
+agent–environment loop. Agent라고 적힌 상자 안에 policy pi(a|s)라고 적힌 작은 상자가 있습니다. action A_t라고 적힌 화살표가 agent에서 Environment라고 적힌 상자로 갑니다. environment에서 agent로 돌아오는 화살표는 둘입니다: state S_t+1과 reward R_t+1.
+@@ 129
+=
+@@ 130
+=
+@@ 131
+=
+@@ 132
+게임 · 로봇과 방 ·
+@@ 133
+시장 · 답을 읽는 사용자
+@@ 134
+=
+@@ 135
+=
+@@ 136
+=
+@@ 137
+=
+@@ 138
+한 tick: agent가 행동하면 environment가 새 state와 숫자 하나로 답함
+@@ 139
+2절의 loop입니다. policy는 agent가 통제하는 유일한 부분입니다. environment의 dynamics는 고정되어 있고, 대개 agent는 이를 알지 못합니다.
+@@ 140 attr
+학습이 놓이는 자리. state, action, reward tuple의 흐름인 experience가 학습 알고리즘 상자로 들어가고, 이 상자는 개선된 policy를 내놓습니다. policy는 더 많은 experience를 만들어 내는 loop로 다시 들어갑니다.
+@@ 141
+=
+@@ 142
+학습 알고리즘
+@@ 143
+value · gradient · 모델
+@@ 144
+=
+@@ 145
+개선된 뒤 행동에 쓰임
+@@ 146
+새 policy가 다음 experience batch를 만듦
+@@ 147
+학습은 loop의 한 step 안이 아니라 loop 옆에 놓입니다. 알고리즘은 experience를 더 나은 policy로 바꾸고, 더 나은 policy는 새로운 experience를 만들어 냅니다. RL의 데이터가 결코 고정되어 있지 않은 이유입니다.
+@@ 148
+첫째 그림을 왼쪽에서 오른쪽으로 읽어 보세요. agent는 policy, 곧 state를 action으로 보내는 함수를 갖고 있습니다(2주차에는 신경망이고, 오늘은 어떤 규칙이든 됩니다). action은 environment로 가고, environment는 자신의 dynamics를 적용한 뒤 두 가지를 돌려보냅니다. 다음 state와 scalar reward입니다. 그 밖에는 아무것도 경계를 넘지 않습니다. label도, gradient도, 옳은 action이 무엇이었을지에 대한 설명도 없습니다. reward가 메시지의 전부입니다.
+@@ 149
+열네 날이 서로 달라지는 곳이 둘째 그림입니다. loop가 만들어 내는 (S, A, R, S′) tuple의 흐름인 experience가 학습 알고리즘으로 들어가고, 알고리즘은 개선된 policy를 내놓습니다. <a href="#d2">Day 2</a>의 알고리즘은 계속 갱신되는 평균을 적어 둔 표입니다. <a href="#d4">Day 4</a>의 알고리즘은 environment의 모델이 필요하고 experience는 전혀 필요 없습니다. <a href="#d6">Day 6</a>에서는 tuple 100만 개를 buffer에 저장하고 그중에서 무작위로 뽑은 batch로 신경망을 훈련합니다. <a href="#d7">Day 7</a>에서는 좋은 trajectory를 만든 것이 무엇이든 그것이 더 자주 나오도록 policy의 파라미터를 조금씩 옮깁니다. loop는 변하지 않습니다. 변하는 것은 가운데 상자입니다.
+@@ 150
+실제로는 두 그림이 서로 다른 하드웨어에서 돌아갑니다. loop(environment 시뮬레이션과 policy의 forward pass)는 step당 비용이 싸고, 보통 CPU에서 여러 복사본이 병렬로 돕니다. 학습 알고리즘은 이 복사본들의 experience를 batch로 모아 GPU에서 훈련합니다. 복사본을 몇 개 돌릴지, 둘 사이의 buffer를 얼마나 크게 둘지, 얼마나 오래된 experience까지 허용할지가 <a href="#d6">Day 6</a>, <a href="#d8">Day 8</a>, <a href="#d12">Day 12</a> 뒤에 있는 엔지니어링 질문이고, 구체적인 숫자는 그 레슨들에 있습니다.
+@@ 151
+Q1. Sutton과 Barto의 표기 관례에서 action A<sub>t</sub>의 결과인 reward는 어느 것입니까?
+@@ 152
+R<sub>t</sub>, 같은 step에 받음
+@@ 153
+R<sub>t−1</sub>, reward는 state보다 늦게 오므로
+@@ 154
+R<sub>t+1</sub>, S<sub>t+1</sub>과 함께 도착함
+@@ 155
+return G<sub>t</sub>
+@@ 156
+정답 3. trajectory는 S<sub>0</sub>, A<sub>0</sub>, R<sub>1</sub>, S<sub>1</sub>, …입니다. reward와 다음 state는 action 한 tick 뒤에 함께 도착합니다. R<sub>t</sub>로 쓰는 책도 있습니다. 관례가 다를 뿐 개념은 같습니다.
+@@ 157
+Q2. agent가 매 step +1을 영원히 받습니다. γ = 0.9일 때 discounted return은…
+@@ 158
+무한대
+@@ 159
+정확히 10
+@@ 160
+약 2.71
+@@ 161
+정답 2. 등비급수 1 + 0.9 + 0.81 + …의 합은 1/(1 − 0.9) = 10입니다. γ = 0.99라면 100이 됩니다. 이것은 agent의 effective horizon을 가늠하는 어림 규칙이기도 합니다.
+@@ 162
+Q3. reward가 −1, −1, −1, +10이고 γ = 0.9입니다. 출발점에서의 return은…
+@@ 163
+정답 1. −1 − 0.9 − 0.81 + 0.729·10 = 4.58입니다. 2번 보기는 undiscounted return(γ = 1)이고, 4번 보기는 γ = 0일 때의 값이며, 3번 보기는 +10에 discount를 적용하지 않았을 때의 답입니다.
+@@ 164
+Q4. RL과 지도학습에 관한 설명 가운데 옳은 것은?
+@@ 165
+RL은 label에 noise가 더 많은 지도학습이다
+@@ 166
+label이 없으므로 RL은 비지도학습의 한 종류이다
+@@ 167
+RL에서는 학습을 시작하기 전에 훈련 데이터셋이 고정된다
+@@ 168
+RL에서는 agent 자신의 action이 어떤 데이터를 볼지 결정하므로 exploration이 중요하다
+@@ 169
+정답 4. label은 아예 없고 scalar reward만 있으며, 데이터 분포는 policy에 따라 바뀝니다. Sutton과 Barto는 RL을 지도학습, 비지도학습 모두와 구별되는 세 번째 패러다임이라고 부르고, exploration–exploitation trade-off가 나머지 둘에서는 "아예 생기지도 않는다"고 지적합니다.
+@@ 170
+Q5. 2015년 <em>Nature</em> DQN 논문은 무엇을 보여 주었습니까?
+@@ 171
+유럽 바둑 챔피언을 5–0으로 이긴 프로그램
+@@ 172
+하나의 신경망 아키텍처와 하나의 hyperparameter 세트로 49개 Atari 게임을 픽셀로부터 학습
+@@ 173
+200,000판의 self-play로 훈련한 백개먼 프로그램
+@@ 174
+supervised fine-tuning 없이 RL로 훈련한 언어 모델
+@@ 175
+정답 2. DQN(Mnih et al., 2015)은 같은 알고리즘, 아키텍처, hyperparameter로 49개 게임을 플레이했습니다. 1번 보기는 AlphaGo(2016), 3번 보기는 TD-Gammon(1992–95), 4번 보기는 DeepSeek-R1-Zero(2025)입니다.
+@@ 176
+Q6. reward hypothesis에 따르면 목표는 무엇으로 표현할 수 있습니까?
+@@ 177
+agent가 따라야 하는 규칙 목록
+@@ 178
+agent가 다음 step에 받는 reward
+@@ 179
+scalar reward의 누적 합의 기댓값을 최대화하는 것
+@@ 180
+옳은 action에 label을 붙인 데이터셋
+@@ 181
+정답 3. "우리가 목표와 목적이라고 부르는 모든 것은, 받은 scalar signal의 누적 합의 기댓값을 최대화하는 것으로 잘 생각할 수 있다." '누적'과 '기댓값'은 둘 다 빠질 수 없습니다. agent가 최대화하는 것은 다음 reward가 아니라 return입니다.
+@@ 182
+RL은 결과로부터 무엇을 할지 배우는 학습입니다. trial-and-error search에 delayed reward가 더해진 것이고, 어떤 action이 옳았는지 agent에게 알려 주는 supervisor는 없습니다.
+@@ 183
+loop는 S<sub>t</sub> → A<sub>t</sub> → R<sub>t+1</sub>, S<sub>t+1</sub>입니다. agent가 action을 고르는 규칙이 policy π(a | s)이고, 학습은 이를 개선하는 것입니다.
+@@ 184
+agent는 다음 reward가 아니라 return G<sub>t</sub> = Σ γ<sup>k</sup> R<sub>t+k+1</sub>을 최대화합니다. γ = 0.9에서 −1, −1, −1, +10이면 4.58이고, +1이 영원히 이어지면 1/(1−γ) = 10입니다.
+@@ 185
+γ는 horizon(약 1/(1−γ) step)을 정하고 무한한 합을 유한하게 유지합니다. terminal state의 value는 0입니다.
+@@ 186
+RL이 어려운 이유는 피드백이 늦게 오는 scalar이고, 데이터가 순차적이며, agent 자신의 action이 데이터를 고르기 때문입니다. 그래서 exploration과 exploitation 사이의 trade-off를 피할 수 없습니다. Day 2는 이 trade-off 하나만 다룹니다.
+@@ 187
+<a href="http://incompleteideas.net/book/the-book-2nd.html">Reinforcement Learning: An Introduction, 2nd edition</a> — Sutton &amp; Barto, MIT Press, 2018 (무료 PDF). 정의와 역사는 Chapter 1, loop와 reward, return, discount는 Chapter 3(3.1–3.4절)에 있습니다. 이 코스 전체의 교과서입니다.
+@@ 188
+<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">Spinning Up: Key Concepts in RL</a> — OpenAI (Achiam), 2018. 오늘의 표기법을 objective J(π)와 함께 간결하게 다시 정리한 글입니다.
+@@ 189
+<a href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/intro_rl.pdf">Lecture 1: Introduction to Reinforcement Learning</a> — David Silver, UCL, 2015. 4절에 나온 "characteristics of RL" 목록의 출처입니다.
+@@ 190
+<a href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Lecture 2: Markov Decision Processes</a> — David Silver, UCL, 2015. Student 예제와 "Why discount?" 슬라이드가 있습니다.
+@@ 191
+<a href="http://incompleteideas.net/rlai.cs.ualberta.ca/RLAI/rewardhypothesis.html">The reward hypothesis</a> — Richard Sutton, 웹 페이지. 한 문단 분량이고, 원문으로 읽어 볼 만합니다.
+@@ 192
+=
+@@ 193
+<a href="https://www.iumj.indiana.edu/IUMJ/FULLTEXT/1957/6/56038">A Markovian Decision Process</a> — Richard Bellman, Indiana University Mathematics Journal 6(4), 1957. MDP를 도입한 논문입니다.
+@@ 194
+<a href="https://people.csail.mit.edu/brooks/idocs/Samuel.pdf">Some Studies in Machine Learning Using the Game of Checkers</a> — Arthur Samuel, IBM Journal of R&amp;D, 1959. 스스로 실력을 키운 첫 게임 프로그램입니다.
+@@ 195
+<a href="https://www.bkgm.com/articles/tesauro/tdl.html">Temporal Difference Learning and TD-Gammon</a> — Gerald Tesauro, Communications of the ACM, 1995. 짧고 읽기 쉽습니다.
+@@ 196
+<a href="https://arxiv.org/abs/1312.5602">Playing Atari with Deep Reinforcement Learning</a> — Mnih et al., DeepMind, 2013; 그리고 <a href="https://www.nature.com/articles/nature14236">Human-level control through deep reinforcement learning</a> — Nature, 2015. DQN 논문들입니다.
+@@ 197
+=
+@@ 198
+<a href="https://arxiv.org/abs/1912.06680">Dota 2 with Large Scale Deep Reinforcement Learning</a> — Berner et al., OpenAI, 2019; 그리고 <a href="https://www.nature.com/articles/s41586-019-1724-z">Grandmaster level in StarCraft II using multi-agent reinforcement learning</a> — Vinyals et al., Nature, 2019.
+@@ 199
+<a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback</a> — Ouyang et al., OpenAI, 2022. InstructGPT 논문입니다.
+@@ 200
+<a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a> — DeepSeek-AI, 2025; 그리고 <a href="https://www.nature.com/articles/s41586-025-09422-z">Nature 판</a>, 2025.

@@ -1,0 +1,374 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 11</span>
+@@ 2
+Exploration, self-play, and multi-agent RL
+@@ 3
+After today you can explain why Montezuma's Revenge defeated DQN, how curiosity, RND and Go-Explore fixed it, how self-play went from TD-Gammon to AlphaZero, and why learning alongside other learners is harder than it looks.
+@@ 4
+About 90 min · Needs <a href="#d10">Day 10</a>
+@@ 5
+Reward-maximising agents only improve on what they have already stumbled into. When rewards are rare, you have to manufacture a reason to go somewhere new: a bonus for novelty, a memory of where you have been, or an opponent who is exactly as good as you. Self-play is the cleanest version of that last trick, and it stops being clean the moment more than two players, or cooperation, enter the game.
+@@ 6
+1. Hard exploration: the game that scored zero
+@@ 7
+By 2015 DQN (<a href="#d6">Day 6</a>, <a href="#p-dqn">the DQN review</a>) was superhuman on dozens of Atari games, yet on Montezuma's Revenge it scored 0.02 points after 200 million frames and saw only two rooms. <a class="src" href="https://arxiv.org/abs/1606.01868">Bellemare 2016</a> The first level is a maze of 24 rooms, and the first points need a long chain: climb down a ladder, jump a skull, take a key, climb back, open a door, and one wrong step kills you. Random actions never complete that chain, so the agent never sees a reward, so there is no gradient. This is <strong>hard exploration</strong>: rewards so sparse or so far away that undirected noise cannot reach them.
+@@ 8
+ε-greedy (<a href="#d6">Day 6</a>) and entropy bonuses (<a href="#d7">Day 7</a>) are <strong>undirected</strong>: they explore equally everywhere, including places visited a thousand times. In a 30-cell corridor with one reward at the end, ε-greedy with all Q-values at zero is a random walk, which needs on the order of 30² ≈ 900 steps to reach the end. Montezuma is that corridor with ladders and skulls.
+@@ 9
+2. Count-based bonuses and pseudo-counts
+@@ 10
+The oldest fix is to pay the agent for visiting rare states. Keep a table <strong>N(s)</strong> of how many times each state has been visited and add an <strong>exploration bonus</strong> to the reward:
+@@ 11
+A fresh state pays β; one visited 100 times pays β/10. Because the bonus is a reward, Q-learning propagates it backwards and the agent learns to <em>steer toward</em> the frontier rather than wander. The catch is the table: in pixel space every frame is new, N(s) = 1 forever, and the bonus is flat.
+@@ 12
+Bellemare and colleagues derived a <strong>pseudo-count</strong> from a density model ρ over frames instead: if ρ(x) is the model's probability of frame x and ρ′(x) the probability after training on x one more time, then N̂(x) = ρ(x)(1 − ρ′(x)) / (ρ′(x) − ρ(x)) behaves like a visit count, and they used the bonus β(N̂ + 0.01)^−1/2 with β = 0.05. <a class="src" href="https://arxiv.org/abs/1606.01868">Bellemare 2016</a> Plugged into DQN, the agent visited <strong>15 rooms</strong> of Montezuma within 50 million frames against 2 without the bonus, averaging 2,461 points at that stage, 3,439 at 100 million frames, with a best run of 6,600. <a class="src" href="https://arxiv.org/abs/1606.01868">Bellemare 2016</a>
+@@ 13
+Try it: the corridor below has one reward at the far end. Run 200 steps with plain ε-greedy, reset, then run 200 steps with the count bonus switched on.
+@@ 14
+Notice the shape of the visit counts. ε-greedy piles them near the start (cell 15 is the furthest it gets in 200 steps; it needs about 1,100 steps to touch cell 29 once). The count bonus spreads visits down the corridor, reaches the reward at step 82 and keeps returning. The policy did not change; only what counts as reward.
+@@ 15
+Imagine a huge house where the only candy is in the last room. Wandering at random, you keep ending up in the same three rooms by the front door. Now every room has a sticker machine: a whole sticker the first time you enter, half a sticker the fourth time, almost nothing after that. Suddenly the far rooms are the interesting ones, and on the way you bump into the candy. RND, below, is a sticker machine that still works when every room looks slightly different each visit.
+@@ 16
+3. Curiosity: ICM and RND
+@@ 17
+A second idea replaces counts with <strong>prediction error</strong>: be curious about what you cannot yet predict. The <strong>Intrinsic Curiosity Module</strong> (ICM) trains a forward model to predict the next state's features from φ(s<sub>t</sub>) and a<sub>t</sub>, and pays the agent the error:
+@@ 18
+The trick is in φ: an <strong>inverse model</strong> trains it to predict a<sub>t</sub> from (φ(s<sub>t</sub>), φ(s<sub>t+1</sub>)), so φ keeps only what the agent's actions can influence and ignores leaves blowing in the wind. On sparse-reward VizDoom ICM reached a 100% mean score where plain A3C got 0%, and in Super Mario with the game reward removed it crossed more than 30% of level 1 on curiosity alone. <a class="src" href="https://arxiv.org/abs/1705.05363">Pathak 2017</a>
+@@ 19
+<strong>Random Network Distillation</strong> (RND, <a href="#p-rnd">the RND review</a>) is simpler and became the standard. Take two networks of the same shape. The <strong>target</strong> f is randomly initialised and frozen forever; the <strong>predictor</strong> f̂ is trained by mean-squared error to copy f's output on observations the agent has seen. The intrinsic reward is the copying error:
+@@ 20
+On familiar observations the predictor has learned the target's output, so the bonus is small; on a new one the error is large. Because the target is a fixed deterministic function, a flickering screen is not forever surprising: the predictor can learn it and the bonus decays. That kills the <strong>noisy-TV problem</strong> of pixel-prediction curiosity, where any source of randomness is infinitely interesting. Observations are whitened and clipped to [−5, 5], the bonus is divided by its running standard deviation, and PPO gets <strong>two value heads</strong>: episodic extrinsic, non-episodic intrinsic. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a>
+@@ 21
+After roughly 1.97 billion frames RND averaged <strong>8,152</strong> on Montezuma's Revenge against 2,497 for plain PPO and 400 for dynamics-prediction curiosity, above the <strong>average human score of 4,753</strong>, with a best return of 17,500 and the best agents finding <strong>22 of the 24 rooms</strong> on level 1; a recurrent variant with 1,024 parallel environments averaged 10,070. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> It was the first agent past the average human without demonstrations.
+@@ 22
+<strong>"Curiosity means rewarding surprising pixels."</strong> Raw pixel-prediction error gets stuck staring at anything random. ICM predicts only controllable features; RND predicts a fixed deterministic function, so noise becomes learnable and stops paying. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a>
+@@ 23
+<strong>"RND trains both networks."</strong> Only the predictor trains. If the target also moved, the error would never settle and the bonus would mean nothing.
+@@ 24
+<strong>"Go-Explore is another intrinsic reward."</strong> It uses no bonus at all. It is an explicit archive of places plus a rule for returning to them.
+@@ 25
+<strong>"AlphaGo learned Go without humans."</strong> The 2016 AlphaGo started from human expert games; the tabula-rasa system is <em>AlphaGo Zero</em>, a year later. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017</a>
+@@ 26
+4. Go-Explore and Agent57: remember, return, then explore
+@@ 27
+Go-Explore's authors diagnosed two failures bonuses cannot cure. <strong>Detachment</strong>: the bonus in an area is consumed, the agent drifts elsewhere, and forgets how to get back to the frontier. <strong>Derailment</strong>: even if it remembers, the noise needed to find new things knocks it off the long, precise path back. <a class="src" href="https://www.nature.com/articles/s41586-020-03157-9">Ecoffet 2021</a>
+@@ 28
+<strong>Go-Explore</strong> separates the two jobs. It keeps an <strong>archive of cells</strong>, where a cell is a frame downscaled to 11 × 8 greyscale pixels with 8 intensity levels, so that many nearby frames share a cell. Each iteration: pick a cell (favouring rarely chosen ones), <strong>return</strong> to it with no noise (in 2019, by restoring the emulator state), then <strong>explore</strong> randomly from there, adding new cells and better routes to the archive. Phase 2 <strong>robustifies</strong> the best trajectories into a policy by imitation learning that starts near the end and works backwards. <a class="src" href="https://arxiv.org/abs/1901.10995">Ecoffet 2019</a>
+@@ 29
+Without game-specific knowledge it averaged <strong>43,763</strong> on Montezuma's Revenge, against a previous intrinsic-motivation best of about 11,500 mean and a human expert's roughly 34,900. With hand-written cell features (room, level, keys) it averaged 666,474, and one run reached 18,003,200 points, past the human world record of 1,219,200. On Pitfall, where every previous RL method scored 0 or less, it averaged <strong>59,494</strong>. <a class="src" href="https://arxiv.org/abs/1901.10995">Ecoffet 2019</a> The Nature version replaced state restoration with a goal-conditioned policy, solved every previously unsolved Atari game, and transferred to a sparse-reward robot task. <a class="src" href="https://www.nature.com/articles/s41586-020-03157-9">Ecoffet 2021</a>
+@@ 30
+One line on <strong>Agent57</strong> (2020): episodic novelty × RND-style lifelong novelty, a family of policies from curious to greedy, and a bandit choosing among them gave the first agent above the human baseline on all 57 Atari games. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a>
+@@ 31
+Where the drive to explore comes from
+@@ 32
+ε-greedy noise only
+@@ 33
+≈ 0 points, 2 rooms
+@@ 34
+Pseudo-counts
+@@ 35
+density model → count → β/√N̂
+@@ 36
+15 rooms at 50M frames; 3,439 mean at 100M
+@@ 37
+ICM
+@@ 38
+forward-model error in controllable features
+@@ 39
+tested on VizDoom and Mario, not Montezuma
+@@ 40
+RND
+@@ 41
+predictor vs frozen random network
+@@ 42
+8,152 mean; 22 of 24 rooms; best 17,500
+@@ 43
+Go-Explore
+@@ 44
+archive of cells, return, then explore; no bonus
+@@ 45
+43,763 mean; 666,474 with domain knowledge
+@@ 46
+Agent57
+@@ 47
+episodic × lifelong novelty, bandit over policies
+@@ 48
+above human on all 57 games
+@@ 49
+Go-Explore is how people actually play a hard video game: keep save-points, load the furthest one, try something different, keep the new save if it got you somewhere new. The learned policy comes last, once a route is known to exist.
+@@ 50
+5. Self-play: from TD-Gammon to AlphaZero
+@@ 51
+Board games have the opposite problem: the reward is clear but you need an opponent at your level, and a too-strong one teaches nothing. <strong>Self-play</strong> has the agent play copies of itself, so the opponent is always exactly as good as you and improves as fast: a free, automatic curriculum.
+@@ 52
+The idea predates deep learning. Gerald Tesauro's <strong>TD-Gammon</strong> (1992–1995) trained a small multilayer network by TD(λ) from self-play alone, starting from random weights, about 200,000 games for the 40-hidden-unit version; version 2.1 finished a 40-game series near parity with Bill Robertie, one of the world's best players. <a class="src" href="https://www.bkgm.com/articles/tesauro/tdl.html">Tesauro 1995</a>
+@@ 53
+<strong>AlphaGo</strong> (<a href="#p-alphago">the AlphaGo review</a>) brought the recipe to Go with three parts: a <strong>policy network</strong>, trained first on human expert games and then by self-play policy gradient; a <strong>value network</strong> predicting the winner from self-play positions; and <strong>Monte Carlo tree search</strong> (MCTS, <a href="#d9">Day 9</a>), which uses the policy to choose which moves to look at and the value network plus fast rollouts to score positions. It won 99.8% of games against other Go programs and beat the European champion Fan Hui <strong>5–0</strong> in October 2015. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a> In March 2016 it beat Lee Sedol <strong>4–1</strong> in Seoul before more than 200 million viewers; its move 37 in game two had a one-in-10,000 chance of being played by a human. <a class="src" href="https://deepmind.google/research/breakthroughs/alphago/">DeepMind 2016</a>
+@@ 54
+Then DeepMind removed the humans. <strong>AlphaGo Zero</strong> (October 2017) starts from random play with only the rules, uses <strong>one network</strong> with a policy head and a value head, and drops the rollouts: MCTS scores leaves with the value head alone. The search becomes the teacher: at every position MCTS produces a visit distribution π better than the raw policy p, and the network is trained to make p match π and v match the game result z. After <strong>3 days</strong> it beat the version that beat Lee Sedol <strong>100–0</strong>; after <strong>40 days</strong> and about 5 million games on 4 TPUs it passed AlphaGo Master, the strongest previous version. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017</a> <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a>
+@@ 55
+<strong>AlphaZero</strong> (preprint December 2017, Science December 2018) ran the same algorithm, unchanged, on chess and shogi. From random play it overtook Stockfish after <strong>4 hours</strong>, the shogi program Elmo after <strong>2 hours</strong>, and AlphaGo Lee after <strong>30 hours</strong>; against Stockfish it won 155 and lost 6 of 1,000 games. It searched about <strong>60 thousand positions per second</strong> against Stockfish's <strong>60 million</strong>, a thousand times fewer, because the network makes the search selective. It played on 4 first-generation TPUs and 44 CPU cores. <a class="src" href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">DeepMind 2018</a>
+@@ 56
+Try it: the widget below is the MCTS half of that loop on tic-tac-toe, with random rollouts instead of a value head. Set the simulations per move and play 100 games, or press Sweep for the whole curve.
+@@ 57
+Notice the win rate rising with simulations: against a random opponent from about 83% at 10 simulations to about 96% at 500; against the 1-ply opponent from about 61% to 95%. The player never changes; it only thinks longer. In AlphaZero the network replaces the rollouts and the improved search becomes the training target, so thinking longer today makes the network stronger tomorrow.
+@@ 58
+Going deeper (optional): the AlphaZero loss
+@@ 59
+Each self-play move stores (s, π, z): the position, the MCTS visit distribution, and the final result from that player's view. The network f<sub>θ</sub>(s) = (p, v) is trained on
+@@ 60
+L = (z − v)² − πᵀ log p + c‖θ‖²
+@@ 61
+MCTS selects children by PUCT, Q(s,a) + U(s,a) with U ∝ p(a) · √N(s) / (1 + N(s,a)): the prior steers the search, the value scores leaves without rollouts, and because π comes from searching with the current network, network and search improve each other. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017</a> <a href="#p-muzero">MuZero</a> (<a href="#d9">Day 9</a>) keeps this loop and learns the rules too.
+@@ 62
+6. Multi-agent RL: why it is harder than it looks
+@@ 63
+Two-player zero-sum games are the easy case of multi-agent learning. Four things break when you leave it.
+@@ 64
+<strong>Non-stationarity.</strong> Every method so far assumes the environment does not change while you learn. Other learning agents are part of your environment, so, as the MADDPG paper puts it, "the environment becomes non-stationary from the perspective of any individual agent". <a class="src" href="https://arxiv.org/abs/1706.02275">Lowe 2017</a> A replayed transition from last month was generated against an opponent who no longer exists; the Markov assumption behind Q-learning and replay quietly fails.
+@@ 65
+<strong>What "optimal" means.</strong> With several players the standard answer is a <strong>Nash equilibrium</strong>: a strategy for every player such that nobody can do better by changing only their own. In rock-paper-scissors it is one third each; any deviation can be exploited. In two-player zero-sum games the equilibrium is the minimax solution and self-play converges toward it, which is why AlphaZero's recipe works. In <strong>general-sum</strong> games, with teammates or negotiation, there can be many equilibria with different payoffs, and "play the equilibrium" is not a complete instruction. That is why Cicero, below, models how <em>humans</em> play instead of solving the game.
+@@ 66
+<strong>Who sees what.</strong> <strong>Centralised training, decentralised execution</strong> (CTDE): during training each agent's critic sees every agent's observations and actions, which makes its world stationary again; at execution each actor uses only its own observation, so the team runs with no central brain. MADDPG is the actor-critic (<a href="#d7">Day 7</a>) version. <a class="src" href="https://arxiv.org/abs/1706.02275">Lowe 2017</a>
+@@ 67
+<strong>Who you train against.</strong> Playing only your latest self can cycle: beat A with B, forget A, relearn A. <strong>Population-based training</strong> keeps 10 to 80 agents, periodically has the bottom 20% copy the weights and hyperparameters of the top 20%, then perturbs the hyperparameters by ×0.8 or ×1.2; it lifted UNREAL on DMLab from 93% to 106% human-normalised. <a class="src" href="https://arxiv.org/abs/1711.09846">Jaderberg 2017</a> AlphaStar's <strong>league</strong> adds <strong>exploiter</strong> agents whose only job is to find weaknesses in the main agents. <a class="src" href="https://www.nature.com/articles/s41586-019-1724-z">Vinyals 2019</a>
+@@ 68
+Three systems show the scale this took; as of October 2026 they remain the landmarks:
+@@ 69
+<strong>OpenAI Five</strong> (Dota 2, five against five). One run, <strong>180 days of training spread over 10 months</strong> (June 2018 to April 2019) with more than 20 "surgeries" that changed model or environment without restarting. It beat the world champions OG <strong>2–0</strong> on 13 April 2019, then won <strong>99.4% of 7,257</strong> public games in the four-day OpenAI Five Arena, with a 17-hero pool. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a>
+@@ 70
+<strong>AlphaStar</strong> (StarCraft II). Seeded by imitating human games (already better than 84% of players), then trained in the league; Grandmaster in all three races, above <strong>99.8%</strong> of ranked players on Battle.net, playing anonymously with a human camera view and at most 22 actions per 5 seconds. <a class="src" href="https://www.nature.com/articles/s41586-019-1724-z">Vinyals 2019</a>
+@@ 71
+<strong>Cicero</strong> (Diplomacy, seven players, natural-language negotiation). A 2.7-billion-parameter dialogue model fine-tuned on more than 40,000 human games, plus a planner (piKL) that predicts human moves and improves on them while staying human-like. Over 40 games on webDiplomacy.net it scored more than double the average and placed in the <strong>top 10%</strong>. <a class="src" href="https://ai.meta.com/blog/cicero-ai-negotiates-persuades-and-cooperates-with-people/">Meta 2022</a>
+@@ 72
+7. Architecture
+@@ 73 attr
+RND: an observation is whitened and clipped, then fed to two networks of the same shape: a frozen random target network and a trained predictor network. Their outputs are compared; the squared difference is normalised and becomes the intrinsic reward. It is added to the environment's extrinsic reward in a PPO agent with two value heads, one for each reward stream, that outputs the next action. Gradient flows only into the predictor.
+@@ 74
+o, r_ext
+@@ 75
+whiten,
+@@ 76
+clip [−5, 5]
+@@ 77
+target net f
+@@ 78
+random, frozen
+@@ 79
+predictor net f̂
+@@ 80
+trained by MSE
+@@ 81
+÷ running std
+@@ 82
+r_int
+@@ 83
+r_ext (episodic)
+@@ 84
+PPO agent: policy π
+@@ 85
+value heads V_ext and V_int
+@@ 86
+gradient (predictor only)
+@@ 87
+RND. One observation feeds two identical-shaped networks; only the lower one learns. Their disagreement is the curiosity signal, mixed with the game score through two value heads. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a>
+@@ 88
+Left to right: the environment emits an observation and the real reward r<sub>ext</sub>. The observation is normalised and sent through the frozen target f and the trainable predictor f̂; their squared difference, divided by its running standard deviation, is r<sub>int</sub>. PPO receives both streams: the extrinsic head treats r<sub>ext</sub> as episodic, the intrinsic head treats r<sub>int</sub> as non-episodic (curiosity about a room should not reset when you die), and the two advantages are summed. The dashed gradient stops at the predictor: the target never changes, so observations the predictor has fit stop paying.
+@@ 89 attr
+AlphaZero: a board position goes into a residual network with a policy head and a value head. An MCTS loop of select, expand, evaluate and backup queries the network at each new leaf and returns a search policy pi and a chosen move. Self-play games produce (position, pi, outcome z) records stored in a replay buffer; training on them yields a new network, which plays the next games.
+@@ 90
+board s
+@@ 91
+true rules
+@@ 92
+ResNet f_θ
+@@ 93
+one network
+@@ 94
+policy head p
+@@ 95
+value head v
+@@ 96
+MCTS, 800 simulations
+@@ 97
+1 select: Q + U(p)
+@@ 98
+2 expand a leaf
+@@ 99
+3 evaluate: ask f_θ → (p, v)
+@@ 100
+4 backup v to the root
+@@ 101
+output: visit counts π, move
+@@ 102
+leaf position s′ to evaluate
+@@ 103
+self-play games
+@@ 104
+store (s, π, z)
+@@ 105
+replay buffer
+@@ 106
+recent games
+@@ 107
+training
+@@ 108
+new θ
+@@ 109
+plays next
+@@ 110
+parameters θ
+@@ 111
+play the move, record π
+@@ 112
+per move (top) · per training step (bottom)
+@@ 113
+AlphaZero. Top: one move, with the search calling the single network at every new leaf. Bottom: the data loop that turns search results into training targets for the next network. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017</a>
+@@ 114
+Top row: a position enters one residual network with two heads. MCTS runs 800 simulations, each selecting a path by PUCT (Q plus a bonus U proportional to the prior p), expanding a leaf, sending it through the network for a fresh (p, v), and backing v up to the root; the output is the visit distribution π, from which the move is played. Bottom row: each finished game writes (s, π, z) for its positions into a buffer; training pushes p toward π and v toward z; the new parameters go back to the self-play workers. Better network, better search, better targets.
+@@ 115 attr
+Centralised training, decentralised execution: three actors each take only their own observation and output their own action. During training, one centralised critic receives all observations and all actions and sends a gradient to each actor. A dashed line separates the training-only critic from the execution-time actors.
+@@ 116
+training only
+@@ 117
+centralised critic Q(o₁, o₂, o₃, a₁, a₂, a₃)
+@@ 118
+sees everyone; the world looks stationary to it
+@@ 119
+removed at execution
+@@ 120
+execution: each actor alone
+@@ 121
+actor 1: π₁(a₁ | o₁)
+@@ 122
+own view only
+@@ 123
+actor 2: π₂(a₂ | o₂)
+@@ 124
+actor 3: π₃(a₃ | o₃)
+@@ 125
+oᵢ, aᵢ up
+@@ 126
+gradient down
+@@ 127
+CTDE as in MADDPG. The critic may know everything while learning; the actors must never need it while acting. <a class="src" href="https://arxiv.org/abs/1706.02275">Lowe 2017</a>
+@@ 128
+Bottom to top: each actor maps its own observation to its own action. During training all observations and actions flow up into one critic, which can attribute a team outcome to each agent's choice and send a policy gradient back down. At execution the top box is deleted and the actors run independently, which is what makes the result deployable on separate robots or players.
+@@ 129
+Systems view: what ran where
+@@ 130
+RND's headline run lasted about 1.97 billion frames; the recurrent variant ran 1,024 parallel environments. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> AlphaGo Zero's 40-day run played about 5 million games on 4 TPUs; AlphaZero played its matches on 4 first-generation TPUs plus 44 CPU cores. <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a> <a class="src" href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">DeepMind 2018</a> OpenAI Five was the extreme: a 159-million-parameter policy, 84% of it one 4,096-unit LSTM, fed batches of about 2 million frames every 2 seconds by up to 172,800 rollout CPUs into up to 1,536 optimiser GPUs, roughly 770 petaflop/s-days over 10 months. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> The pattern: cheap simulators on many CPU cores, one learner on accelerators, and the gap between them is the engineering.
+@@ 131
+Q1. Why did DQN score essentially zero on Montezuma's Revenge?
+@@ 132
+The network was too small to see the screen
+@@ 133
+The game has no reward signal at all
+@@ 134
+Random exploration never completed the long action chain needed for the first reward, so there was nothing to learn from
+@@ 135
+Experience replay cannot store Atari frames
+@@ 136
+With ε-greedy noise the agent saw two rooms and almost never a reward; without rewards, Q-learning has no signal. Bellemare 2016 reports 0.02 points after 200 million frames.
+@@ 137
+Q2. In RND, which network is trained?
+@@ 138
+Both, so that they agree on every observation
+@@ 139
+Only the predictor; the random target is frozen forever
+@@ 140
+Only the target, toward the predictor's output
+@@ 141
+Neither; the bonus is the fixed difference between two random networks
+@@ 142
+The predictor learns to copy the frozen target on visited observations. Where it has succeeded, the error (and the bonus) is small; new observations still produce large error.
+@@ 143
+Q3. RND averaged 8,152 on Montezuma's Revenge. How does that compare with the average human score reported in the same paper?
+@@ 144
+About a fifth of it (human ≈ 43,000)
+@@ 145
+About equal (human ≈ 8,000)
+@@ 146
+Far below it (human ≈ 34,900)
+@@ 147
+Above it (human ≈ 4,753)
+@@ 148
+Burda 2018 gives the average human as 4,753; RND was the first to pass it without demonstrations. 34,900 is the human expert figure quoted by Go-Explore, and 43,763 is Go-Explore's own mean.
+@@ 149
+Q4. What is the key difference between Go-Explore and a curiosity bonus?
+@@ 150
+Go-Explore keeps an explicit archive of visited cells and returns to them deterministically before exploring; it uses no bonus
+@@ 151
+Go-Explore uses a larger bonus coefficient β
+@@ 152
+Go-Explore predicts pixels while curiosity predicts features
+@@ 153
+Go-Explore only works with human demonstrations
+@@ 154
+"First return, then explore." Returning without noise fixes derailment; the archive fixes detachment. The 43,763 mean used no domain knowledge and no demonstrations.
+@@ 155
+Q5. What did AlphaZero search per second compared with Stockfish, and who won?
+@@ 156
+About the same, 60 million positions per second; AlphaZero won on better evaluation
+@@ 157
+A thousand times more; AlphaZero won on raw speed
+@@ 158
+About 60 thousand against Stockfish's 60 million; AlphaZero still won 155 and lost 6 of 1,000
+@@ 159
+About 60 thousand against 60 million; Stockfish won narrowly
+@@ 160
+The network makes the search selective: fewer positions, better chosen. Those are the DeepMind 2018 figures for the Science version.
+@@ 161
+Q6. "Multi-agent RL is just several single-agent learners running at once." What is wrong with this?
+@@ 162
+Nothing; MADDPG is exactly independent DDPG per agent
+@@ 163
+Each agent's environment includes the other learners, so it is non-stationary and the Markov assumption behind Q-learning and replay breaks
+@@ 164
+The agents must share one network, so they cannot be run separately
+@@ 165
+Single-agent learners cannot output more than one action
+@@ 166
+Lowe 2017: "the environment becomes non-stationary from the perspective of any individual agent". CTDE restores a stationary view for the critic during training only.
+@@ 167
+Hard exploration is a missing-signal problem: on Montezuma's Revenge DQN saw two rooms and scored about zero because random actions never reached the first reward.
+@@ 168
+Novelty can be a reward. Counts (β/√N), pseudo-counts from a density model, and prediction error (ICM, RND) all turn "I have not been here" into gradient; RND's frozen-target trick reached 8,152 against the human 4,753 and 22 of 24 rooms.
+@@ 169
+Go-Explore replaces bonuses with memory: archive cells, return to them without noise, then explore; 43,763 on Montezuma and 59,494 on Pitfall, where RL had scored nothing.
+@@ 170
+Self-play is an automatic curriculum; AlphaGo Zero and AlphaZero close the loop by training one network on its own search results, beating Stockfish after 4 hours with a thousand times fewer positions per second.
+@@ 171
+Beyond two-player zero-sum games, "optimal" blurs into Nash equilibria, other learners make the environment non-stationary, and the fixes are centralised critics (CTDE), populations and leagues, and, for Cicero, modelling humans rather than solving the game.
+@@ 172
+Bellemare, Srinivasan, Ostrovski, Schaul, Saxton, Munos. Unifying Count-Based Exploration and Intrinsic Motivation. NeurIPS 2016. <a href="https://arxiv.org/abs/1606.01868">arxiv.org/abs/1606.01868</a>
+@@ 173
+Pathak, Agrawal, Efros, Darrell. Curiosity-driven Exploration by Self-supervised Prediction. ICML 2017. <a href="https://arxiv.org/abs/1705.05363">arxiv.org/abs/1705.05363</a>
+@@ 174
+Burda, Edwards, Storkey, Klimov. Exploration by Random Network Distillation. 2018. <a href="https://arxiv.org/abs/1810.12894">arxiv.org/abs/1810.12894</a>
+@@ 175
+Ecoffet, Huizinga, Lehman, Stanley, Clune. Go-Explore: a New Approach for Hard-Exploration Problems. 2019. <a href="https://arxiv.org/abs/1901.10995">arxiv.org/abs/1901.10995</a>
+@@ 176
+Ecoffet et al. First return, then explore. Nature 590, 580–586 (2021). <a href="https://www.nature.com/articles/s41586-020-03157-9">nature.com/articles/s41586-020-03157-9</a>
+@@ 177
+Badia et al. Agent57: Outperforming the Atari Human Benchmark. 2020. <a href="https://arxiv.org/abs/2003.13350">arxiv.org/abs/2003.13350</a>
+@@ 178
+Tesauro. Temporal Difference Learning and TD-Gammon. Communications of the ACM 38(3), 1995. <a href="https://www.bkgm.com/articles/tesauro/tdl.html">bkgm.com/articles/tesauro/tdl.html</a>
+@@ 179
+Silver et al. Mastering the game of Go with deep neural networks and tree search. Nature 529, 484–489 (2016). <a href="https://www.nature.com/articles/nature16961">nature.com/articles/nature16961</a>
+@@ 180
+DeepMind. AlphaGo (breakthrough page). <a href="https://deepmind.google/research/breakthroughs/alphago/">deepmind.google/research/breakthroughs/alphago/</a>
+@@ 181
+Silver et al. Mastering the game of Go without human knowledge. Nature 550, 354–359 (2017). <a href="https://www.nature.com/articles/nature24270">nature.com/articles/nature24270</a> · Blog: <a href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">AlphaGo Zero: Starting from scratch</a>
+@@ 182
+DeepMind. AlphaZero: Shedding new light on chess, shogi, and Go. 6 Dec 2018. <a href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">deepmind.google/discover/blog/alphazero-…</a>
+@@ 183
+Lowe, Wu, Tamar, Harb, Abbeel, Mordatch. Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments. NeurIPS 2017. <a href="https://arxiv.org/abs/1706.02275">arxiv.org/abs/1706.02275</a>
+@@ 184
+Jaderberg et al. Population Based Training of Neural Networks. 2017. <a href="https://arxiv.org/abs/1711.09846">arxiv.org/abs/1711.09846</a>
+@@ 185
+Berner et al. Dota 2 with Large Scale Deep Reinforcement Learning. 2019. <a href="https://arxiv.org/abs/1912.06680">arxiv.org/abs/1912.06680</a>
+@@ 186
+Vinyals et al. Grandmaster level in StarCraft II using multi-agent reinforcement learning. Nature 575, 350–354 (2019). <a href="https://www.nature.com/articles/s41586-019-1724-z">nature.com/articles/s41586-019-1724-z</a>
+@@ 187
+Meta AI. CICERO: An AI agent that negotiates, persuades, and cooperates with people. 22 Nov 2022. <a href="https://ai.meta.com/blog/cicero-ai-negotiates-persuades-and-cooperates-with-people/">ai.meta.com/blog/cicero-…</a>

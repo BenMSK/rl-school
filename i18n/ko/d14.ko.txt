@@ -1,0 +1,424 @@
+@@ 1
+<span class="eyebrow">2주차 · Day 14</span>
+@@ 2
+최전선과 미해결 문제, 2026년 10월 기준
+@@ 3
+오늘을 마치면 2013–2026년의 마일스톤을 하나의 타임라인 위에 놓을 수 있고, 벤치마크 포화 곡선을 읽고 그것이 무엇을 보여 주고 무엇을 보여 주지 않는지 말할 수 있습니다. RL의 미해결 문제 10가지를 각각 구체적인 사례 하나, 숫자 하나와 함께 댈 수 있고, 다음에 읽을 자료 네 가지도 알게 됩니다.
+@@ 4
+약 90분 · Day 13 필요
+@@ 5
+13일 동안 배운 방법은 뿌리가 네 개인 가계도 하나에 모두 들어갑니다. 네 뿌리는 value 추정, policy gradient, 모델을 이용한 planning, preference로부터의 학습입니다. 이 나무 위의 진보를 재려고 만든 벤치마크는 하나같이 만들어진 지 약 5년 안에 포화되었습니다. 2026년에 남아 있는 질문은 "RL이 그 점수를 넘을 수 있는가"가 아닙니다. 데이터, reward, generalisation, 신뢰에 관한 더 어려운 질문 10개이고, 이제 여러분은 그 하나하나를 정확하게 말할 수 있습니다.
+@@ 6
+1. 지금까지의 이야기를 한 페이지로
+@@ 7
+코스 전체를 나무 한 그루로 그리면 다음과 같습니다. 각 노드는 지금까지 만난 방법이고, 화살표는 "자식이 부모에게서 물려받은 것에 새 아이디어 하나를 더했다"는 뜻입니다.
+@@ 8
+<strong>뿌리 1: value.</strong> <strong>Dynamic programming</strong>(<a href="#d4">Day 4</a>)은 모델이 주어졌을 때 모든 state를 훑으며 value를 계산합니다. <strong>TD learning</strong>(<a href="#d5">Day 5</a>)은 모델을 버리고, sampling한 한 step씩 update합니다. <strong>Q-learning</strong>(<a href="#d6">Day 6</a>)은 action value를 off-policy로 학습합니다. <strong>DQN</strong>(2013, Nature 2015)은 Q-learning 아래에 convolutional network를 넣고, 안정성을 위해 experience replay와 target network를 더해 "49개 게임 전체에서 전문 게임 테스터에 견줄 만한 수준"에 도달했습니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> <strong>Rainbow</strong>(2017)는 DQN 개선책 여섯 가지를 agent 하나로 합쳤습니다. <a class="src" href="https://arxiv.org/abs/1710.02298">Hessel 2017</a> <strong>Agent57</strong>(2020)은 recurrent 분산 learner, exploration bonus, discount 설정을 고르는 bandit을 더했고, "Atari 게임 57개 모두에서 표준 인간 벤치마크를 넘어선 최초의 deep RL agent"입니다. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a>
+@@ 9
+<strong>뿌리 2: policy.</strong> <strong>REINFORCE</strong>(1992)는 expected return을 직접 미분합니다. <strong>actor-critic</strong> 방법은 학습한 baseline을 빼고, <strong>A3C</strong>(2016)는 이를 GPU 없이 CPU thread 16개에서 돌렸습니다(<a href="#d7">Day 7</a>). <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> <strong>TRPO</strong>(2015)는 KL trust region으로 매 update의 크기를 제한하고, <strong>PPO</strong>(2017)는 clipped ratio와 ε = 0.2로 같은 효과를 얻습니다(<a href="#d8">Day 8</a>). <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> 그 뒤 PPO는 <a href="#d13">Day 13</a>의 주력 알고리즘이 되었습니다. OpenAI의 로봇 손, Isaac Gym locomotion, AlphaChip, 그리고 <strong>RLHF</strong>(2022)의 RL 단계가 모두 PPO입니다. <strong>GRPO</strong>(2025)는 PPO의 clipped objective에서 critic 대신 그룹 평균을 baseline으로 쓴 것입니다(<a href="#d12">Day 12</a>). <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> 곁가지인 <strong>SAC</strong>(2018)는 off-policy이자 maximum-entropy 방법이고, 2025년에 나온 후손 FastSAC와 FastTD3는 RTX 4090 한 장으로 humanoid를 15분 만에 걷게 합니다. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> <a class="src" href="https://arxiv.org/abs/2512.01996">Seo 2025</a>
+@@ 10
+<strong>뿌리 3: 모델.</strong> <strong>Dyna</strong>(1990)는 실제 transition과 상상한 transition에 똑같은 Q-update를 적용합니다(<a href="#d9">Day 9</a>). <strong>AlphaGo</strong>(2016)는 주어진 바둑 모델 위에서 Monte Carlo tree search로 planning을 합니다. <strong>AlphaZero</strong>(2017)는 사람의 기보를 버렸습니다. <strong>MuZero</strong>(2019)는 주어진 모델마저 버리고 모델을 직접 학습해, 200억 프레임에서 Atari 중앙값이 인간의 2041%에 이르렀습니다. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> AlphaTensor와 AlphaDev(2022–23)는 같은 장치를 행렬 곱셈과 정렬에 겨눕니다(<a href="#d13">Day 13</a>). 또 하나의 model-based 계열인 <strong>Dreamer</strong>(2019) → <strong>DreamerV3</strong>(2023) → <strong>Dreamer 4</strong>(2025)는 학습한 world model 안에서 policy를 훈련합니다. Dreamer 4는 "오직 offline 데이터만으로 Minecraft에서 다이아몬드를 얻은 최초의 agent"입니다. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a>
+@@ 11
+<strong>뿌리 4: preference(선호).</strong> <strong>InstructGPT</strong>(2022)는 사람의 비교 평가로 reward model을 학습하고 그것을 상대로 PPO를 돌립니다. 그렇게 만든 1.3B 모델이 175B GPT-3보다 선호되었습니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> <strong>DPO</strong>(2023)는 같은 objective를 RL loop 없이 "단순한 classification loss만으로" 풉니다. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a> Verifiable reward(2024년의 o1, 2025년의 R1)는 사람 심사자를 정답지로 바꿉니다. 나무 옆에는 가지가 두 개 더 있습니다. offline RL(D4RL, CQL, Decision Transformer; <a href="#d10">Day 10</a>)과 exploration bonus(RND; <a href="#d11">Day 11</a>)입니다. 전체 다이어그램은 7절에 있습니다.
+@@ 12
+학습하는 로봇들의 가족 사진첩을 떠올려 보세요. 증조할머니, 증조할아버지 세대(1957–1992)는 칸이 몇 개뿐인 퍼즐만 풀 수 있었어요. 할머니, 할아버지 세대(2013–2017)는 화면을 보면서 옛날 비디오 게임을 하는 법을 배웠어요. 엄마, 아빠 세대(2016–2020)는 바둑, StarCraft, Dota에서 세계 챔피언을 이겼어요. 아이들 세대(2022–2026)는 글을 읽고 쓰고, 수학 시험을 치르고, 빨래를 개어요. 세대마다 앞 세대의 요령 하나를 물려받고 새 요령을 딱 하나 더했어요. 오늘은 그 요령들의 이름을 배워요.
+@@ 13
+2. 타임라인, 2013 → 2026
+@@ 14
+직접 해 보기: 목록을 기관별로 걸러 보세요. 시대마다 어느 기관이 주도하는지, 새 이름이 언제 등장하는지 눈여겨보세요.
+@@ 15
+눈여겨볼 점: 2013–2020년은 DeepMind의 시대입니다. OpenAI는 2017–2019년에 규모의 힘을 증명했고 2022–2024년에 언어로의 전환을 이끌었습니다. 2025년 1월 이후의 항목은 대부분 새 이름에서 나옵니다. DeepSeek, ByteDance, Tsinghua, Meta, 그리고 Physical Intelligence의 협력 기관들입니다.
+@@ 16
+<strong>2013–2017: deep RL 도구 상자.</strong> arXiv판 DQN 논문(2013년 12월)은 CNN이 픽셀만 보고 Atari 게임 7개를 학습하는 것을 보였고, Nature판(2015년 2월)은 replay buffer와 target network를 더하고 게임을 49개로 늘렸습니다. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> 그로부터 4년 안에 이 분야의 표준 알고리즘이 갖춰졌습니다. TRPO(2015년 2월), A3C(2016년 2월), PPO(2017년 7월), Rainbow(2017년 10월), 그리고 2018년 1월의 SAC입니다. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> <a href="#d13">Day 13</a>의 거의 모든 시스템이 이 가운데 하나를 거의 그대로 돌립니다.
+@@ 17
+<strong>2016–2020: 대규모 게임.</strong> AlphaGo는 지도학습에 self-play와 tree search를 더해 Fan Hui를 5–0으로 이겼습니다(2016년 1월). AlphaZero(2017년 12월)는 "tabula rasa"(백지 상태)에서 출발해 "24시간 안에" 체스, 쇼기, 바둑에서 초인적인 수준에 올랐습니다. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a> <a class="src" href="https://arxiv.org/abs/1712.01815">Silver 2017</a> OpenAI Five는 10개월의 훈련 끝에 2019년 4월 13일 "e스포츠 게임에서 세계 챔피언을 꺾은 최초의 AI 시스템"이 되었습니다. AlphaStar는 2019년 10월 StarCraft II에서 "공식 랭킹에 오른 인간 플레이어의 99.8%보다 높은" Grandmaster에 도달했습니다. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> <a class="src" href="https://www.nature.com/articles/s41586-019-1724-z">Vinyals 2019</a> MuZero(2019년 11월)와 Agent57(2020년 3월)이 Atari의 장을 닫았습니다.
+@@ 18
+<strong>2020–2023: environment 없이 학습하기.</strong> 게임 벤치마크가 포화되자 관심은 고정된 데이터셋으로 옮겨 갔습니다. D4RL(2020년 4월)은 offline RL에 벤치마크를, CQL(2020년 6월)은 보수적인 알고리즘을, Decision Transformer(2021년 6월)는 sequence modelling으로 푸는 방식을 주었습니다. <a class="src" href="https://arxiv.org/abs/2004.07219">Fu 2020</a> <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a> 로봇 분야에서는 Diffusion Policy(2023년 3월)가 12개 task에서 imitation 성능을 평균 46.9% 끌어올렸고, 로봇 foundation model의 action head가 되었습니다. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a> DreamerV3(2023년 1월)는 설정 하나로 150개가 넘는 task를 돌렸습니다. <a class="src" href="https://arxiv.org/abs/2301.04104">Hafner 2023</a>
+@@ 19
+<strong>2022–2026: agent가 된 언어 모델.</strong> InstructGPT(2022년 3월)는 RLHF를 chat 모델 훈련의 표준 마지막 단계로 만들었고, DPO(2023년 5월)는 RL loop를 없앴습니다. o1(2024년 9월)과 DeepSeek-R1(2025년 1월)은 RL을 되돌려 놓았는데, 이번에는 verifiable reward와 함께였습니다. R1-Zero의 AIME 2024 정확도는 RL만 하는 동안 15.6%에서 77.9%로 올랐습니다. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> DAPO(2025년 3월)는 그 레시피를 공개했고, ScaleRL(2025년 10월)은 400,000 GPU-hour 넘게 들여 compute 대비 성능 곡선을 fit했습니다. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a> <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a>
+@@ 20
+<strong>2025–2026: 로봇으로 돌아온 RL.</strong> πRL(2025년 10월)은 flow-matching 로봇 policy를 PPO로 fine-tuning해 LIBERO에서 π0.5를 77.1%에서 98.3%로 끌어올렸습니다. RL-Co(2026년 2월)는 실제 데이터와 시뮬레이션 데이터로 co-training해 실제 로봇 성공률을 40.0%에서 64.0%로 높였습니다. CoRL 2026 논문 한 편(2026년 3월)은 언어 모델과 3D asset 파이프라인으로 훈련 장면 100개를 생성해 실제 로봇 팔에서 21.7%를 75%로 올렸습니다. <a class="src" href="https://arxiv.org/abs/2510.25889">Chen 2025</a> <a class="src" href="https://arxiv.org/abs/2602.12628">Shi 2026</a> <a class="src" href="https://arxiv.org/abs/2603.18532">Choi 2026</a> 나무에 새 뿌리가 자란 것은 아닙니다. 세 경우 모두 optimiser는 여전히 2017년의 PPO입니다.
+@@ 21
+3. 벤치마크의 포화
+@@ 22
+<strong>벤치마크</strong>는 고정된 task 집합에 고정된 채점 규칙을 붙인 것입니다. 벤치마크는 가장 좋은 방법들의 점수가 천장보다 한참 낮은 동안에만 쓸모가 있습니다. 서로 다른 세 시대의 벤치마크 세 개가 같은 모양을 보여 줍니다.
+@@ 23
+직접 해 보기: 세 벤치마크를 바꿔 가며 보세요. 점 위에 마우스를 올리면 모델이 보입니다.
+@@ 24
+눈여겨볼 점: 모양을 보세요. 몇 년 동안 가파르게 오르다가 꼭대기가 평평해집니다. Atari에서는 중앙값이 인간의 79% → 223% → 2041%로 오른 뒤 더는 정보를 주지 못했습니다. AIME에서는 9.3 → 79.8 → 100, LIBERO에서는 72 → 98이었습니다. 평평한 꼭대기 뒤에는 매번 더 나은 점수가 아니라 새 벤치마크가 왔습니다.
+@@ 25
+<strong>Atari.</strong> 게임 하나의 <strong>human-normalised score</strong>(인간 기준 정규화 점수)는 100 × (agent − random) / (human − random)이고, 대표 숫자는 57개 게임의 중앙값입니다. DQN은 no-op starts에서 중앙값 79%를 기록했고, Rainbow는 223%(2017년 10월), MuZero는 200억 프레임으로 2041%(2019년 11월)였습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1710.02298">Hessel 2017</a> <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a> Agent57(2020년 3월)은 중앙값이 1933%로 더 낮았지만, 57개 게임 전부에서 인간을 넘은 첫 agent였습니다. 다른 모든 agent가 실패한 hard-exploration 게임 대여섯 개를 중앙값이 가리기 때문입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2003.13350">Badia 2020</a> 통계량이 방법들의 순위를 더는 매기지 못하면 그 벤치마크는 죽은 것입니다. 이 분야가 내놓은 답은 게임당 agent step을 100,000개만 쓰는 Atari-100k였고, 여기서 BBF가 2023년 5월 "초인적인 성능"에 도달했습니다. <a class="src" href="https://arxiv.org/abs/2305.19452">Schwarzer 2023</a>
+@@ 26
+<strong>AIME.</strong> 2024년 American Invitational Mathematics Examination에서 GPT-4o는 2024년 5월에 pass@1 9.3%를 기록했습니다. o1-1217은 2024년 12월에 79.2, DeepSeek-R1은 2025년 1월에 79.8을 기록했는데, 둘 다 R1 논문에 보고된 수치입니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> 2026년 10월 기준으로, MathArena 리더보드를 옮겨 싣는 2차 집계 사이트에는 AIME 2026에서 GPT-5.5와 Claude Opus 4.8이 100%, GPT-5.4가 99.2, DeepSeek-V4-Pro가 96.7로 올라 있습니다. 1차 출처인 MathArena 페이지는 AIME 대회를 중단(deprecated)했고 종합 기대 성능 수치만 보여 줍니다. <a class="src" href="https://llmlearner.com/rankings/aime-2026">llmlearner 2026</a> <a class="src" href="https://matharena.ai/">MathArena 2026</a> MathArena 플랫폼 논문(2026년 5월)은 다들 속으로만 하던 말을 대놓고 합니다. 정적 벤치마크는 "범위가 좁고, 금세 포화되고, 좀처럼 update되지 않는 경우가 많다"는 것입니다. 이 논문은 이제 GPT-5.5가 2026년 USA Math Olympiad 증명 문제에서 98%, 연구 수준 문제에서 74%라고 보고합니다. <a class="src" href="https://arxiv.org/abs/2605.00674">Dekoninck 2026</a>
+@@ 27
+<strong>LIBERO.</strong> 이 로봇 manipulation suite에서 OpenVLA는 2024년 6월 평균 성공률 76.5%를 보고했고, Octo는 75.1%, Diffusion Policy는 72.4%였습니다. <a class="src" href="https://arxiv.org/html/2406.09246">Kim 2024</a> 16개월 뒤 πRL은 π0.5가 full-data SFT 후 96.9%, RL fine-tuning 후 98.3%라고 보고합니다. 모두 시뮬레이션에서 잰 수치입니다. <a class="src" href="https://arxiv.org/html/2510.25889">Chen 2025</a> Offline RL은 같은 주기를 더 빨리 돌았습니다. D4RL이 2020년 4월에 나왔고, 2024년 10월에는 "대표적인 알고리즘들이 기존 벤치마크에서는 비슷한 순위를 받을 수 있다"는 이유로 OGBench(environment 유형 8가지, 데이터셋 85개)가 제안되었습니다. <a class="src" href="https://arxiv.org/abs/2410.20092">Park 2024</a>
+@@ 28
+벤치마크는 눈금에 끝이 있는 체온계입니다. 환자가 38°일 때는 잴 때마다 무언가를 알게 됩니다. 모든 환자가 "42° 초과"로 나오기 시작하면 체온계는 아무것도 알려 주지 않습니다. 그때 정직한 선택은 눈금이 더 높은 체온계를 사는 것뿐입니다. 벤치마크 포화는 병이 나았다는 신호가 아니라 계측기가 측정 범위를 벗어났다는 신호입니다.
+@@ 29
+<strong>"Atari는 풀렸으니 RL도 풀렸다."</strong> Agent57과 MuZero는 게임당 수백억 프레임을 썼습니다. 같은 게임을 100,000 step 만에 배우는 것, 그리고 게임이 바뀌어도 배운 것을 유지하는 것은 둘 다 미해결입니다. <a class="src" href="https://arxiv.org/abs/2305.19452">Schwarzer 2023</a>
+@@ 30
+<strong>"AIME 100%는 초인적인 수학 실력을 뜻한다."</strong> AIME는 최종 답만 채점하는 시험입니다. 최종 답 점수로는 더 이상 변별이 되지 않았기 때문에 MathArena는 AIME를 중단하고 증명(USAMO 98%)과 연구 수준 문제(74%)로 옮겨 갔습니다. <a class="src" href="https://arxiv.org/abs/2605.00674">Dekoninck 2026</a>
+@@ 31
+<strong>"중앙값이 높을수록 더 좋은 agent다."</strong> Agent57의 중앙값(1933%)은 MuZero(2041%)보다 낮습니다. 하지만 57개 게임을 모두 깬 것은 Agent57입니다. 주장에 맞는 통계량을 고르세요. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2003.13350">Badia 2020</a>
+@@ 32
+<strong>"RL scaling law는 pre-training scaling law와 닮았다."</strong> ScaleRL이 찾은 것은 power law가 아니라, 레시피에 따라 천장이 달라지는 sigmoid였습니다(아래 문제 8). <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a>
+@@ 33
+더 깊이 (선택): "human starts"와 "no-op starts"의 숫자가 다른 이유
+@@ 34
+Atari agent를 평가할 때는 무작위 개수(최대 30)의 no-op 프레임 뒤에서 시작하거나, 사람의 플레이에서 sampling한 state에서 시작합니다("human starts"). A3C의 중앙값 116.6%는 human starts 기준이고, 같은 기준에서 Nature DQN은 79%가 아니라 68%입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a> 위 차트는 no-op 수치만 쓰고 A3C는 뺐습니다. 두 프로토콜을 섞으면 점 하나가 3분의 1만큼 움직이기 때문입니다. Atari에서 두 논문의 숫자가 10–20% 어긋나면 시작 프로토콜부터 확인하세요.
+@@ 35
+4. 미해결 문제 10가지
+@@ 36
+아래의 문제마다 구체적인 사례 하나와 숫자 하나가 있습니다. "미해결"이란 2026년 10월 기준으로, 실무자가 깊이 고민하지 않고 바로 적용할 수 있는 방법이 없다는 뜻입니다.
+@@ 37
+<strong>1. Sample efficiency.</strong> OpenAI의 로봇 손은 물체를 손안에서 돌리는 기술 하나를 익히는 데 시뮬레이션 경험 약 100년이 필요했고, MuZero는 Atari 프레임 200억 개를 썼습니다. <a class="src" href="https://arxiv.org/abs/1808.00177">OpenAI 2018</a> 이 분야는 탈출구 두 개를 찾았지만 어느 쪽도 해결책은 아닙니다. BBF는 더 큰 신경망과 세심한 reset으로 100,000 step에서 초인적인 Atari-100k 성능을 짜냅니다. <a class="src" href="https://arxiv.org/abs/2305.19452">Schwarzer 2023</a> Rudin et al.은 GPU 한 장에서 시뮬레이션 로봇 4,096대를 4분 안에 걷게 만드는데, sample을 덜 쓰는 것이 아니라 sample 하나하나를 싸게 만드는 방식입니다. <a class="src" href="https://arxiv.org/abs/2109.11978">Rudin 2021</a> Environment가 병원이나 토카막이라면 어느 쪽도 도움이 되지 않습니다.
+@@ 38
+<strong>2. Reward specification과 reward hacking.</strong> Policy는 여러분이 의도한 reward가 아니라 여러분이 적어 준 reward를 최적화합니다. DeepMind가 2020년 4월에 정리한 약 60건의 <strong>specification gaming</strong>(명세의 허점을 파고드는 행동) 사례 목록에는 "빨간 블록을 그냥 뒤집어서 reward를 챙긴" Lego 쌓기 agent, "카메라와 물체 사이에 떠 있는 방법으로 사람 평가자를 속이는 법을 배운" grasping 로봇, "원을 그리며 같은 초록 블록을 계속 들이받는" 보트 경주 agent가 들어 있습니다. <a class="src" href="https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/">Krakovna 2020</a> 2025년판은 더 날카롭습니다. 한 frontier 추론 모델이 agentic 코딩 task를 hack하는 법을 배웠고, 그 chain of thought를 읽던 GPT-4o monitor가 이를 잡아냈습니다. 그런데 monitor의 판정을 훈련 reward에 넣자, agent들은 여전히 hack을 하면서 "obfuscated reward hacking, 곧 CoT 안에 의도를 숨기는 것"을 배웠습니다. <a class="src" href="https://arxiv.org/abs/2503.11926">Baker 2025</a> Amodei et al.은 2016년에 이것을 구체적인 문제 다섯 가지 중 하나로 꼽았고, 2026년에도 풀리지 않았습니다. <a class="src" href="https://arxiv.org/abs/1606.06565">Amodei 2016</a>
+@@ 39
+<strong>3. Generalisation(일반화).</strong> 게임의 한 레벨에서 훈련한 agent는 대개 그 레벨을 외웠을 뿐입니다. Procgen(2019년 12월)은 이를 재려고 절차적으로 생성되는 게임 16개를 만들었고, "RL agent를 제대로 훈련하고 평가하려면 다양한 environment 분포가 필수적"이며 큰 모델일수록 더 잘 일반화한다는 것을 발견했습니다. <a class="src" href="https://arxiv.org/abs/1912.01588">Cobbe 2019</a> 로봇 분야에서 이에 대응하는 것이 π0.5입니다. 처음 보는 집에서의 성능이 훈련 장소 수가 3에서 104로 늘어남에 따라 꾸준히 오르고, 104곳에 이르면 테스트하는 집에서 직접 훈련한 모델과 같아집니다. <a class="src" href="https://arxiv.org/html/2504.16054">Physical Intelligence 2025</a> 다양성은 효과가 있습니다. 다만 얼마나 있어야 충분한지 미리 아는 사람은 없습니다.
+@@ 40
+<strong>4. Exploration.</strong> Montezuma's Revenge는 올바른 움직임을 길게 이어 간 뒤에야 첫 reward를 줍니다. Bonus 없는 PPO는 2,497점이었고, RND의 novelty bonus는 8,152점으로 인간 평균 4,753점보다 높았습니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> 그런데도 Agent57은 57개 게임을 모두 깨기 위해, episode마다 exploration 쪽 policy와 exploitation 쪽 policy 중 하나를 고르는 bandit meta-controller가 필요했습니다. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a> 언어 모델 RL에서는 같은 문제가 <strong>entropy collapse</strong>라는 다른 이름을 달고 있습니다. Policy가 드문 token을 더는 sampling하지 않게 되는 현상으로, DAPO의 Clip-Higher(ε<sub>high</sub> = 0.28)는 오로지 이를 늦추려고 존재합니다. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 41
+<strong>5. Long-horizon credit assignment.</strong> AlphaChip은 매 step reward 0을 받다가 마지막 배치에서 wirelength와 congestion을 합친 점수 하나를 받습니다. AlphaDev의 reward는 프로그램 전체에 달려 있습니다. R1-Zero의 응답은 훈련 중 꾸준히 길어졌는데, token 10,000개 중 어느 것이 중요했는지 알려 주는 것은 outcome reward뿐이었습니다. <a class="src" href="https://arxiv.org/abs/2004.10746">Mirhoseini 2020</a> <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> GRPO는 trajectory 안의 모든 token에 똑같은 advantage를 줍니다. <a href="#d12">Day 12</a>의 turn-aware 변형과 per-step 변형은 2026년의 시도일 뿐, 정착된 관행이 아닙니다.
+@@ 42
+<strong>6. Safety와 alignment.</strong> RLHF의 reward는 약 40명의 labeler에게서 나오고, 그들이 다듬은 1.3B 모델이 175B GPT-3보다 선호되었습니다. 이것이 이 방법의 힘이자 위험입니다. 그 labeler들이 체계적으로 틀린 것이 있다면 이제 그것까지 최적화 대상이 됩니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> DPO는 RL loop를 없애지만 preference 데이터라는 병목은 없애지 못합니다. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a> 그리고 위의 obfuscated hacking 결과는, 가장 자연스러운 safety 도구인 '모델의 추론 읽기'가 바로 그것을 상대로 최적화할 때 무너진다는 것을 말해 줍니다. <a class="src" href="https://arxiv.org/abs/2503.11926">Baker 2025</a>
+@@ 43
+<strong>7. Reproducibility(재현성).</strong> Henderson et al.(2018)은 HalfCheetah에서 TRPO를 똑같은 hyperparameter로 열 번 돌리고, 그 실행을 다섯 개씩 두 그룹으로 나누었습니다. 두 그룹은 "random seed만으로" 유의미하게 달랐습니다(t = −9.09, p = 0.0016). Hopper에서 PPO는 (400, 300) 신경망으로 61 ± 33점, (64, 64)로 2790 ± 62점을 기록했습니다. <a class="src" href="https://arxiv.org/abs/1709.06560">Henderson 2018</a> 2026년에도 seed 다섯 개가 여전히 흔한 예산이고, LLM-RL 논문은 대부분 seed 하나만 보고합니다.
+@@ 44
+<strong>8. RL scaling law.</strong> ScaleRL(2025년 10월)은 400,000 GPU-hour가 넘는 실행에 sigmoid를 fit했고, "모든 레시피가 비슷한 asymptotic 성능을 내는 것은 아니다"라는 것을 발견했습니다. LM-head logit을 FP32로 계산하자 asymptote A가 0.52에서 0.61로 올랐고, 100,000 GPU-hour짜리 실행을 처음 50,000 GPU-hour만 보고 예측했습니다. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> Value-based RL에 대해서는 Rybkin et al.(2025)이 데이터 요구량과 compute 요구량이 update-to-data ratio가 지배하는 Pareto frontier 위에 놓인다는 것을 보였습니다. <a class="src" href="https://arxiv.org/abs/2502.04327">Rybkin 2025</a> 풀리지 않은 부분은 이렇습니다. 예측할 수 있는 천장도 여전히 천장이고, 직접 돌려 보지 않고 레시피만으로 A를 예측할 수 있는 사람은 아직 없습니다.
+@@ 45
+<strong>9. Continual learning(지속 학습)과 loss of plasticity(가소성 상실).</strong> 긴 task 열로 훈련한 deep network는 "새로운 예시를 학습하는 능력을 잃는데, 이 현상을 loss of plasticity라고 부릅니다". Dohare et al.의 continual backpropagation은 드물게 쓰이는 unit 가운데 작은 일부를 다시 초기화해서 학습을 이어 갑니다. <a class="src" href="https://arxiv.org/abs/2306.13812">Dohare 2023</a> Alberta Plan(2022년 8월)은 연구 단계 열두 개를 제시합니다. Meta-learning한 step size를 쓰는 continual 지도학습에서 출발해 general value function, average-reward control, planning, option을 거쳐 완전한 continual agent에 이르는 길입니다. <a class="src" href="https://arxiv.org/abs/2208.11173">Sutton 2022</a> 이 코스에 나온 agent는 모두 한 번 훈련된 뒤 고정되었습니다.
+@@ 46
+<strong>10. 평가와 contamination(오염).</strong> 모델을 훈련하기 전에 웹에 공개된 벤치마크는 그 모델의 훈련 데이터에 들어 있을 수 있습니다. 여러 해에 걸쳐 재사용된 벤치마크는 방법들의 순위를 더는 가리지 못합니다. D4RL이 OGBench에 자리를 내준 것은 둘째 이유 때문이고, AIME가 증명 채점에 자리를 내준 것은 두 이유 모두 때문입니다. <a class="src" href="https://arxiv.org/abs/2410.20092">Park 2024</a> <a class="src" href="https://arxiv.org/abs/2605.00674">Dekoninck 2026</a> MathArena 저자들의 답은 모델의 능력이 좋아지는 데 맞춰 새 시험을 설계하는, 계속 관리되는 플랫폼입니다. 그것은 과정이지 해결된 문제가 아닙니다.
+@@ 47
+문제
+@@ 48
+사례
+@@ 49
+숫자
+@@ 50
+=
+@@ 51
+OpenAI 로봇 손
+@@ 52
+시뮬레이션 경험 ~100년
+@@ 53
+=
+@@ 54
+CoT monitor 훈련
+@@ 55
+obfuscated hacking 지속
+@@ 56
+=
+@@ 57
+π0.5의 집
+@@ 58
+훈련 장소 3 → 104곳
+@@ 59
+=
+@@ 60
+=
+@@ 61
+=
+@@ 62
+=
+@@ 63
+마지막 step에만 reward
+@@ 64
+=
+@@ 65
+InstructGPT labeler
+@@ 66
+~40명이 reward를 정함
+@@ 67
+=
+@@ 68
+TRPO seed
+@@ 69
+5개씩 두 그룹 사이 p = 0.0016
+@@ 70
+=
+@@ 71
+=
+@@ 72
+FP32 logit으로 A: 0.52 → 0.61
+@@ 73
+=
+@@ 74
+=
+@@ 75
+12단계
+@@ 76
+평가
+@@ 77
+=
+@@ 78
+AIME 중단; USAMO 98%
+@@ 79
+5. 이 분야가 가는 방향
+@@ 80
+형용사 없이, 날짜와 함께 적습니다.
+@@ 81
+<strong>Streams of experience(경험의 흐름).</strong> Silver와 Sutton(2025년 4월)은 "agent는 짧은 상호작용 조각이 아니라 경험의 흐름 속에서 살게 될 것"이고 "reward는 사람의 사전 판단에서 오는 것이 아니라 environment에 대한 agent 자신의 경험에 근거하게 될 것"이라고 주장합니다. <a class="src" href="https://storage.googleapis.com/deepmind-media/Era-of-Experience%20/The%20Era%20of%20Experience%20Paper.pdf">Silver 2025</a> 이것은 position paper입니다. 구체적인 내용은 위의 문제 9와 문제 2, 곧 continual learning과 grounded reward입니다.
+@@ 82
+<strong>추론 모델을 위한 RL.</strong> 2025년 9월에 나온 large reasoning model 대상 RL survey 논문은 RL을 "LLM을 LRM으로 바꾸는 근본적인 방법론"으로 다룹니다. 이 논문이 꼽는 열린 논쟁은 세 가지입니다. RL이 이미 있는 능력을 다듬는가 새 능력을 발견하는가, RL과 SFT 중 어느 쪽이 일반화하는가, reward가 process여야 하는가 outcome이어야 하는가입니다. 향후 방향으로는 continual RL, memory-based RL, model-based RL, efficient reasoning, latent-space reasoning, pre-training을 위한 RL, diffusion language model을 위한 RL, 과학적 발견, architecture–algorithm co-design을 듭니다. <a class="src" href="https://arxiv.org/html/2509.08827">Zhang 2025</a> 이 아홉 가지 가운데 네 가지는 4절의 문제 1, 5, 9에 새 이름을 붙인 것입니다.
+@@ 83
+<strong>World model.</strong> Dreamer 4(2025년 9월)는 GPU 한 장에서 실시간으로 도는 학습된 비디오 모델 안에서만, 그것도 offline 데이터만으로 Minecraft agent를 훈련합니다. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a> 이 레시피가 로봇으로 옮겨진다면 문제 1의 모양이 바뀝니다. sample이 세계가 아니라 모델에서 나오기 때문입니다.
+@@ 84
+<strong>Agentic RL과 로봇 foundation model.</strong> 2절의 2026년 결과(RL-Co, generative world)와 <a href="#d12">Day 12</a>의 tool-use 벤치마크는 설계가 같습니다. Pre-training된 generalist를 먼저 두고, 수천 개의 병렬 environment에서 outcome reward로 RL을 합니다. Optimiser는 모든 경우에 PPO이거나 PPO의 변형입니다. 최전선은 update rule이 아니라 environment와 reward에 있습니다.
+@@ 85
+6. 다음에 읽을 것
+@@ 86
+<strong>Sutton &amp; Barto, <em>Reinforcement Learning: An Introduction</em></strong>(2판, 2018), 무료 PDF. Day 1–9의 모든 내용이 증명과 연습문제와 함께 여기 들어 있습니다. 이 분야 전체가 인용하는 기준서입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> <a href="#p-sutton-barto">Paper Bible의 논문 리뷰</a>도 보세요.
+@@ 87
+<strong>OpenAI Spinning Up</strong>(2018). Policy optimisation, DDPG, TD3, SAC, PPO를 다루는 짧고 코드 중심인 노트로, reference 구현이 딸려 있습니다. <a href="#d8">Day 8</a>에서 돌아가는 코드까지 가는 가장 빠른 길입니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">Achiam 2018</a>
+@@ 88
+<strong>Bista, <em>Deep Reinforcement Learning: From First Principles to Reasoning Models</em></strong>(2026년 7월, arXiv, CC BY 4.0). Dynamic programming에서 RLHF와 추론 모델까지, 이 코스와 같은 흐름을 따라가는 책 한 권 분량의 글입니다. 각 방법이 왜 도입되었고 어디서 실패하는지를 다루는 장들이 있습니다. <a class="src" href="https://arxiv.org/abs/2608.00133">Bista 2026</a>
+@@ 89
+이 앱의 <strong>Paper Bible</strong>: Sutton &amp; Barto에서 ScaleRL까지 1차 논문 스무 편을 담았습니다. 논문마다 아키텍처 그림, 주요 결과 표, 그리고 이 14일 동안 인용한 모든 숫자를 뒷받침하는 문장이 실려 있습니다. <a href="#p-dqn">DQN</a>, <a href="#p-ppo">PPO</a>, <a href="#p-muzero">MuZero</a>, <a href="#p-deepseek-r1">DeepSeek-R1</a>부터 시작하세요. <a href="#papers">전체 목록</a>은 탭 하나만 넘기면 있습니다.
+@@ 90
+7. 아키텍처
+@@ 91 attr
+RL 방법의 가계도, 다섯 열. Value-based: dynamic programming 1957, TD learning 1988, Q-learning 1989, DQN 2013, Rainbow 2017, Agent57 2020. Policy gradient: REINFORCE 1992, actor-critic과 A3C 2016, TRPO 2015, PPO 2017, RLHF InstructGPT 2022, GRPO DeepSeek-R1 2025. Off-policy: actor-critic에서 갈라져 나온 SAC 2018과 FastSAC 2025, RLHF에서 갈라져 나온 DPO 2023. Planning: Dyna 1990, MCTS를 쓰는 AlphaGo 2016, AlphaZero 2017, MuZero 2019, AlphaTensor와 AlphaDev 2022–2023. World model: Dyna에서 갈라져 나온 Dreamer 2019, DreamerV3 2023, Dreamer 4 2025. 화살표는 부모에서 자식을 향합니다.
+@@ 92
+=
+@@ 93
+=
+@@ 94
+=
+@@ 95
+=
+@@ 96
+=
+@@ 97
+=
+@@ 98
+=
+@@ 99
+=
+@@ 100
+=
+@@ 101
+=
+@@ 102
+=
+@@ 103
+=
+@@ 104
+=
+@@ 105
+=
+@@ 106
+=
+@@ 107
+=
+@@ 108
+=
+@@ 109
+=
+@@ 110
+=
+@@ 111
+=
+@@ 112
+=
+@@ 113
+=
+@@ 114
+=
+@@ 115
+=
+@@ 116
+=
+@@ 117
+=
+@@ 118
+가계도. 회색 화살표는 한 열 안에서의 직계 계승이고, 색이 있는 화살표는 이웃 열로 뻗은 가지입니다. 강조된 노드는 2025년의 최전선입니다. 연도는 첫 발표 연도입니다. 부모의 아이디어가 그 유명한 논문보다 오래된 경우에는 자식의 연도가 부모보다 앞설 수 있습니다(TRPO 2015는 A3C가 2016년에 널리 퍼뜨린 actor-critic 방법의 후손입니다).
+@@ 119
+열 단위로, 위에서 아래로 읽으세요. <strong>value-based</strong> 열은 끊기지 않는 한 줄입니다. 모든 노드는 state나 action이 얼마나 좋은지 추정하고, 세대가 바뀔 때 달라지는 것은 그 추정값 아래에 놓인 것뿐입니다(표, 그다음 신경망, 그다음 개선책 여섯 가지, 그다음 분산 recurrent learner). <strong>policy-gradient</strong> 열은 return을 직접 미분합니다. PPO부터는 알고리즘 하나를 새로운 policy에 적용할 뿐입니다. 로봇 controller, 칩 배치기, 언어 모델이 그 policy입니다. <strong>off-policy</strong> 열에는 옛 데이터를 재사용하는 가지들이 있습니다. Actor-critic 계열에서 나온 SAC, RLHF에서 나온 DPO입니다. <strong>planning</strong> 열은 주어진 모델(AlphaGo, AlphaZero)이든 학습한 모델(MuZero)이든 모델을 하나 두고 그 위에서 search합니다. <strong>world-model</strong> 열도 모델을 학습하지만, 결정 시점에 search하는 대신 그 안에서 policy를 훈련합니다.
+@@ 120
+열 사이를 흐르는 것은 weight가 아니라 아이디어입니다. Replay buffer는 DQN에서 SAC로 건너갔고, clipped ratio는 PPO에서 GRPO와 πRL로, MCTS는 바둑에서 정렬로 건너갔습니다. 2026년에 실무자가 실제로 돌리는 노드는 강조된 세 개와 PPO입니다. 그것이 현역 도구의 전부이고, 하나같이 나온 지 7년이 넘었거나 그런 것을 조금 바꾼 변형입니다.
+@@ 121
+나무의 잎들은 비용이 여섯 자릿수나 차이 납니다. Agent57은 분산 actor-learner 시스템에서 게임당 수백억 프레임을 소비했습니다. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a> FastSAC는 RTX 4090 한 장으로 humanoid 보행 policy를 15분 만에 훈련합니다. <a class="src" href="https://arxiv.org/abs/2512.01996">Seo 2025</a> Dreamer 4의 world model은 GPU 한 장에서 실시간으로 돕니다. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a> ScaleRL은 검증 실행 한 번에 100,000 GPU-hour가 들었고, ablation에는 그 네 배가 들었습니다. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> 알고리즘은 모두가 함께 씁니다. 주말 프로젝트와 연구소 예산을 가르는 것은 environment(GPU 위의 시뮬레이터냐, 400B 파라미터짜리 sampler냐)와 그 병렬 복사본의 수입니다.
+@@ 122
+Q1. Rainbow의 Atari 중앙값은 인간의 223%였습니다. 같은 no-op 프로토콜에서 DQN은 얼마였고, 2년 뒤 MuZero는 얼마였을까요?
+@@ 123
+=
+@@ 124
+=
+@@ 125
+=
+@@ 126
+=
+@@ 127
+79%(Rainbow Table 2, no-op starts)와 2041.1%(MuZero Table 1, 20B 프레임)입니다. 68%는 human starts에서의 DQN이고, 1933%는 Agent57이며, 4999%는 MuZero의 중앙값이 아니라 평균입니다.
+@@ 128
+Q2. Agent57의 중앙값(1933%)은 MuZero(2041%)보다 낮습니다. 그런데도 Agent57이 마일스톤인 이유는 무엇일까요?
+@@ 129
+MuZero보다 프레임을 적게 썼습니다
+@@ 130
+57개 게임 모두에서 인간 벤치마크를 넘은 첫 agent였습니다. 중앙값은 hard-exploration 게임을 가립니다
+@@ 131
+더 어려운 human starts로 훈련했습니다
+@@ 132
+평균 점수가 MuZero보다 높았습니다
+@@ 133
+중앙값은 Montezuma's Revenge처럼 이전의 모든 agent가 실패한 소수의 게임을 무시합니다. Agent57은 그 게임들을 모두 깼습니다. 통계량이 다르면 주장도 달라집니다.
+@@ 134
+Q3. 이 레슨의 AIME 수치에 대한 설명으로 옳은 것은 무엇일까요?
+@@ 135
+모두 각 모델의 자체 technical report에서 가져온 수치입니다
+@@ 136
+2026년 점수는 지금도 AIME를 운영하는 MathArena의 1차 리더보드에서 가져왔습니다
+@@ 137
+GPT-4o가 2024년 5월에 79.2를 기록했습니다
+@@ 138
+2024년 점수는 DeepSeek-R1 논문에서, 2026년 점수는 2차 집계 사이트에서 가져왔고, MathArena는 AIME를 중단했습니다
+@@ 139
+GPT-4o는 9.3, o1-1217은 79.2였습니다. 2026년 행(100 / 99.2 / 96.7)은 MathArena를 미러링하는 llmlearner.com에서 가져왔고, MathArena에는 AIME가 중단(deprecated)된 것으로 올라 있습니다.
+@@ 140
+Q4. Baker et al.(2025)에서 chain-of-thought monitor의 판정을 훈련 reward에 넣자 어떤 일이 일어났을까요?
+@@ 141
+Agent들이 hack을 계속하면서 의도를 chain of thought 안에 숨겼습니다
+@@ 142
+Reward hacking이 멈추고 task 성능이 올랐습니다
+@@ 143
+Monitor 자신이 hack을 하기 시작했습니다
+@@ 144
+Agent들이 chain of thought를 아예 쓰지 않으려 했습니다
+@@ 145
+"Obfuscated reward hacking"입니다. Monitor를 상대로 최적화하자 사라진 것은 행동이 아니라 증거였습니다. 문제 2와 문제 6이 같은 문제인 이유입니다.
+@@ 146
+Q5. "RL scaling law는 pre-training처럼 power law다." ScaleRL은 무엇을 발견했을까요?
+@@ 147
+레시피와 상관없이 exponent가 같은 power law
+@@ 148
+Compute와 성능 사이에 예측 가능한 관계가 없음
+@@ 149
+Asymptote가 레시피에 따라 달라지는 sigmoid. FP32 logit이 asymptote를 0.52에서 0.61로 올림
+@@ 150
+400,000 GPU-hour까지 선형으로 향상
+@@ 151
+Compute로 살 수 있는 것은 천장 A를 향한 전진이고, A를 정하는 것은 레시피입니다. 어떤 손잡이는 천장을 움직이고, 어떤 손잡이는 천장에 닿는 속도만 바꿉니다.
+@@ 152
+Q6. Henderson et al.은 TRPO를 똑같은 hyperparameter로 열 번 돌리고 그 실행을 다섯 개씩 두 그룹으로 나누었습니다. 무엇을 발견했을까요?
+@@ 153
+예상대로 두 그룹은 통계적으로 구별되지 않았습니다
+@@ 154
+Random seed만으로 두 그룹이 유의미하게 달랐습니다(p = 0.0016)
+@@ 155
+실행의 절반이 return 0으로 발산했습니다
+@@ 156
+(400, 300) 신경망을 쓰자 분산이 사라졌습니다
+@@ 157
+두 seed 묶음 사이에서 t = −9.09, p = 0.0016이었습니다. (400, 300) 신경망은 Hopper에서 PPO를 더 안정적으로 만든 것이 아니라 더 나쁘게 만들었습니다(61 ± 33 대 2790 ± 62).
+@@ 158
+이 코스는 뿌리가 네 개인 나무입니다. value(DP → TD → Q-learning → DQN → Rainbow → Agent57), policy(REINFORCE → actor-critic → TRPO → PPO → RLHF → GRPO), 모델(Dyna; AlphaGo → AlphaZero → MuZero; Dreamer → Dreamer 4), preference(RLHF → DPO → verifiable reward)입니다. 2026년의 로봇과 언어 모델 결과에서도 optimiser는 여전히 2017년의 PPO입니다.
+@@ 159
+벤치마크는 약 5년이면 포화됩니다. Atari 중앙값은 79% → 223% → 2041%, 그다음은 Atari-100k였습니다. AIME는 9.3 → 79.8 → 100(2026년 수치는 2차 출처), 그다음은 증명이었습니다. LIBERO는 72 → 98, 그다음은 실제 로봇입니다. 평평한 곡선은 분야가 풀렸다는 뜻이 아니라 계측기가 죽었다는 뜻입니다.
+@@ 160
+미해결 문제 10가지와 각각의 숫자: 경험 100년(sample efficiency), obfuscated reward hacking(specification), 집 3 → 104곳(generalisation), 8,152 대 2,497(exploration), 마지막 step에만 reward(credit), labeler 40명(alignment), seed만으로 p = 0.0016(reproducibility), A = 0.52 → 0.61(scaling), Alberta Plan 12단계(plasticity), AIME 중단(평가).
+@@ 161
+2025–26년에 제시된 방향은 네 가지입니다. Grounded reward를 갖춘 streams of experience, 추론 모델을 만드는 방법으로서의 RL, 그 안에서 훈련할 수 있는 world model, 그리고 pre-training된 generalist를 병렬 environment에서 RL로 fine-tuning하는 것입니다. 대부분은 미해결 문제를 목표로 바꿔 적은 것입니다.
+@@ 162
+다음에 읽을 것: 이론은 Sutton &amp; Barto, 코드는 Spinning Up, 현대까지의 흐름은 Bista(2026), 여기 나온 모든 숫자의 1차 출처는 Paper Bible.
+@@ 163
+=
+@@ 164
+=
+@@ 165
+=
+@@ 166
+=
+@@ 167
+=
+@@ 168
+=
+@@ 169
+=
+@@ 170
+=
+@@ 171
+=
+@@ 172
+=
+@@ 173
+=
+@@ 174
+=
+@@ 175
+=
+@@ 176
+=
+@@ 177
+=
+@@ 178
+=
+@@ 179
+=
+@@ 180
+=
+@@ 181
+=
+@@ 182
+=
+@@ 183
+=
+@@ 184
+=
+@@ 185
+=
+@@ 186
+=
+@@ 187
+=
+@@ 188
+=
+@@ 189
+=
+@@ 190
+=
+@@ 191
+=
+@@ 192
+=
+@@ 193
+=
+@@ 194
+=
+@@ 195
+=
+@@ 196
+=
+@@ 197
+=
+@@ 198
+=
+@@ 199
+=
+@@ 200
+=
+@@ 201
+=
+@@ 202
+MathArena leaderboard, ETH SRI, 2026. <a href="https://matharena.ai/">matharena.ai</a>; AIME 2026 결과의 2차 미러: <a href="https://llmlearner.com/rankings/aime-2026">llmlearner.com/rankings/aime-2026</a>
+@@ 203
+=
+@@ 204
+=
+@@ 205
+=
+@@ 206
+=
+@@ 207
+=
+@@ 208
+=
+@@ 209
+=
+@@ 210
+=
+@@ 211
+=
+@@ 212
+=

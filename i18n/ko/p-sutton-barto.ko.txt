@@ -1,0 +1,182 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+이 분야의 언어가 된 교과서입니다. 세 Part에 걸친 17개 chapter로 이루어져 있고, 저자들이 PDF를 무료로 공개했으며, 이 Paper Bible의 다른 모든 논문 리뷰가 쓰는 표기법이 여기서 나왔습니다.
+@@ 4
+<a href="#d1">Day 1</a>에서 다룸 · 원문 읽는 시간: 하루 두 chapter씩 약 일주일
+@@ 5
+Sutton과 Barto는 강화학습을 "수치로 된 reward 신호를 최대화하려면 무엇을 해야 하는지, 즉 상황을 action에 어떻게 대응시킬지를 학습하는 것"으로 정의합니다. 그런 다음 이를 table로 정확하게 푸는 방법(Part I), function approximation으로 근사해서 푸는 방법(Part II), 그리고 이것이 뇌, 심리학, 실제 시스템과 어떤 관련이 있는지(Part III)를 보여 줍니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 6
+강아지에게 재주를 가르치는 두꺼운 안내서를 떠올려 보세요. 아무도 강아지에게 규칙을 알려 주지 않고, 강아지는 간식을 받았는지만 알 수 있어요. 첫 번째 부분은 종이 한 장에 점수를 다 적을 수 있는 작은 게임을 다뤄요. 두 번째 부분은 상황이 너무 많아서 종이 대신 똑똑하게 어림짐작하는 장치가 필요한 게임을 다뤄요. 세 번째 부분은 진짜 동물과 진짜 뇌가 같은 일을 어떻게 해내는지 물어요. 두 저자는 이 안내서를 통째로 인터넷에 무료로 올려 두었어요.
+@@ 7
+이 책이 나오기 전, RL의 아이디어는 서로 떨어진 세 갈래의 문헌에 흩어져 있었습니다. 심리학에는 "시행착오 학습의 본질"인 Thorndike의 Law of Effect(1911)가 있었습니다. 제어 이론에는 Bellman의 dynamic programming과 Markov decision process(1957)가 있었습니다. 세 번째 갈래인 <strong>temporal-difference learning</strong>은 Samuel의 체커 프로그램(1959)에서 Sutton의 1988년 논문으로 이어졌습니다. 이 셋은 Watkins가 1989년에 쓴 Q-learning 학위 논문에 이르러서야 "완전히 하나로 합쳐졌습니다". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 이 책의 역할은 그렇게 통합된 주제를 하나의 표기법으로 가르치는 것입니다. return G<sub>t</sub>, discount γ, value v<sub>π</sub>(s)와 q<sub>π</sub>(s,a), dynamics p(s′,r|s,a)가 그 표기법입니다. 여기서 인용하는 것은 2판입니다. 저자들의 페이지에 전체 PDF, 정오표, 코드, 슬라이드가 올라와 있습니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 8
+두 문장이 이 책을 떠받칩니다. 첫째, 모든 추정값은 같은 방식으로 update됩니다. <strong>NewEstimate ← OldEstimate + StepSize [Target − OldEstimate]</strong>(eq. 2.4)입니다. bandit, TD(0), Sarsa, Q-learning, semi-gradient 방법은 target이 무엇이냐만 다릅니다. 둘째, <strong>generalised policy iteration</strong>입니다. policy evaluation과 policy improvement가 어떤 단위로든 서로 맞물려 돌아가게 하라는 것입니다. "거의 모든 강화학습 방법은 GPI로 잘 설명되기" 때문입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 9
+이 책은 하나의 강의 과정이므로, "작동 방식"이란 곧 읽는 방법을 뜻합니다. 아래는 RL School이 따르는 순서와 각 Day가 기대는 chapter입니다.
+@@ 10
+<strong>Chapter 1 → <a href="#d1">Day 1</a>.</strong> agent–environment loop, RL을 규정하는 두 특징인 시행착오 탐색과 delayed reward, 역사를 다룬 절(§1.7). <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 11
+<strong>Chapter 2 → <a href="#d2">Day 2</a>.</strong> bandit. 10-armed testbed에서 greedy는 가능한 1.54 가운데 step당 약 1.0을 얻습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 12
+<strong>Chapter 3 → <a href="#d3">Day 3</a>.</strong> finite MDP와 Bellman equation:
+@@ 13
+<strong>Chapter 4 → <a href="#d4">Day 4</a>.</strong> dynamic programming. 4×4 gridworld에서는 sweep 3번 만에 greedy policy가 이미 optimal입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 14
+<strong>Chapter 5, 6, 7, 12 → <a href="#d5">Day 5</a>.</strong> Monte Carlo, TD(0), n-step return, eligibility trace. true value가 1/6 … 5/6인 random walk. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 15
+<strong>§6.4–6.7과 §16.5 → <a href="#d6">Day 6</a>.</strong> Sarsa, Q-learning, maximisation bias, 그리고 DQN 사례 연구(<a href="#p-qlearning">Q-learning 논문 리뷰</a>와 <a href="#p-dqn">DQN 논문 리뷰</a> 참고).
+@@ 16
+<strong>Chapter 13 → <a href="#d7">Day 7</a>.</strong> policy gradient theorem과 REINFORCE(<a href="#p-reinforce">REINFORCE 논문 리뷰</a>).
+@@ 17
+<strong>Chapter 9–11</strong>은 Day 6–8의 배경으로, function approximation과 deadly triad(§11.3)를 다룹니다. Chapter 14–17은 Day 1의 역사와 응용을 다루는 Day들의 바탕이 됩니다.
+@@ 18 attr
+책의 지도: 맨 위에 Chapter 1 Introduction이 있고, 그 아래 왼쪽부터 상자 세 개가 있습니다. Part I Tabular Solution Methods는 chapter 2부터 8까지로 Day 2부터 6에서 쓰이고, Part II Approximate Solution Methods는 chapter 9부터 13까지로 Day 5부터 8에서 쓰이고, Part III Looking Deeper는 chapter 14부터 17까지로 Day 1, 6, 13, 14에서 쓰입니다. 화살표는 Part I에서 Part II로, 다시 Part III로 이어집니다
+@@ 19
+Chapter 1 · Introduction: loop, tic-tac-toe, 역사 → Day 1
+@@ 20
+=
+@@ 21
+작은 table의 정확한 value
+@@ 22
+=
+@@ 23
+=
+@@ 24
+=
+@@ 25
+=
+@@ 26
+=
+@@ 27
+=
+@@ 28
+Day 2–6
+@@ 29
+=
+@@ 30
+table 대신 weight
+@@ 31
+=
+@@ 32
+=
+@@ 33
+=
+@@ 34
+=
+@@ 35
+=
+@@ 36
+Day 5–8
+@@ 37
+=
+@@ 38
+뇌, 동물, 시스템
+@@ 39
+=
+@@ 40
+=
+@@ 41
+=
+@@ 42
+=
+@@ 43
+Day 1, 6, 13–14
+@@ 44
+일주일 경로: 1 → 2 → 3 → 4 → 6 → 5 → 13 → 16.5 · 14–15는 다음 회독에
+@@ 45
+상자 세 개로 본 책입니다. Part I에서는 모든 알고리즘이 정확합니다. Part II는 table을 파라미터 벡터로 바꿉니다. Part III는 그것이 무엇을 뜻하는지 묻습니다. chapter 번호는 2판의 목차를 따릅니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 46
+교과서의 "결과"는 직접 재현할 수 있는 풀이 예제입니다. 아래는 RL School의 위젯이 다시 돌려 보는 예제들입니다. 여러분의 코드가 이 숫자를 출력하지 않는다면 코드가 틀린 것입니다.
+@@ 47
+예제
+@@ 48
+위치
+@@ 49
+맞춰야 할 숫자
+@@ 50
+=
+@@ 51
+≈1.0 reward/step(가능한 값은 1.54). best arm을 찾은 task는 ≈⅓
+@@ 52
+=
+@@ 53
+=
+@@ 54
+v(A) = 8.8로 reward +10보다 낮고, v(B) = 5.3으로 +5보다 높음
+@@ 55
+=
+@@ 56
+=
+@@ 57
+sweep k = 3부터 greedy policy가 optimal
+@@ 58
+=
+@@ 59
+=
+@@ 60
+true value 1/6, 2/6, 3/6, 4/6, 5/6
+@@ 61
+=
+@@ 62
+=
+@@ 63
+가장 좋은 ε-greedy ≈ −44, stochastic policy ≈ −11.6
+@@ 64
+다섯 개 모두 책의 본문과 그림에서 가져왔습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 65
+이 Paper Bible의 계보는 이 책을 관통합니다. Watkins의 Q-learning(§6.5, 1989)은 DQN(Nature, 2015년 2월) 안에 들어 있는 update이고, 책은 DQN을 §16.5에서 사례 연구로 다룹니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> REINFORCE(§13.3, Williams 1992)는 A3C, TRPO, PPO의 조상입니다. <a class="src" href="https://link.springer.com/article/10.1007/BF00992696">Williams 1992</a> 저자들은 지금도 의제를 이끌고 있습니다. Sutton은 Alberta Plan(2022)을 공동 집필했고, Silver와 함께 "Welcome to the Era of Experience"(2025)를 썼습니다. 이 글은 agent가 "짧은 상호작용 조각이 아니라 경험의 흐름 속에서 살게 될 것"이라고 주장합니다. <a class="src" href="https://storage.googleapis.com/deepmind-media/Era-of-Experience%20/The%20Era%20of%20Experience%20Paper.pdf">Silver &amp; Sutton 2025</a>
+@@ 66
+이 책은 2018년에서 멈춥니다. "trust region"과 "proximal policy"라는 표현은 책에 나오지 않으므로, <a href="#d8">Day 8</a>(TRPO, PPO, SAC)은 전부 논문을 바탕으로 가르칩니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> deep network는 주로 Chapter 16의 사례 연구에 등장하고, Part II는 linear feature와 tile coding을 중심으로 짜여 있습니다. 알아 둘 실수가 하나 있습니다. §16.5는 DQN이 "46개 게임 중 29개"에서 사람 수준에 도달했다고 하지만, Nature 논문이 보고한 것은 49개 게임입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> 2018년 이후의 흐름(DQN → PPO/SAC → MuZero → offline RL → RLHF와 reasoning model)은 2026년에 나온 책 한 권 분량의 정리가 있습니다. <a class="src" href="https://arxiv.org/abs/2608.00133">Bista 2026</a>
+@@ 67
+일주일을 잡습니다. 첫째 날: Chapter 1과 §3.1–3.6(3시간). 둘째 날: Chapter 2를 읽고 testbed를 직접 코딩합니다(3시간). 셋째 날: Chapter 4(2시간). 넷째 날: Chapter 5보다 먼저 §6.1–6.5를 읽습니다. TD를 먼저 보고, MC는 λ=1인 특수한 경우로 봅니다(3시간). 다섯째 날: §6.6–6.7, §11.3, §16.5(3시간). 여섯째 날: Chapter 13(3시간). 일곱째 날: Chapter 17. 처음 읽을 때는 Chapter 14–15와 별표가 붙은 절을 건너뜁니다. value table이 함께 실린 연습문제는 풀어 봅니다. 그 table이 곧 정답지이기 때문입니다.
+@@ 68
+Q1. Chapter 4의 4×4 gridworld에서 policy evaluation sweep을 몇 번 하면 greedy policy가 이미 optimal이 됩니까?
+@@ 69
+k → ∞인 극한에서만
+@@ 70
+sweep 10번 후
+@@ 71
+sweep 3번 후
+@@ 72
+sweep 1번 후
+@@ 73
+Figure 4.1: value는 k → ∞까지 계속 바뀌지만, arg-max 화살표는 k = 3에서 더 이상 바뀌지 않습니다. 이 차이 덕분에 value iteration은 evaluation을 중간에 끊을 수 있습니다.
+@@ 74
+Q2. "Bellman equation은 알고리즘이다." 책의 관점에서 이 말은 왜 틀렸습니까?
+@@ 75
+알고리즘이 맞지만, continuing task에만 해당합니다
+@@ 76
+value function이 만족하는 일관성 조건입니다. DP, TD, Q-learning은 이를 푸는 서로 다른 방법입니다
+@@ 77
+bandit에만 적용됩니다
+@@ 78
+신경망이 필요합니다
+@@ 79
+Chapter 3은 Bellman equation을 v_π와 v*가 만족해야 하는 등식으로 제시합니다. Chapter 4–6은 그 등식을 만족하는 함수를 찾는 세 계열의 방법입니다.
+@@ 80
+Q3. 다음 중 2018년 2판에서 다루지 않는 것은 무엇입니까?
+@@ 81
+=
+@@ 82
+=
+@@ 83
+DQN의 Atari 결과
+@@ 84
+PPO의 clipped surrogate objective
+@@ 85
+Q-learning은 §6.5, REINFORCE with baseline은 §13.4, DQN은 §16.5에 있습니다. "trust region"도 "proximal policy"도 본문에 나오지 않습니다. PPO는 2017년 논문이며 책은 이를 다루지 않습니다.
+@@ 86
+Sutton, R. S. &amp; Barto, A. G. (2018). <em>Reinforcement Learning: An Introduction</em>, 2nd ed. MIT Press. 책 페이지: <a href="http://incompleteideas.net/book/the-book-2nd.html">incompleteideas.net/book/the-book-2nd.html</a>; 전체 PDF: <a href="http://incompleteideas.net/book/RLbook2020.pdf">RLbook2020.pdf</a>.
+@@ 87
+Watkins, C. J. C. H. &amp; Dayan, P. (1992). Q-learning. <em>Machine Learning</em> 8(3–4):279–292. <a href="https://link.springer.com/article/10.1007/BF00992698">doi:10.1007/BF00992698</a> (책의 §6.5).
+@@ 88
+=
+@@ 89
+=
+@@ 90
+=
+@@ 91
+=

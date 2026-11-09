@@ -1,0 +1,196 @@
+@@ qlearn
+"Cliff-walking grid with the greedy paths of SARSA and Q-learning"
+==
+"SARSA와 Q-learning의 greedy 경로를 표시한 cliff-walking 격자"
+@@ qlearn
+"the cliff: −100, back to S"
+==
+"절벽: −100, S로 복귀"
+@@ qlearn
+"ε-greedy with ε = "+eps+", α = "+alpha+", γ = 1 · bold arrows: "+(show==="sarsa"?"SARSA":"Q-learning")+" greedy path, faint: the other"
+==
+"ε-greedy, ε = "+eps+", α = "+alpha+", γ = 1 · 굵은 화살표: "+(show==="sarsa"?"SARSA":"Q-learning")+" greedy 경로, 흐린 화살표: 다른 쪽"
+@@ qlearn
+"Press Run to train both agents from zero Q-values (same random seed each time)."
+==
+"실행 버튼을 누르면 두 agent가 Q-value 0에서부터 학습합니다(매번 같은 random seed 사용)."
+@@ qlearn
+"Smoothed sum of rewards per episode for SARSA and Q-learning"
+==
+"SARSA와 Q-learning의 episode당 reward 합(이동 평균)"
+@@ qlearn
+"reward per episode"
+==
+"episode당 reward"
+@@ qlearn
+"SARSA, last 100"
+==
+"SARSA, 최근 100"
+@@ qlearn
+"Q-learning, last 100"
+==
+"Q-learning, 최근 100"
+@@ qlearn
+"mean reward per episode"
+==
+"episode당 평균 reward"
+@@ qlearn
+"Greedy path length"
+==
+"Greedy 경로 길이"
+@@ qlearn
+"SARSA vs Q-learning (13 is optimal)"
+==
+"SARSA vs Q-learning (13이 optimal)"
+@@ qlearn
+"4×12 grid, −1 per step, −100 for falling off the cliff. Both agents learn from the same seeded random numbers; the chart smooths rewards over 10 episodes."
+==
+"4×12 격자, 한 step마다 −1, 절벽에서 떨어지면 −100. 두 agent는 같은 seed의 난수로 학습하며, 차트는 reward를 10 episodes에 걸쳐 평균 내어 보여 줍니다."
+@@ qlearn
+"Show path of"
+==
+"표시할 경로"
+@@ qlearn
+"Run 50 episodes"
+==
+"50 episodes 실행"
+@@ qlearn
+"Run 500"
+==
+"500 실행"
+@@ dqn
+"Emulator"
+==
+"에뮬레이터"
+@@ dqn
+"DQN pipeline, active boxes highlighted"
+==
+"DQN 파이프라인, 사용 중인 상자 강조"
+@@ dqn
+"Observe"
+==
+"관찰"
+@@ dqn
+"Act"
+==
+"행동"
+@@ dqn
+"Store"
+==
+"저장"
+@@ dqn
+"Sample"
+==
+"Sampling"
+@@ dqn
+"Targets"
+==
+"Target"
+@@ dqn
+"Copy"
+==
+"복사"
+@@ dqn
+"4 frames"
+==
+"4프레임"
+@@ dqn
+"The emulator runs at 60 Hz; the agent sees every 4th frame and repeats its action in between (frame skip k = 4)."
+==
+"에뮬레이터는 60 Hz로 실행. agent는 4프레임마다 보고, 그 사이에는 action을 반복 (frame skip k = 4)"
+@@ dqn
+"Four 210×160 colour frames → per-pixel max over consecutive frames (kills sprite flicker) → luminance → 84×84 → stacked: <strong>φ<sub>t</sub> = 84×84×4 = 28,224 numbers</strong>. The stack gives the network motion: one frame cannot tell which way the ball is going."
+==
+"210×160 컬러 프레임 4장 → 연속한 프레임끼리 픽셀별 max (스프라이트 깜빡임 제거) → 휘도 → 84×84 → 쌓기: <strong>φ<sub>t</sub> = 84×84×4 = 숫자 28,224개</strong>. 프레임을 쌓아야 신경망이 움직임을 볼 수 있습니다. 프레임 한 장만으로는 공이 어느 쪽으로 가는지 알 수 없습니다."
+@@ dqn
+"Q for all actions"
+==
+"모든 action의 Q"
+@@ dqn
+"One forward pass gives one Q-value per action (4–18 outputs; 3 in this toy)."
+==
+"forward pass 한 번으로 action마다 Q-value 하나씩 (출력 4–18개, 이 예시에서는 3개)"
+@@ dqn
+"Toy online net, state φ<sub>t</sub>, actions "
+==
+"예시용 online network, state φ<sub>t</sub>, actions "
+@@ dqn
+"ε = 0.1: with probability 0.9 take the argmax (NOOP, Q = 1.20); with 0.1 pick uniformly. P(NOOP) = 0.9 + 0.1/3 = <strong>0.933</strong>. The draw this time: "
+==
+"ε = 0.1: 확률 0.9로 argmax(NOOP, Q = 1.20)를 고르고, 확률 0.1로 세 action 중 하나를 균등하게 고릅니다. P(NOOP) = 0.9 + 0.1/3 = <strong>0.933</strong>. 이번에 뽑힌 결과: "
+@@ dqn
+"explore → random action"
+==
+"explore → 무작위 action"
+@@ dqn
+". ε was annealed from 1.0 to 0.1 over the first 1M frames."
+==
+". ε은 첫 1M 프레임 동안 1.0에서 0.1로 서서히 줄였습니다."
+@@ dqn
+"Replay memory holds the 1,000,000 most recent transitions; the oldest is dropped when full."
+==
+"Replay memory는 최근 transition 1,000,000개를 보관하고, 가득 차면 가장 오래된 것부터 버립니다."
+@@ dqn
+"The score went up by 4 points. Reward clipping: r<sub>t</sub> = sign(4) = <strong>+1</strong>. Stored: (φ<sub>t</sub>, NOOP, +1, φ<sub>t+1</sub>, terminal = no)."
+==
+"점수가 4점 올랐습니다. Reward clipping: r<sub>t</sub> = sign(4) = <strong>+1</strong>. 저장되는 값: (φ<sub>t</sub>, NOOP, +1, φ<sub>t+1</sub>, terminal = no)."
+@@ dqn
+"At this point the buffer is 31% full, so each transition will be replayed many times before it is dropped."
+==
+"지금 buffer는 31% 차 있습니다. 그래서 각 transition은 버려지기 전까지 여러 번 replay됩니다."
+@@ dqn
+"Uniform sampling: every stored transition has probability 32 / N of being in this minibatch."
+==
+"Uniform sampling: 저장된 transition 각각이 이 minibatch에 뽑힐 확률은 32 / N입니다."
+@@ dqn
+"32 / "+N.toLocaleString()+" = "+(32/N*100).toFixed(4)+"% per transition. Indices drawn (seeded):"
+==
+"transition 하나당 32 / "+N.toLocaleString()+" = "+(32/N*100).toFixed(4)+"%. 뽑힌 index (seed 고정):"
+@@ dqn
+"Consecutive frames are nearly identical; a random mix of old and new moments breaks that correlation. This is why the learner must be off-policy: the sampled actions came from older, different ε-greedy policies."
+==
+"연속한 프레임은 거의 똑같습니다. 오래된 순간과 최근 순간을 무작위로 섞으면 그 상관관계가 깨집니다. 학습 알고리즘이 off-policy여야 하는 이유가 여기에 있습니다. sampling된 action은 지금과 다른, 더 오래된 ε-greedy policy가 고른 것이기 때문입니다."
+@@ dqn
+"The target network is a frozen copy; its output is treated as a constant, no gradient flows into it."
+==
+"Target network는 고정된 복사본입니다. 출력은 상수로 취급하며 gradient가 흘러들지 않습니다."
+@@ dqn
+"For our transition the target net gives Q̂(φ<sub>t+1</sub>, ·):"
+==
+"우리 transition에 대해 target network가 내놓는 Q̂(φ<sub>t+1</sub>, ·):"
+@@ dqn
+"</strong>. If φ<sub>t+1</sub> had been terminal, y = r = 1. Note the max: the bootstrap assumes the greedy action LEFT will be taken, whatever ε-greedy actually does."
+==
+"</strong>. φ<sub>t+1</sub>이 terminal이었다면 y = r = 1입니다. 여기서 눈여겨볼 것은 max입니다. ε-greedy가 실제로 무엇을 하든, bootstrap은 greedy action인 LEFT를 고른다고 가정합니다."
+@@ dqn
+"Only the output unit of the action taken gets an error; the other outputs receive zero gradient."
+==
+"실제로 고른 action의 출력 unit에만 error가 전달되고, 나머지 출력의 gradient는 0입니다."
+@@ dqn
+"</strong>. Error clipping: the loss is δ² inside [−1, 1] and linear outside, so the gradient magnitude is min(|δ|, 1) = <strong>1.0</strong>, not "+d.toFixed(3)+". Mean over the 32 samples, then one RMSProp step (learning rate 0.00025) on θ. One update every 4 agent steps."
+==
+"</strong>. Error clipping: loss는 [−1, 1] 안에서는 δ²이고 밖에서는 선형입니다. 그래서 gradient 크기는 "+d.toFixed(3)+"가 아니라 min(|δ|, 1) = <strong>1.0</strong>입니다. 32개 sample의 평균을 낸 뒤 θ에 RMSProp을 한 step 적용합니다(learning rate 0.00025). update는 agent 4step마다 한 번입니다."
+@@ dqn
+"θ⁻ ← θ every C"
+==
+"C마다 θ⁻ ← θ"
+@@ dqn
+"C = 10,000 updates: the target moves in steps, so an update cannot chase its own tail."
+==
+"C = 10,000 updates: target이 계단식으로만 움직이므로 update가 제 꼬리를 쫓지 못합니다."
+@@ dqn
+"Update counter: 7,431 of 10,000 since the last copy. In 2,569 updates θ⁻ ← θ and the targets jump to the new estimates. Between copies the regression problem is fixed: same inputs, same targets, ordinary supervised learning."
+==
+"Update 카운터: 마지막 복사 이후 10,000 중 7,431. 2,569번 더 update하면 θ⁻ ← θ가 일어나고 target이 새 추정값으로 한꺼번에 바뀝니다. 복사와 복사 사이에는 회귀 문제가 고정됩니다. 입력도 같고 target도 같은, 평범한 지도학습입니다."
+@@ dqn
+"Then back to step 1. Repeat for 50,000,000 frames ≈ 12.5M agent steps ≈ 3.1M gradient updates ≈ 310 target copies."
+==
+"그리고 다시 1단계로 돌아갑니다. 이 과정을 50,000,000 프레임 ≈ agent 12.5M step ≈ gradient update 3.1M번 ≈ target 복사 310번 동안 반복합니다."
+@@ dqn
+"One DQN training step"
+==
+"DQN 학습 한 step"
+@@ dqn
+"Walk through what happens between two frames of Atari. Numbers in bold are the toy arithmetic; the hyperparameters are the Nature 2015 values."
+==
+"Atari의 두 프레임 사이에 무슨 일이 일어나는지 차례로 따라가 봅니다. 굵은 숫자는 예시용 계산이고, 하이퍼파라미터는 Nature 2015 논문의 값입니다."

@@ -1,0 +1,118 @@
+@@ 1
+<span class="eyebrow">1992 · Watkins &amp; Dayan · Machine Learning 8:279–292 (and Watkins's 1989 Cambridge thesis)</span>
+@@ 2
+Q-learning: learn the optimal action values without a model
+@@ 3
+A one-line update that converges to the optimal action values with probability 1, however clumsily you explore, as long as you keep trying every action in every state.
+@@ 4
+Taught in <a href="#d6">Day 6</a> · Read time of the original: ~45 min (a 14-page technical note)
+@@ 5
+Keep a table Q(s,a); after each step move Q(s,a) a little toward "reward plus γ times the best Q in the next state", and the table converges to q<sub>*</sub> "so long as all actions are repeatedly sampled in all states and the action-values are represented discretely". <a class="src" href="https://link.springer.com/article/10.1007/BF00992698">Watkins &amp; Dayan 1992</a>
+@@ 6
+You are in a maze and stick a note on every door saying how good it is to go through it. Each time you walk through a door, you rewrite its note: "what I got on the other side, plus the best note I can see in the next room". You can wander randomly and still, after enough wandering, the notes become exactly right, and the best path is just "follow the biggest note".
+@@ 7
+Dynamic programming (Bellman 1957; Howard's policy iteration, 1960) finds optimal policies, but only given the full rulebook p(s′,r|s,a), and only for small problems: backgammon alone has about 10<sup>20</sup> states. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Temporal-difference learning (Sutton 1988) learned without a model, but it learned the value of a fixed policy, and to act greedily from a state-value function you still need the model. <a class="src" href="http://incompleteideas.net/papers/sutton-88-with-erratum.pdf">Sutton 1988</a> Watkins's 1989 thesis reframed the whole problem as "learning to control a Markov Decision Process by incremental dynamic programming" and included a sketch of a convergence proof; the 1992 note with Dayan supplies the proof. <a class="src" href="https://www.cs.rhul.ac.uk/~chrisw/thesis.html">Watkins 1989</a> <a class="src" href="https://link.springer.com/article/10.1007/BF00992698">Watkins &amp; Dayan 1992</a>
+@@ 8
+Learn <strong>action values</strong>, and learn the optimal ones directly. The target uses the <em>best</em> action in the next state, max<sub>a</sub> Q(S′,a), not the action you happen to take. So the table "directly approximates q<sub>*</sub>, the optimal action-value function, independent of the policy being followed". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> That is what <strong>off-policy</strong> means: the behaviour policy explores, the target policy is greedy, and the two never have to agree. Once Q is right, the policy is read off with no model and no search: act greedily.
+@@ 9
+Initialise Q(s,a) arbitrarily for every pair; set Q(terminal, ·) = 0.
+@@ 10
+In state S, choose A by any policy that keeps exploring, for example ε-greedy on Q.
+@@ 11
+Take A; observe reward R and next state S′.
+@@ 12
+Form the target: R + γ max<sub>a</sub> Q(S′, a). This is a one-step sample of the Bellman optimality equation.
+@@ 13
+Move Q(S,A) toward the target by a step size α (eq. 6.8 in Sutton &amp; Barto):
+@@ 14
+Q(S<sub>t</sub>,A<sub>t</sub>) ← Q(S<sub>t</sub>,A<sub>t</sub>) + α [ R<sub>t+1</sub> + γ max<sub>a</sub> Q(S<sub>t+1</sub>,a) − Q(S<sub>t</sub>,A<sub>t</sub>) ]
+@@ 15
+S ← S′; repeat until the episode ends, then start another.
+@@ 16
+<strong>The convergence theorem, in words.</strong> Run this forever. If every state–action pair is updated infinitely often, the values are stored exactly (a table, one cell per pair), and the step sizes shrink in the usual stochastic-approximation way (they add up to infinity, their squares do not), then Q converges to q<sub>*</sub> with probability 1. <a class="src" href="https://link.springer.com/article/10.1007/BF00992698">Watkins &amp; Dayan 1992</a> <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Nothing is assumed about <em>how</em> you choose actions. The note also sketches two extensions: undiscounted problems with absorbing goal states, and updating many Q values per step rather than one. <a class="src" href="https://link.springer.com/article/10.1007/BF00992698">Watkins &amp; Dayan 1992</a>
+@@ 17 attr
+Data flow of one Q-learning update: the agent in state S picks action A from the Q table with epsilon-greedy; the environment returns reward R and next state S prime; the Q table is read at S prime to compute the max over actions; the target R plus gamma times that max is compared with Q of S and A; the difference, times alpha, is added back into the single cell Q of S and A
+@@ 18
+Q table
+@@ 19
+one cell per (s,a)
+@@ 20
+ε-greedy
+@@ 21
+act: A in S
+@@ 22
+behaviour policy
+@@ 23
+returns R, S′
+@@ 24
+target = R + γ max<tspan baseline-shift="sub" font-size="10">a</tspan> Q(S′,a)
+@@ 25
+greedy in the next state: off-policy
+@@ 26
+read Q(S′,·)
+@@ 27
+error = target − Q(S,A)
+@@ 28
+Q(S,A) += α · error
+@@ 29
+One step of Q-learning: act with one policy, learn about another
+@@ 30
+only the cell Q(S,A) changes; the max over the next state's cells is the whole trick
+@@ 31
+Data flow of the update. The behaviour policy (ε-greedy) decides what happens; the target uses the greedy max in S′ regardless. Only one table cell changes per step. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 32
+This is a theory paper: the result is the theorem, not a benchmark. The behaviour it predicts is visible in Sutton and Barto's cliff-walking gridworld (Example 6.6, ε = 0.1): Q-learning learns the values of the optimal cliff-edge path, while the on-policy Sarsa learns a longer, safer route. Because exploration keeps pushing the agent off the cliff, Q-learning's online return is <em>worse</em>, about −50 per episode against Sarsa's about −25 in the book's plot; RL School's replication (α = 0.5, 50 runs) gives −50.9 and −27.4. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The book also shows the max in the target causing <strong>maximisation bias</strong>: in Example 6.7 Q-learning keeps picking a bad action about 5% too often even at convergence, which Double Q-learning removes. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> <a class="src" href="https://proceedings.neurips.cc/paper/2010/hash/091d584fced301b442654dd8c23b3fc9-Abstract.html">van Hasselt 2010</a>
+@@ 33
+Sutton and Barto date the moment the dynamic-programming and trial-and-error threads of RL were "fully brought together" to Watkins's 1989 thesis; the term "action value" is also his. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Twenty-six years later the same update, with a convolutional network in place of the table, became DQN: 49 Atari games from pixels at a level "comparable to that of a professional human games tester" (Nature, February 2015). <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> Every value-based deep RL method since, Double DQN, Rainbow, Agent57, is this update plus engineering (see <a href="#p-dqn">the DQN review</a>).
+@@ 34
+The theorem needs a table. Replace it with a function approximator and you have all three ingredients of the <strong>deadly triad</strong> (approximation, bootstrapping, off-policy), under which instability "can" occur; "if any two elements of the deadly triad are present, but not all three", it can be avoided. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The max over noisy estimates overestimates: Double DQN (2015) observed overestimation in all 49 Atari games and lifted the median normalised score from 93.5% to 114.7% by fixing it. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> The theorem gives no rate, and "infinitely often" is not a budget. And, as cliff walking shows, learning the optimal policy is not the same as behaving well while you learn.
+@@ 35
+The note is short; the full text sits behind Springer's paywall, so we could verify only its abstract page. Read the abstract (5 min), then the theorem statement and the conditions on the step sizes, and skim the proof. Then read Sutton &amp; Barto §6.5 for the modern statement and procedural box, §6.7 for maximisation bias, and §11.3 for why the table matters (45 min). The thesis chapter is gentler than the note. <a class="src" href="https://www.cs.rhul.ac.uk/~chrisw/thesis.html">Watkins 1989</a>
+@@ 36
+Q1. Which condition is NOT required by the Watkins–Dayan convergence theorem?
+@@ 37
+Every state–action pair is updated infinitely often
+@@ 38
+The behaviour policy becomes greedy in the limit
+@@ 39
+Action values are stored discretely, one per pair
+@@ 40
+Step sizes satisfy the stochastic-approximation conditions
+@@ 41
+Q-learning is off-policy: the behaviour policy only has to keep visiting every pair. Greedy-in-the-limit is Sarsa's requirement, not Q-learning's.
+@@ 42
+Q2. On cliff walking with ε = 0.1, roughly what did Q-learning and Sarsa score per episode in the book's plot?
+@@ 43
+Q-learning −25, Sarsa −50
+@@ 44
+Both about −25
+@@ 45
+Both about −100
+@@ 46
+Q-learning −50, Sarsa −25
+@@ 47
+Q-learning finds the optimal cliff-edge path but falls off during exploration; Sarsa's safer path scores better online. Learning the optimal values and acting well are different things.
+@@ 48
+Q3. "Off-policy methods are inherently unstable." What does the deadly triad actually say?
+@@ 49
+Instability needs all three: function approximation, bootstrapping and off-policy learning; any two are safe
+@@ 50
+Off-policy learning alone can diverge even with a table
+@@ 51
+Bootstrapping is always unstable
+@@ 52
+Function approximation is always unstable
+@@ 53
+Tabular Q-learning is off-policy and bootstraps, yet converges. The danger appears only when the table is replaced by a shared parameter vector.
+@@ 54
+Watkins, C. J. C. H. &amp; Dayan, P. (1992). Q-learning. <em>Machine Learning</em> 8(3–4):279–292. <a href="https://link.springer.com/article/10.1007/BF00992698">doi:10.1007/BF00992698</a> (abstract page opened; full text paywalled).
+@@ 55
+Watkins, C. J. C. H. (1989). <em>Learning from Delayed Rewards</em>. PhD thesis, University of Cambridge. <a href="https://www.cs.rhul.ac.uk/~chrisw/thesis.html">Author's thesis page</a>.
+@@ 56
+Sutton, R. S. &amp; Barto, A. G. (2018). <em>Reinforcement Learning: An Introduction</em>, 2nd ed., §6.5, §6.7, §11.3. <a href="http://incompleteideas.net/book/RLbook2020.pdf">PDF</a>.
+@@ 57
+van Hasselt, H. (2010). Double Q-learning. <em>NIPS</em> 23. <a href="https://proceedings.neurips.cc/paper/2010/hash/091d584fced301b442654dd8c23b3fc9-Abstract.html">proceedings.neurips.cc</a>.
+@@ 58
+van Hasselt, H., Guez, A. &amp; Silver, D. (2015). Deep Reinforcement Learning with Double Q-learning. <a href="https://arxiv.org/abs/1509.06461">arXiv:1509.06461</a>.
+@@ 59
+Mnih, V. et al. (2015). Human-level control through deep reinforcement learning. <em>Nature</em> 518:529–533. <a href="https://www.nature.com/articles/nature14236">nature.com</a>.

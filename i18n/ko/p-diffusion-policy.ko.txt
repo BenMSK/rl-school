@@ -1,0 +1,84 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+이미지 diffusion 모델이 픽셀을 denoising하듯, Gaussian noise에서 action sequence를 denoising해 내는 로봇 policy입니다. 시뮬레이션 과제 12개에서 기존 최고의 imitation 기법을 평균 46.9% 앞섰고, 실제 로봇의 Push-T 과제에서 성공률 95%를 기록했습니다. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a>
+@@ 4
+<a href="#d10">Day 10</a>에서 다룸 · 원문 읽는 시간: 약 60분 (IJRR 판은 길고, RSS 판의 핵심은 약 35분)
+@@ 5
+이 policy는 action 하나가 아니라 16-step짜리 action 블록을 출력하는데, 최근 카메라 프레임 두 장을 조건으로 학습된 denoiser를 random noise에서부터 돌려 만들어 내기 때문에, 왼쪽 <em>또는</em> 오른쪽으로 가는 demonstration을 "직진"으로 평균 내지 않고 그대로 따라 할 수 있습니다. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a>
+@@ 6
+팔을 움직이는 길을 그리는 법을 배운다고 상상해 보세요. 낙서로 가득한 종이에서 시작해서 낙서를 조금씩 지워 나가면, 마침내 깔끔한 선 하나가 나타나요. 이 지우개는 좋은 움직임을 수천 번 지켜봤기 때문에 어느 부분이 지워야 할 낙서인지 알아요. 선생님이 어떤 때는 컵 왼쪽으로 돌아가고 어떤 때는 오른쪽으로 돌아갔다면, 지우개는 두 길 가운데 어느 쪽이든 그려 낼 수 있어요. 하지만 컵을 그대로 뚫고 지나가는 엉뚱한 길은 절대 그리지 않아요.
+@@ 7
+Behaviour cloning(<a href="#d10">Day 10</a>)은 사람의 demonstration을 보고 "state → action" 대응을 신경망에 학습시킵니다. 그런데 사람은 일관되지 않습니다. 같은 장면에서 어떤 demo는 블록을 왼쪽에서 밀고, 다른 demo는 오른쪽에서 밉니다. Gaussian policy나 mean-squared-error policy는 둘을 평균 내어 정면으로 밀어 버리고, 그래서 실패합니다. 표준적인 해결책인 mixture model(LSTM-GMM)과 energy-based implicit policy(IBC)는 한쪽 mode로 치우치거나 어느 쪽으로도 결정을 내리지 못하고, IBC는 훈련도 불안정합니다. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a> 실제 로봇의 Push-T 과제에서 baseline의 성공률은 20%(LSTM-GMM)와 0%(IBC)였습니다. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 8
+action을 regression할 대상이 아니라 <strong>생성</strong>할 대상으로 봅니다. <strong>denoising diffusion probabilistic model</strong>(DDPM)은 K번의 작은 step에 걸쳐 noise를 데이터 분포의 sample로 바꾸는 법을 학습합니다. 이것을 최근 observation을 조건으로 삼아, 짧은 미래 action sequence에 적용합니다. 그러면 서로 떨어진 여러 mode를 포함해 어떤 모양의 action 분포든 표현할 수 있으면서, 평범한 regression loss로 훈련되는 policy가 됩니다. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a>
+@@ 9
+<strong>입력.</strong> 최근 T<sub>o</sub> = 2개의 observation(ResNet encoder를 거친 카메라 이미지, 또는 저차원 state). <a class="src" href="https://ar5iv.labs.arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 10
+<strong>훈련.</strong> demo에서 T<sub>p</sub> = 16 step짜리 ground-truth action 블록 A<sup>0</sup>를 가져와 noise level k를 고르고, Gaussian noise ε<sup>k</sup>를 더한 다음, 더해진 noise를 예측하도록 신경망 ε<sub>θ</sub>를 훈련합니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 11
+=
+@@ 12
+<strong>Inference.</strong> A<sup>K</sup> ~ N(0, I)에서 시작해 k = K … 1에 대해 반복합니다(논문의 Eq. 4): <a class="src" href="https://ar5iv.labs.arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 13
+<strong>실행.</strong> 16개 가운데 앞의 T<sub>a</sub> = 8개 action을 실행한 뒤, 다시 관측하고 re-planning합니다(receding horizon). 훈련에는 diffusion iteration 100회를 쓰지만 test 때는 DDIM sampler로 10회면 충분해서, RTX 3080에서 latency가 0.1 s입니다. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 14
+<strong>두 가지 backbone.</strong> 하나는 모든 convolution layer에서 observation을 FiLM conditioning으로 넣어 주는 1-D temporal U-Net이고, 다른 하나는 observation에는 cross-attention을, action token 사이에는 causal attention을 쓰는 Transformer입니다. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 15 attr
+Diffusion Policy 개요: (a) observation 블록이 들어가 K번의 denoising step을 거쳐 action 블록이 나옴, (b) FiLM conditioning을 쓰는 CNN U-Net, (c) observation에 cross-attention하는 Transformer
+@@ 16
+<a class="src" href="https://arxiv.org/abs/2303.04137">Figure 2, Chi 2023</a> (a) 일반적인 레시피: 최근 observation 몇 개가 들어가고, K번의 denoising step 뒤에 미래 action 블록이 나옵니다. (b) CNN 버전은 FiLM으로 observation을 모든 layer에 주입합니다. (c) Transformer 버전은 action token에서 observation token으로 attention합니다.
+@@ 17
+4개 벤치마크(Robomimic, Push-T, Block Pushing, Franka Kitchen)의 12개 과제에서, 기존 최고 기법 대비 평균 향상 폭은 46.9%였습니다. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a> 저널 판에는 실제 로봇 과제가 추가됩니다. Push-T에서는 성공률 95%와 IoU 0.80을 기록했는데, 사람 demonstrator는 100%와 0.84, LSTM-GMM은 20%, IBC는 0%였습니다. 여기에 머그컵 뒤집기, 소스 붓기, 그리고 양팔 과제 세 가지(거품기 다루기, 매트 펼치기, 셔츠 개기)가 더해집니다. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a> encoder도 중요합니다. frozen R3M encoder를 쓰면 실제 Push-T 성공률이 80%로, ImageNet weight를 쓰면 15%로 떨어집니다. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a> 기억해 둘 그림은 논문의 Figure 3입니다. Push-T에서 policy는 어떤 rollout에서는 왼쪽 경로를, 다른 rollout에서는 오른쪽 경로를 택하고, 한 rollout 안에서는 고른 쪽을 끝까지 따라갑니다. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 18
+Diffusion Policy 이후 로봇 imitation에서는 생성형 action 모델이 기본 head가 되었습니다. π0(Physical Intelligence, 2024년 10월)는 이 아이디어를 유지하면서 diffusion을 <strong>flow matching</strong>으로 바꿨습니다. 신경망이 velocity field를 예측하고, Euler step 10번으로 noise를 50-step action chunk로 옮깁니다. 이 구조는 3B vision-language 모델 위에 올라가며, 7가지 로봇 구성과 68개 과제에 걸친 10,000시간 이상의 로봇 데이터로 훈련되었습니다. <a class="src" href="https://arxiv.org/abs/2410.24164">Black 2024</a> 그다음에는 그 위에 RL이 올라갔습니다. diffusion policy나 flow policy는 최종 action의 likelihood가 intractable하므로, DPPO(2024년 9월)는 denoising step 하나하나를 inner MDP의 action으로 보고 거기서 PPO를 돌립니다. <a class="src" href="https://arxiv.org/abs/2409.00588">Ren 2024</a> πRL(2025년 10월)은 Flow-Noise와 Flow-SDE로 flow policy에 같은 일을 하며, few-shot fine-tuning 후 LIBERO에서 π0의 성공률을 57.6%에서 97.6%로 끌어올렸습니다. <a class="src" href="https://arxiv.org/abs/2510.25889">Chen 2025</a>
+@@ 19
+저자들은 이 방법이 behaviour cloning의 한계를 그대로 물려받는다고 말합니다. demonstration보다 잘할 수 없고, demonstration이 부족하면 성능이 떨어집니다. 저자들은 suboptimal 데이터와 negative 데이터를 활용할 길로 RL을 꼽습니다. inference 비용은 LSTM-GMM보다 큽니다. action chunking이 이 비용을 가려 주지만, control rate가 높으면 일부만 가려집니다. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a> 과제 수는 버전마다 다르게 적혀 있습니다(v1에서는 11개, v5에서는 12개, 양팔 과제까지 세는 전문에서는 15개). 46.9%라는 수치는 모든 버전에서 같습니다. <a class="src" href="https://arxiv.org/abs/2303.04137v1">Chi 2023</a>
+@@ 20
+abstract와 Figure 1(explicit policy, implicit policy, diffusion policy 비교)을 읽고, Eq. 4가 나오는 Section 2.3, 두 backbone을 보여 주는 Figure 2, multimodality를 다루는 Section 4.1과 Figure 3을 차례로 읽습니다. Table 1–2는 훑어보고, Table 6(실제 Push-T)은 꼼꼼히 읽습니다. 양팔 하드웨어에 관심이 없다면 Section 6.2–7은 건너뜁니다. 약 40분.
+@@ 21
+Q1. demo가 왼쪽과 오른쪽 양쪽으로 갈 때, mean-squared-error policy는 왜 Push-T에서 실패합니까?
+@@ 22
+이미지가 너무 흐릿해서
+@@ 23
+블록을 보지 못해서
+@@ 24
+두 경로를 평균 내어 블록에 부딪히는 경로 하나로 만들어서
+@@ 25
+마지막 demo에 overfitting해서
+@@ 26
+MSE regression은 평균 action을 예측합니다. 평균은 두 mode 사이에 있어서 블록을 향해 그대로 돌진합니다.
+@@ 27
+Q2. 훈련 중에 신경망 ε<sub>θ</sub>는 무엇을 예측하도록 학습합니까?
+@@ 28
+실제 action 블록에 더해진 noise
+@@ 29
+action의 reward
+@@ 30
+다음 카메라 이미지
+@@ 31
+state의 value
+@@ 32
+표준적인 DDPM 훈련입니다. noise ε<sup>k</sup>를 더하고, MSE loss로 그 noise를 다시 예측합니다.
+@@ 33
+Q3. receding-horizon 설정을 나타내는 숫자 조합은 어느 것입니까?
+@@ 34
+16개 관측, 2개 예측, 8개 실행
+@@ 35
+8개 관측, 8개 예측, 8개 실행
+@@ 36
+2개 관측, 8개 예측, 16개 실행
+@@ 37
+2개 관측, 16개 예측, 8개 실행
+@@ 38
+T<sub>o</sub> = 2, T<sub>p</sub> = 16, T<sub>a</sub> = 8입니다. 그다음 re-planning합니다.
+@@ 39
+Chi, Xu, Feng, Cousineau, Du, Burchfiel, Tedrake, Song. Diffusion Policy: Visuomotor Policy Learning via Action Diffusion. RSS 2023; IJRR 확장판. <a href="https://arxiv.org/abs/2303.04137">arXiv 2303.04137</a> · <a href="https://diffusion-policy.cs.columbia.edu/">프로젝트 페이지</a>
+@@ 40
+=
+@@ 41
+=
+@@ 42
+=

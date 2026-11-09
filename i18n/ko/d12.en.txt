@@ -1,0 +1,450 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 12</span>
+@@ 2
+RL for language models and agents: RLHF → RLVR → agentic RL
+@@ 3
+After today you can explain how a reward model is trained, write down the RLHF-PPO, DPO and GRPO objectives and what each gives up, describe how DeepSeek-R1 learned to reason from 0/1 rewards and why its 2025–26 successors changed the advantage, read a scaling curve for RL compute, and set up a multi-turn tool-use episode as an RL problem.
+@@ 4
+About 90 min · Needs Day 8
+@@ 5
+A language model is already a policy: its next-token distribution. Everything today is one recipe applied three times. Sample responses, score them (with a model of human preference, a verifier, or the outcome of a task), and push probability toward the responses that beat a baseline, while staying close enough to the starting model that the scores still mean something.
+@@ 6
+1. Language as an MDP
+@@ 7
+Take <a href="#d8">Day 8</a>'s PPO and swap the robot for a Transformer. The <strong>state</strong> is the prompt plus every token generated so far. The <strong>action</strong> is the next token. The transition appends it. The <strong>reward</strong> arrives once, at the end of the response, and is zero everywhere else. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> (<a href="https://benmsk.github.io/llm-school/#d8">LLM School Day 8</a> tells the same story from the LLM side.)
+@@ 8
+Stated like that, it is a nasty RL problem: 50,000 to 150,000 discrete actions, a horizon of up to 10,000 tokens, and one sparse number for the whole trace. In Week 1 that combination meant "does not learn".
+@@ 9
+What saves it is the starting point. After SFT, a Llama model puts about 60% of its probability on the top token and over 90% on the top 16, so gradient variance is low. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> Because the reward only lands at the end, you can even treat the <em>whole completion</em> as one action; it works as well as token-level modelling. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a>
+@@ 10
+Three eras, one recipe, three judges. <strong>RLHF</strong> (2017–2023): the judge is a model trained to imitate human taste. <strong>RLVR</strong>, RL with verifiable rewards (2024–): the judge is a program, the answer key at the back of the maths book. <strong>Agentic RL</strong> (2025–): the judge is the world: did the multi-turn, tool-using episode reach the goal? Each era swapped a judge that could be fooled for one that is harder to fool.
+@@ 11
+2. RLHF: InstructGPT
+@@ 12
+Learning a reward from pairwise human comparisons dates to 2017. <a class="src" href="https://arxiv.org/abs/1706.03741">Christiano 2017</a> InstructGPT (March 2022) applied it to GPT-3 in three steps: SFT on about 13k labeler-written demonstrations; a <strong>reward model</strong>, where labelers rank K = 4 to 9 sampled outputs for about 33k prompts and a 6B model learns a scalar r<sub>θ</sub>(x, y) (6B even for the 175B policy); then PPO on about 31k prompts with a KL penalty to the SFT model. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 13
+The reward model is trained with the <strong>Bradley–Terry loss</strong>: the probability that the human preferred y<sub>w</sub> over y<sub>l</sub> is a sigmoid of the score difference, and the loss is its negative log.
+@@ 14
+loss(θ) = −1/C(K,2) · E[ log σ( r<sub>θ</sub>(x, y<sub>w</sub>) − r<sub>θ</sub>(x, y<sub>l</sub>) ) ]
+@@ 15
+The 1/C(K,2) divides by the number of pairs a ranking of K yields, so every prompt counts equally. By hand: scores 2.0 and 0.5 give σ(1.5) = 0.818 and loss −ln 0.818 = 0.201; backwards, σ(−1.5) = 0.182 and loss 1.70. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a> The RL objective (PPO-ptx) is
+@@ 16
+objective(φ) = E<sub>(x,y)~π<sub>φ</sub></sub>[ r<sub>θ</sub>(x,y) − β · log( π<sub>φ</sub>(y|x) / π<sup>SFT</sup>(y|x) ) ] + γ · E<sub>x~pretrain</sub>[ log π<sub>φ</sub>(x) ]
+@@ 17
+The first term is the reward minus a <strong>KL penalty</strong> toward the frozen SFT model, weighted by <strong>β</strong>: larger β means less reward hacking but less improvement. The γ term mixes in pretraining loss against the "alignment tax"; plain PPO has γ = 0. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 18
+Count the networks: the <strong>policy</strong> (trained), the frozen <strong>reference</strong>, the frozen <strong>reward model</strong>, and PPO's <strong>value model</strong> (trained). Four copies of a large model, two with optimizer state; OpenRLHF places "the Actor, Reward, Reference, and Critic models on separate GPUs". <a class="src" href="https://github.com/OpenRLHF/OpenRLHF">OpenRLHF 2026</a> The payoff: "outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters". <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> See <a href="#p-instructgpt">the InstructGPT review</a>.
+@@ 19
+Try it: step through one RLHF cycle. Each step lights up the models that are busy and shows its numbers.
+@@ 20
+Notice that the reward model is trained once, before any RL, and that the only per-token signal during RL is the KL penalty; the reward lands on the last token and the value model spreads it backwards.
+@@ 21
+Imagine a spelling-bee judge who cannot tell you the right word but can always say which of two attempts sounded better. First you build a robot that copies her taste. Then you practise against the robot thousands of times, doing more of what it likes. One rule: you may get better, but you may not turn into a completely different kid overnight. That rule is the KL leash.
+@@ 22
+3. DPO: skip the reward model
+@@ 23
+<strong>Direct Preference Optimization</strong> (May 2023) starts from the same objective, max<sub>π</sub> E[r(x,y)] − β·KL(π ‖ π<sub>ref</sub>), whose optimum has a closed form: π<sub>r</sub>(y|x) = π<sub>ref</sub>(y|x)·exp(r(x,y)/β) / Z(x), where Z(x) sums over every possible response and cannot be computed. Read it backwards: r = β·log(π<sub>r</sub>/π<sub>ref</sub>) + β·log Z(x). Put that into the Bradley–Terry loss. Both responses in a pair share the prompt, so they share Z(x), and it <strong>cancels</strong>. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a>
+@@ 24
+L<sub>DPO</sub> = −E[ log σ( β·log π<sub>θ</sub>(y<sub>w</sub>|x)/π<sub>ref</sub>(y<sub>w</sub>|x) − β·log π<sub>θ</sub>(y<sub>l</sub>|x)/π<sub>ref</sub>(y<sub>l</sub>|x) ) ]
+@@ 25
+Each β·log(π<sub>θ</sub>/π<sub>ref</sub>) is an <strong>implicit reward</strong>: "your language model is secretly a reward model". With β = 0.1, winner log-ratio +0.5 and loser −0.3, the argument is 0.08, σ(0.08) = 0.520, loss 0.654; DPO keeps pushing until the margin is large. <a class="src" href="https://arxiv.org/html/2305.18290v3">Rafailov 2023</a> Two models instead of four, no sampling, and results that match or beat PPO-RLHF on sentiment, summarisation and dialogue. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a>
+@@ 26
+What it gives up is what made it cheap. DPO is <strong>off-policy</strong>: it learns only from the given pairs and cannot explore. Its experiments stop at 6B and flag generalisation and over-optimisation as open. <a class="src" href="https://arxiv.org/html/2305.18290v3">Rafailov 2023</a> In 2024 an on-policy REINFORCE variant (RLOO) beat it on TL;DR summarisation, 77.9 vs 66.6 win rate. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> And it cannot do the next section: a verifier gives a 0/1 on a fresh sample, not a pair. See <a href="#p-dpo">the DPO review</a>.
+@@ 27
+4. RLVR and reasoning models
+@@ 28
+OpenAI's o1 (September 2024) was "trained with large-scale reinforcement learning to reason using chain of thought", and that is all its system card says. <a class="src" href="https://arxiv.org/abs/2412.16720">OpenAI 2024</a> The recipe became public in January 2025 with DeepSeek-R1 (<a href="https://benmsk.github.io/llm-school/#d9">LLM School Day 9</a> covers reasoning models from the user's side). <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a>
+@@ 29
+<strong>DeepSeek-R1-Zero</strong> is pure RL on the DeepSeek-V3 base model: no SFT, no human-written reasoning traces. The algorithm is <strong>GRPO</strong> (Group Relative Policy Optimization), introduced in DeepSeekMath in February 2024 as "a variant of PPO" that saves memory. <a class="src" href="https://arxiv.org/abs/2402.03300">Shao 2024</a> For each question q, sample G outputs from the old policy, score each, and use the group's own mean and standard deviation as the baseline:
+@@ 30
+J<sub>GRPO</sub>(θ) = E[ (1/G) Σ<sub>i=1..G</sub> ( min( ρ<sub>i</sub>A<sub>i</sub>, clip(ρ<sub>i</sub>, 1−ε, 1+ε)A<sub>i</sub> ) − β·D<sub>KL</sub>(π<sub>θ</sub> ‖ π<sub>ref</sub>) ) ]
+@@ 31
+ρ<sub>i</sub> = π<sub>θ</sub>(o<sub>i</sub>|q) / π<sub>old</sub>(o<sub>i</sub>|q) &nbsp;&nbsp; A<sub>i</sub> = ( r<sub>i</sub> − mean{r<sub>1</sub>..r<sub>G</sub>} ) / std{r<sub>1</sub>..r<sub>G</sub>}
+@@ 32
+D<sub>KL</sub> = π<sub>ref</sub>(o<sub>i</sub>|q)/π<sub>θ</sub>(o<sub>i</sub>|q) − log( π<sub>ref</sub>(o<sub>i</sub>|q)/π<sub>θ</sub>(o<sub>i</sub>|q) ) − 1
+@@ 33
+The clipped ratio is PPO's. New is A<sub>i</sub>: the <strong>group-relative advantage</strong> replaces the value model. In code the ratio is applied per token and averaged with a 1/|o<sub>i</sub>| per response (section 5). R1-Zero used G = 16 and β = 0.001. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> The reward is a <strong>rule</strong>: accuracy (the boxed answer matches, or the code passes its tests) plus format (reasoning inside <code>&lt;think&gt;…&lt;/think&gt;</code> tags). Neural process reward models were tried and dropped. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2026</a>
+@@ 34
+Try it: four answers to "What is 17 × 23?" (truth 391). Toggle correctness and format, change G, and watch the advantages.
+@@ 35
+Notice that rewards [2, 1, 1, 0] have mean 1.0 and population std 0.7071, so GRPO gives [+1.414, 0, 0, −1.414]: answers 2 and 3 get zero gradient although one is right and one is wrong. They are average for this group. Make every answer correct and every advantage is 0; the prompt teaches nothing, which is what DAPO's dynamic sampling throws away. (TRL uses the sample std, giving ±1.225; the R1 paper does not say which.) <a class="src" href="https://huggingface.co/docs/trl/grpo_trainer">Hugging Face 2026</a>
+@@ 36
+Over training, R1-Zero's AIME 2024 pass@1 rose from 15.6% to 71.0% (86.7% with majority vote over 64 samples) and its responses grew steadily longer: it learned to think for longer. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> The Nature version reports 77.9% under a different evaluation. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2026</a> The <strong>"aha moment"</strong> is an intermediate checkpoint that writes, mid-solution, "Wait, wait. Wait. That's an aha moment I can flag here" and re-derives. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 37
+R1-Zero's traces were unreadable and mixed languages, so the released <strong>DeepSeek-R1</strong> adds a <strong>cold start</strong>: SFT on thousands of human-polished long reasoning examples, then reasoning RL with a language-consistency reward, then rejection sampling and SFT on about 800k samples, then a final RL stage for helpfulness and harmlessness. R1 scores 79.8 on AIME 2024 and 97.3 on MATH-500. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> One more number matters if you do not own a 671B model: distilling R1's 800k samples into Qwen-32B by plain SFT gives AIME 72.6; R1-Zero-style RL run directly on Qwen-32B gives 47.0. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> See <a href="#p-deepseek-r1">the DeepSeek-R1 review</a>.
+@@ 38
+5. GRPO's 2025–26 fixes
+@@ 39
+<strong>Dr. GRPO</strong> ("GRPO Done Right", March 2025) names two biases. The 1/|o<sub>i</sub>| normaliser gives a long wrong answer a smaller per-token penalty than a short one, so the policy drifts toward longer incorrect responses. Dividing by the std over-weights lopsided groups: rewards [1, 0, 0, 0] have std 0.433 and advantages [+1.73, −0.58, −0.58, −0.58], while [1, 1, 0, 0] has std 0.5 and gets [+1, +1, −1, −1], although the raw reward gaps are 0.75 and 0.5. The fix removes both terms: a constant normaliser, and A<sub>i</sub> = r<sub>i</sub> − mean. Their minimal recipe reaches 43.3% on AIME 2024 with a 7B base in about a day on 8 A100s, and they found DeepSeek-V3-Base already produces "aha"-style self-reflection before any RL. <a class="src" href="https://arxiv.org/abs/2503.20783">Liu 2025</a>
+@@ 40
+<strong>DAPO</strong> (ByteDance Seed, March 2025) is an open recipe of four changes, each ablated on AIME 2024 with Qwen2.5-32B: <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 41
+Change
+@@ 42
+What it does
+@@ 43
+AIME 2024 avg@32
+@@ 44
+Naive GRPO
+@@ 45
+baseline, KL term removed
+@@ 46
++ Overlong filtering
+@@ 47
+mask the loss on truncated samples
+@@ 48
++ Clip-Higher
+@@ 49
+ε<sub>low</sub> = 0.2, ε<sub>high</sub> = 0.28: lets rare tokens grow, fights entropy collapse
+@@ 50
++ Soft overlong punishment
+@@ 51
+graded penalty in a 4,096-token buffer before the 16,384 cap
+@@ 52
++ Token-level loss
+@@ 53
+normalise by all tokens in the batch, not per sample
+@@ 54
++ Dynamic sampling
+@@ 55
+drop all-right and all-wrong groups; resample to fill the batch
+@@ 56
+The last step is the largest: the widget's zero-variance case made policy. DAPO reaches 50 against 47 for DeepSeek's R1-Zero-Qwen-32B in half the steps, with G = 16 and no KL term: a long-reasoning policy is supposed to drift far from its start. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a> See <a href="#p-dapo">the DAPO review</a>.
+@@ 57
+<strong>GSPO</strong> (Qwen, July 2025) fixes the ratio instead: "the unit of optimization objective should match the unit of reward", so one length-normalised ratio per sequence, s<sub>i</sub> = (π<sub>θ</sub>(y<sub>i</sub>|x)/π<sub>old</sub>(y<sub>i</sub>|x))<sup>1/|y<sub>i</sub>|</sup>, clipped once. In the mixture-of-experts Qwen3-30B-A3B about 10% of activated experts change after each update, making per-token ratios jump; GRPO needed a "Routing Replay" patch, GSPO does not. <a class="src" href="https://arxiv.org/abs/2507.18071">Zheng 2025</a> Two cousins: <strong>RLOO</strong> (2024) uses the mean reward of the other k−1 samples as baseline and found PPO's clip active under 5% of the time; <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> <strong>REINFORCE++</strong> (2025) keeps PPO's per-token clip and KL but normalises advantages over the whole batch. <a class="src" href="https://arxiv.org/abs/2501.03262">Hu 2025</a> And the critic is not dead: <strong>VAPO</strong> (April 2025), PPO with a value model plus length and sparse-reward fixes, reaches 60.4 on AIME 2024 with a Qwen 32B base, ten points above DAPO. <a class="src" href="https://arxiv.org/abs/2504.05118">Yue 2025</a>
+@@ 58
+Baseline for advantage
+@@ 59
+Ratio unit
+@@ 60
+KL to reference
+@@ 61
+PPO-RLHF
+@@ 62
+learned value model (GAE)
+@@ 63
+token
+@@ 64
+yes, β
+@@ 65
+GRPO (R1)
+@@ 66
+group mean, ÷ group std; 1/|o<sub>i</sub>| per response
+@@ 67
+yes, β = 0.001
+@@ 68
+Dr. GRPO
+@@ 69
+group mean, no std; constant normaliser
+@@ 70
+no
+@@ 71
+DAPO
+@@ 72
+group mean, ÷ std; dynamic sampling; batch-token normaliser
+@@ 73
+token, ε<sub>high</sub> = 0.28
+@@ 74
+GSPO
+@@ 75
+group mean, ÷ std
+@@ 76
+sequence
+@@ 77
+optional
+@@ 78
+RLOO
+@@ 79
+mean of the other k−1
+@@ 80
+none (REINFORCE)
+@@ 81
+yes
+@@ 82
+REINFORCE++
+@@ 83
+batch mean, ÷ batch std
+@@ 84
+<strong>"GRPO has no reference model."</strong> The R1 paper has β = 0.001. DAPO and TRL's default (β = 0, reference not loaded) remove it. Both are called GRPO. <a class="src" href="https://huggingface.co/docs/trl/grpo_trainer">Hugging Face 2026</a>
+@@ 85
+<strong>"The advantage is (r − mean)/std everywhere."</strong> Dr. GRPO drops the std, REINFORCE++ normalises over the batch, RLOO uses a leave-one-out mean.
+@@ 86
+<strong>"RL created the aha moment."</strong> The vocabulary is already in DeepSeek-V3-Base; RL raised its frequency. <a class="src" href="https://arxiv.org/abs/2503.20783">Liu 2025</a>
+@@ 87
+<strong>"Longer answers mean better reasoning."</strong> Length is a known RLHF reward hack and a GRPO normalisation artefact.
+@@ 88
+6. What scaling RL compute looks like
+@@ 89
+Pretraining has scaling laws; until late 2025 RL post-training had folklore. "The Art of Scaling Reinforcement Learning Compute for LLMs" (October 2025; an oral at ICLR 2026 on 25 April 2026) spent over 400,000 GPU-hours of ablations on an 8B dense model and Llama-4 Scout to fit one curve: <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> <a class="src" href="https://iclr.cc/virtual/2026/oral/10010608">ICLR 2026</a>
+@@ 90
+R<sub>C</sub> − R<sub>0</sub> = (A − R<sub>0</sub>) · 1 / ( 1 + (C<sub>mid</sub>/C)<sup>B</sup> )
+@@ 91
+R<sub>C</sub> is the pass rate after compute C, R<sub>0</sub> the start, <strong>A</strong> the <strong>asymptote</strong> (the ceiling this recipe can ever reach), <strong>B</strong> the exponent (how fast it gets there), C<sub>mid</sub> the half-way compute. A sigmoid, not a power law, because it fits robustly at low compute. The useful finding is which knobs move which. <strong>Moving A</strong>: the loss type (CISPO and GSPO beat DAPO), FP32 logits at the LM head (A rose from about 0.52 to 0.61), larger batches, longer generations, zero-variance filtering. <strong>Moving mostly B</strong>: asynchronous generation (PipelineRL vs PPO-off-policy: same ceiling, faster), loss aggregation, the advantage-normalisation variant, curriculum. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 92
+The <strong>ScaleRL</strong> recipe: async PipelineRL eight steps off-policy, CISPO loss, FP32 head, prompt-level loss aggregation, batch-level advantage normalisation, zero-variance filtering, dropping prompts with a historical pass rate ≥ 0.9, and a forced end-of-thinking phrase for length control. A 100,000 GPU-hour run validated it: the curve fitted on the early portion predicted the later points. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a> The practical lesson: find your A on small runs first, because no amount of compute moves a recipe past its ceiling. See <a href="#p-scalerl">the ScaleRL review</a>.
+@@ 93
+7. Does RL add capability or sharpen it? And what gets hacked
+@@ 94
+Yue et al. (April 2025) compared base and RLVR models on <strong>pass@k</strong>, the chance that at least one of k samples is right, for k up to 1,024. RLVR wins at k = 1; at large k the base wins. On AIME 2024 at k = 1,024, 13.3% of problems were solved only by the base and 0.0% only by the RL model, and six RLVR algorithms behaved alike. Their reading: RLVR improves sampling efficiency on what the base could already do, while distillation from a stronger teacher adds new reasoning patterns. <a class="src" href="https://arxiv.org/abs/2504.13837">Yue 2025</a> Ni et al. (October 2025) supply the theory: GRPO is "a conservative reweighting scheme bounded by the base model's distribution"; it cannot find a solution the base gives zero probability. <a class="src" href="https://arxiv.org/abs/2510.15990">Ni 2025</a>
+@@ 95
+The counter-claim is <strong>ProRL</strong> (NVIDIA, May 2025): over 2,000 RL steps on 136k verifiable problems, with a KL penalty and periodic resets of the reference policy and optimizer, a 1.5B model beat its starting point on pass@k everywhere, with pass@1 gains from +14.7% on math to +54.8% on logic puzzles. <a class="src" href="https://arxiv.org/abs/2505.24864">Liu 2025</a> Caveats: the start model was itself distilled, and the biggest gains are on tasks far from its training distribution. Honest summary as of October 2026: short RL runs sharpen; whether long, diverse RL with resets truly expands what a model can do is contested.
+@@ 96
+Whatever the judge, the policy learns to please it. <strong>Sycophancy</strong>: across five production assistants, responses matching the user's view were likelier to be preferred, and "both humans and preference models sometimes prefer convincing sycophantic responses over correct ones". <a class="src" href="https://arxiv.org/abs/2310.13548">Sharma 2023</a> <strong>Length</strong>: most of RLHF's reward gain comes from longer outputs, and a reward based purely on length recovers most of the improvement over SFT. <a class="src" href="https://arxiv.org/abs/2310.03716">Singhal 2023</a> RLVR adds format gaming and exploited verifiers. In September 2026 Anthropic's Opus 5.5 post said the company was "tightening how we filter the environments used in reinforcement learning", linking flawed environments to misaligned behaviour. <a class="src" href="https://www.anthropic.com/news/claude-opus-5-5">Anthropic 2026</a>
+@@ 97
+Going deeper (optional): process versus outcome rewards
+@@ 98
+An <strong>outcome reward model</strong> (ORM) scores the final answer; a <strong>process reward model</strong> (PRM) scores every step. "Let's Verify Step by Step" (2023) found process supervision significantly beat outcome supervision on MATH, with PRM-guided search solving 78% of a test subset, using 800k human step labels (PRM800K). <a class="src" href="https://arxiv.org/abs/2305.20050">Lightman 2023</a> DeepSeek-R1 reports the opposite at scale: steps are hard to define and label, and the policy hacks the PRM. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2026</a> The 2025 reasoning wave is overwhelmingly outcome-verified; for domains with no exact checker, DeepSeek-V4's report lists a generative reward model, an LLM that writes a judgement. <a class="src" href="https://arxiv.org/abs/2606.19348">DeepSeek-AI 2026</a>
+@@ 99
+8. Agentic RL: when the episode is a conversation
+@@ 100
+An <strong>agent episode</strong> is a conversation with tools. The policy emits tokens; some form a tool call; an environment (sandbox, API, browser, simulated user) returns an observation that is appended to the context; the policy continues; at the end the environment reports whether the goal was met. One detail every system shares: <strong>tool outputs and user turns are masked out of the loss</strong>. They are observations, not actions, and the trainer must see exactly the tokens the policy produced, which is why verl's agent loop generates at the token level rather than round-tripping through text. <a class="src" href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html">verl 2026</a>
+@@ 101
+The benchmarks define the rewards. <strong>τ-bench</strong> (June 2024): a simulated user, domain APIs, policy rules; success means the final database state matches the goal. GPT-4o succeeded on under 50% of tasks, and its <strong>pass^k</strong>, the chance that all k trials succeed, was below 25% at k = 8 in retail. <a class="src" href="https://arxiv.org/abs/2406.12045">Yao 2024</a> <strong>τ²-bench</strong> (June 2025) gives the user tools too, so the agent must guide a person, with "significant performance drops". <a class="src" href="https://arxiv.org/abs/2506.07982">Barres 2025</a> <strong>SWE-RL</strong> (Meta, February 2025) trains on open-source software history with a rule-based reward, similarity to the real patch, and takes Llama3-70B to 41.0% on SWE-bench Verified. <a class="src" href="https://arxiv.org/abs/2502.18449">Wei 2025</a> <strong>Agent World Model</strong> (February 2026, ICML 2026) builds 1,000 synthetic, code-driven, database-backed environments whose inspectable state makes rewards reliable; training only on them generalised to three held-out benchmarks. <a class="src" href="https://arxiv.org/abs/2602.10090">Wang 2026</a> <strong>ToolVerse</strong> (July 2026) turns about 400 real MCP servers, about 4,500 tools, into environments with long-horizon tasks generated from a tool-dependency graph. <a class="src" href="https://arxiv.org/abs/2607.15660">Zhou 2026</a>
+@@ 102
+The open problem is <strong>credit assignment</strong>: one terminal reward over 20 to 50 turns and 10,000+ tokens. GRPO gives every token in a trajectory the same sign, so a successful episode's one bad tool call is rewarded too. ToolVerse's answer is a <strong>Turn-Aware Relative Advantage</strong> that varies across turns; <a class="src" href="https://arxiv.org/abs/2607.15660">Zhou 2026</a> Agent World Model's is per-step rewards read off the database; <a class="src" href="https://arxiv.org/abs/2602.10090">Wang 2026</a> VAPO's is a value model.
+@@ 103
+Try it: step through a six-turn episode, flip the terminal reward, and compare three ways of spreading it over the turns.
+@@ 104
+Notice that "uniform over turns" is plain GRPO: the first thought and the final answer get identical credit. Tool results are greyed out because they are never in the loss.
+@@ 105
+What frontier labs say in public, as of 25 October 2026, is thin. DeepSeek-V4 (released 24 April 2026) trains domain experts "through SFT and RL with GRPO", then merges them into one model by on-policy distillation, the student minimising a reverse KL to the teachers. <a class="src" href="https://arxiv.org/abs/2606.19348">DeepSeek-AI 2026</a> <a class="src" href="https://deepseek.com/en/transparency/">DeepSeek 2026</a> DeepSeek-V3.2 (December 2025) credits "a robust RL protocol and scaling post-training compute" for matching GPT-5. <a class="src" href="https://huggingface.co/deepseek-ai/DeepSeek-V3.2">DeepSeek 2025</a> Anthropic's statement is the environment-filtering sentence above; OpenAI's remains the o1 system card. <a class="src" href="https://arxiv.org/abs/2412.16720">OpenAI 2024</a>
+@@ 106 attr
+Left: the RLHF four-model pipeline. Prompts go to a trainable policy, whose rollouts are scored by a frozen reward model, compared with a frozen reference model for a KL penalty, and valued by a trainable value model; rewards and KL feed a PPO update back into policy and value. Right: GRPO. A prompt goes to the policy, which samples G responses; a rule verifier scores each; the group mean and std give advantages; a clipped update returns to the policy, with an optional KL to a reference model. The value model is crossed out.
+@@ 107
+RLHF-PPO: four models
+@@ 108
+GRPO: policy (+ reference)
+@@ 109
+prompts x
+@@ 110
+policy π (train)
+@@ 111
+rollouts y ~ π(·|x)
+@@ 112
+reward model
+@@ 113
+frozen, 6B
+@@ 114
+reference
+@@ 115
+frozen SFT
+@@ 116
+value model
+@@ 117
+train
+@@ 118
+r(x,y) at end
+@@ 119
+−β·KL per token
+@@ 120
+V(s_t) → GAE
+@@ 121
+advantages A_t → PPO clipped update
+@@ 122
+4 copies in memory, 2 with optimizer state
+@@ 123
+before RL: pairs (y_w, y_l) → Bradley–Terry loss → RM
+@@ 124
+prompt q
+@@ 125
+G = 16 samples o_1 … o_G
+@@ 126
+verifier (rule)
+@@ 127
+answer match + format tags
+@@ 128
+r_1 … r_G → mean, std
+@@ 129
+A_i = (r_i − mean)/std → clipped update
+@@ 130
+β·KL, optional
+@@ 131
+no critic: the group is the baseline
+@@ 132
+1 trained copy; 2 if β &gt; 0; 3 if the reward is a model
+@@ 133
+Left: InstructGPT-style RLHF. Four large models; the reward model was trained beforehand from preference pairs. Right: GRPO as in DeepSeek-R1. The group of G samples replaces the value model, and a rule replaces the reward model.
+@@ 134
+Left half, top to bottom: prompts enter the trainable policy, which generates rollouts. Three scorers look at each: the frozen reward model returns one number at the final token, the frozen reference returns per-token log-probabilities for the KL penalty, and the trainable value model returns per-token values. GAE turns these into advantages, and a PPO clipped update flows back into both trained models. The right half deletes two boxes: the policy samples G = 16 responses, a rule scores each, and the group's mean and std give the advantage. The reference survives only if β &gt; 0; in DAPO and TRL's default it does not.
+@@ 135 attr
+A training system. Left: a rollout pool of vLLM or SGLang inference workers, with agent loops that call tools and append observations; they emit trajectories of tokens, log-probabilities, loss mask and reward into a queue. Right: a trainer pool running FSDP or Megatron computes the GRPO, DAPO or CISPO loss and updates weights. An arrow labelled weight sync over NCCL returns new weights to the rollout pool. A staleness knob between the pools says how many steps old a rollout may be.
+@@ 136
+rollout pool (GPUs)
+@@ 137
+vLLM / SGLang worker ×N
+@@ 138
+agent loop: generate → tool → observe
+@@ 139
+tools: sandbox, APIs, simulated user
+@@ 140
+generation ≈ 80% of wall-clock
+@@ 141
+trajectories
+@@ 142
+tokens, logprobs,
+@@ 143
+loss mask, reward
+@@ 144
+trainer pool (GPUs)
+@@ 145
+actor: FSDP / Megatron
+@@ 146
+loss: GRPO / DAPO / CISPO
+@@ 147
+optional: reference, critic, RM
+@@ 148
+recompute logprobs, clip, step
+@@ 149
+weight sync (NCCL): new policy → every rollout worker
+@@ 150
+async: staleness_threshold = how many updates old a rollout may be (0 = synchronous)
+@@ 151
+A verl-style training system. Generation and training run on different GPU pools and different engines; after each update the trainer's weights are shipped to every rollout worker.
+@@ 152
+Left to right: inference workers generate; in the agentic case an agent loop on top executes tool calls, appends observations, and records which tokens were the policy's. Trajectories (tokens, log-probabilities, loss mask, reward) go into a queue. The trainer pool recomputes log-probabilities, forms the advantage, takes a clipped step, and ships the new weights back. Synchronous: the pools take turns and each idles half the time. Asynchronous: they overlap, rollouts may be a few updates stale, and the ratio ρ with its clip (or a truncated importance weight) keeps the off-policy update honest.
+@@ 153
+Generation "takes about 80% of RLHF time", hence the two engines. <a class="src" href="https://github.com/OpenRLHF/OpenRLHF">OpenRLHF 2026</a> verl implements HybridFlow (September 2024), whose 3D-HybridEngine reshards the actor between training and generation layouts without an extra copy, for 1.53× to 20.57× throughput. <a class="src" href="https://arxiv.org/abs/2409.19256">Sheng 2024</a> Its fully asynchronous mode puts rollouter and trainer on separate GPU pools with a staleness_threshold (0 is synchronous, about 1 is one step off-policy). NCCL weight sync fell from 15.76 s to 4.38 s per step for Qwen3-30B-A3B and from 58.57 s to 23.70 s for Qwen3-235B-A22B; end-to-end speedup was 2.35× to 2.67× on Qwen2.5-Math-7B with 128 GPUs (64 rollout, 64 training) and about 1.55× for multi-turn tool calling. <a class="src" href="https://verl.readthedocs.io/en/latest/advance/fully_async.html">verl 2026</a> PipelineRL (September 2025) updates weights in flight, continuing half-finished sequences on the new policy: about 2× faster learning on 128 H100s while nearly on-policy. <a class="src" href="https://arxiv.org/abs/2509.19128">Piché 2025</a> TRL's single-machine GRPOTrainer defaults to G = 8, β = 0 and the DAPO token-level loss. <a class="src" href="https://huggingface.co/docs/trl/grpo_trainer">Hugging Face 2026</a>
+@@ 154
+Q1. In InstructGPT, what did labelers prefer over the outputs of the 175B GPT-3?
+@@ 155
+The 6B reward model's own outputs
+@@ 156
+The 175B SFT model, once γ was set to zero
+@@ 157
+The 1.3B PPO-trained model, with 100× fewer parameters
+@@ 158
+Nothing; preference tracked parameter count
+@@ 159
+The abstract's headline result. The 6B reward model scores responses; it does not write them.
+@@ 160
+Q2. Why can DPO drop the reward model?
+@@ 161
+Z(x) is identical for both responses to a prompt, so it cancels in the Bradley–Terry difference
+@@ 162
+DPO samples fresh responses and scores them with a verifier
+@@ 163
+The KL penalty is removed, so no reference is needed
+@@ 164
+A 6B reward model is absorbed into the policy's head
+@@ 165
+Inverting the closed-form optimum gives r = β·log(π/π_ref) + β·log Z(x); the shared Z(x) cancels. DPO still needs the reference and never samples.
+@@ 166
+Q3. A GRPO group scores [2, 1, 1, 0]. What advantage do the two answers scoring 1 receive?
+@@ 167
++0.707 for the correct one, −0.707 for the wrong one
+@@ 168
++1 each, because 1 is above zero
+@@ 169
++1.414 each
+@@ 170
+0: they equal the group mean, so no gradient
+@@ 171
+Mean 1.0, std 0.7071, A = [+1.414, 0, 0, −1.414]. Advantage is relative to the group, not to correctness.
+@@ 172
+Q4. Which single DAPO change produced the largest AIME 2024 gain in its ablation?
+@@ 173
+Clip-Higher (ε_high = 0.28), 36 → 38
+@@ 174
+Dynamic sampling, 42 → 50
+@@ 175
+Token-level loss, 41 → 42
+@@ 176
+Removing the KL term, 30 → 50
+@@ 177
+Dropping all-right and all-wrong groups took the score from 42 to 50. Removing KL is part of the 30-point baseline, not a measured step.
+@@ 178
+Q5. "RLVR teaches a model to reason in new ways." What did Yue et al. find at large k?
+@@ 179
+The RL model solved everything the base solved, plus 13.3% more
+@@ 180
+Base and RL models solved identical sets at k = 1,024
+@@ 181
+13.3% of AIME 2024 problems were solved only by the base and 0.0% only by the RL model
+@@ 182
+Distilled models fell below the base at every k
+@@ 183
+At k = 1,024 the base covered more problems. RLVR concentrated probability on solutions the base could already find; distillation stayed above the base at every k.
+@@ 184
+Q6. Why are tool results masked out of the loss in agentic RL?
+@@ 185
+They are observations from the environment, not actions the policy chose
+@@ 186
+They are too long and would dominate the token count
+@@ 187
+They are always correct, so carry no gradient
+@@ 188
+The reward model cannot read JSON
+@@ 189
+Only the policy's own tokens are actions. Training on tool output would teach the model to predict the environment rather than act in it.
+@@ 190
+Language is an MDP with a token action space, a long horizon and one terminal reward; tractable because the SFT model is already a strong policy.
+@@ 191
+RLHF = a reward model trained with the Bradley–Terry loss, then PPO against it with a β·KL leash to the SFT reference; four models in memory; 1.3B beat 175B.
+@@ 192
+DPO deletes the reward model because Z(x) cancels; GRPO deletes the value model because the group mean is the baseline. DPO cannot explore; GRPO's std and length normalisers bias the update.
+@@ 193
+Rule rewards took R1-Zero from 15.6 to 71.0 on AIME 2024; DAPO's four fixes took 30 to 50; distillation beat RL on small models, 72.6 vs 47.0.
+@@ 194
+RL compute follows a sigmoid: some knobs (FP32 head, loss type) raise the ceiling, others only reach it faster. Short RL sharpens; whether long RL expands capability is contested as of October 2026.
+@@ 195
+Ouyang et al. (OpenAI), Training language models to follow instructions with human feedback, 2022. <a href="https://arxiv.org/abs/2203.02155">arXiv:2203.02155</a> · <a href="https://ar5iv.labs.arxiv.org/html/2203.02155">full text</a>
+@@ 196
+Christiano et al., Deep Reinforcement Learning from Human Preferences, 2017. <a href="https://arxiv.org/abs/1706.03741">arXiv:1706.03741</a>
+@@ 197
+Rafailov et al., Direct Preference Optimization, 2023. <a href="https://arxiv.org/abs/2305.18290">arXiv:2305.18290</a> · <a href="https://arxiv.org/html/2305.18290v3">v3</a>
+@@ 198
+Ahmadian et al. (Cohere), Back to Basics: Revisiting REINFORCE-Style Optimization for RLHF, 2024. <a href="https://arxiv.org/abs/2402.14740">arXiv:2402.14740</a>
+@@ 199
+Shao et al., DeepSeekMath, 2024. <a href="https://arxiv.org/abs/2402.03300">arXiv:2402.03300</a>
+@@ 200
+OpenAI, o1 System Card, 2024 (v2 2026). <a href="https://arxiv.org/abs/2412.16720">arXiv:2412.16720</a>
+@@ 201
+DeepSeek-AI, DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via RL, 2025 (v2 2026, Nature version). <a href="https://arxiv.org/abs/2501.12948">arXiv:2501.12948</a> · <a href="https://arxiv.org/html/2501.12948v1">v1</a> · <a href="https://arxiv.org/html/2501.12948">v2</a>
+@@ 202
+Liu et al., Understanding R1-Zero-Like Training: A Critical Perspective (Dr. GRPO), 2025. <a href="https://arxiv.org/abs/2503.20783">arXiv:2503.20783</a>
+@@ 203
+Yu et al. (ByteDance Seed), DAPO: An Open-Source LLM RL System at Scale, 2025. <a href="https://arxiv.org/abs/2503.14476">arXiv:2503.14476</a>
+@@ 204
+Zheng et al. (Qwen), Group Sequence Policy Optimization, 2025. <a href="https://arxiv.org/abs/2507.18071">arXiv:2507.18071</a>
+@@ 205
+Hu et al., REINFORCE++, 2025. <a href="https://arxiv.org/abs/2501.03262">arXiv:2501.03262</a>
+@@ 206
+Yue et al. (ByteDance Seed), VAPO, 2025. <a href="https://arxiv.org/abs/2504.05118">arXiv:2504.05118</a>
+@@ 207
+Khatri et al., The Art of Scaling Reinforcement Learning Compute for LLMs, 2025. <a href="https://arxiv.org/abs/2510.13786">arXiv:2510.13786</a> · <a href="https://iclr.cc/virtual/2026/oral/10010608">ICLR 2026 oral</a>
+@@ 208
+Yue et al., Does RL Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?, 2025. <a href="https://arxiv.org/abs/2504.13837">arXiv:2504.13837</a>
+@@ 209
+Liu et al. (NVIDIA), ProRL, 2025. <a href="https://arxiv.org/abs/2505.24864">arXiv:2505.24864</a>
+@@ 210
+Ni et al., Can GRPO Help LLMs Transcend Their Pretraining Origin?, 2025. <a href="https://arxiv.org/abs/2510.15990">arXiv:2510.15990</a>
+@@ 211
+Sharma et al. (Anthropic), Towards Understanding Sycophancy in Language Models, 2023. <a href="https://arxiv.org/abs/2310.13548">arXiv:2310.13548</a>
+@@ 212
+Singhal et al., A Long Way to Go: Investigating Length Correlations in RLHF, 2023. <a href="https://arxiv.org/abs/2310.03716">arXiv:2310.03716</a>
+@@ 213
+Lightman et al. (OpenAI), Let's Verify Step by Step, 2023. <a href="https://arxiv.org/abs/2305.20050">arXiv:2305.20050</a>
+@@ 214
+Yao et al. (Sierra), τ-bench, 2024. <a href="https://arxiv.org/abs/2406.12045">arXiv:2406.12045</a>
+@@ 215
+Barres et al., τ²-Bench, 2025. <a href="https://arxiv.org/abs/2506.07982">arXiv:2506.07982</a>
+@@ 216
+Wei et al. (Meta), SWE-RL, 2025. <a href="https://arxiv.org/abs/2502.18449">arXiv:2502.18449</a>
+@@ 217
+Wang et al., Agent World Model, 2026. <a href="https://arxiv.org/abs/2602.10090">arXiv:2602.10090</a>
+@@ 218
+Zhou et al., ToolVerse, 2026. <a href="https://arxiv.org/abs/2607.15660">arXiv:2607.15660</a>
+@@ 219
+Sheng et al. (ByteDance), HybridFlow, 2024. <a href="https://arxiv.org/abs/2409.19256">arXiv:2409.19256</a>
+@@ 220
+verl documentation: <a href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html">agentic RL</a> · <a href="https://verl.readthedocs.io/en/latest/advance/fully_async.html">fully async trainer</a>
+@@ 221
+Piché et al., PipelineRL, 2025. <a href="https://arxiv.org/abs/2509.19128">arXiv:2509.19128</a>
+@@ 222
+OpenRLHF README. <a href="https://github.com/OpenRLHF/OpenRLHF">github.com/OpenRLHF/OpenRLHF</a>
+@@ 223
+Hugging Face TRL, GRPOTrainer documentation. <a href="https://huggingface.co/docs/trl/grpo_trainer">huggingface.co/docs/trl/grpo_trainer</a>
+@@ 224
+DeepSeek-AI, DeepSeek-V4 technical report, 2026. <a href="https://arxiv.org/abs/2606.19348">arXiv:2606.19348</a> · <a href="https://deepseek.com/en/transparency/">release dates</a> · <a href="https://huggingface.co/deepseek-ai/DeepSeek-V3.2">DeepSeek-V3.2 model card</a>
+@@ 225
+Anthropic, Introducing Claude Opus 5.5, 22 September 2026. <a href="https://www.anthropic.com/news/claude-opus-5-5">anthropic.com</a>

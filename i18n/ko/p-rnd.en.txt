@@ -1,0 +1,102 @@
+@@ 1
+<span class="eyebrow">2018 · Burda et al. · arXiv 1810.12894 (OpenAI / Edinburgh)</span>
+@@ 2
+RND: Exploration by random network distillation
+@@ 3
+An exploration bonus equal to how badly a trained network predicts a frozen random network's features: 8,152 mean on Montezuma's Revenge against 2,497 for PPO and 4,753 for an average human, the first agent past the human average without demonstrations.
+@@ 4
+Taught in <a href="#d11">Day 11</a> · Read time of the original: ~40 min
+@@ 5
+RND pays the agent for visiting observations a predictor network has not yet learned to copy from a fixed random target network, which rewards novelty while being immune to unpredictable noise, and feeds that bonus to PPO through a second value head with its own discount.
+@@ 6
+You get a sweet for walking into a room you have never seen. How does the game know? A scribble machine turns any picture into a fixed random scribble, and a copier learns to copy the scribbles. In familiar rooms the copier is good and you get nothing; in a new room it gets the scribble wrong and you get a sweet. A flickering TV cannot fool it, because the same picture always gives the same scribble.
+@@ 7
+In Montezuma's Revenge the first reward needs a long chain of precise moves past lethal traps, and random exploration essentially never finds it; <a href="#p-dqn">DQN</a> scored about zero and saw 2 rooms. <a class="src" href="https://arxiv.org/abs/1606.01868">Bellemare 2016</a> Curiosity bonuses based on prediction error help, but a <strong>forward model</strong> that predicts the next frame is drawn to anything unpredictable, "local sources of entropy in the environment" such as static on a screen or a coin flip, the so-called noisy-TV problem. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> Count-based bonuses work in tables but every frame of a game is new.
+@@ 8
+Predict something deterministic that you have never seen before. The paper lists four sources of prediction error: amount of training data, stochasticity, model misspecification and learning dynamics. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> Only the first is novelty. If the thing being predicted is the output of a <em>fixed random network</em>, the target is a deterministic function of the observation (no stochasticity) in the same architecture family as the predictor (no misspecification), so what remains is mainly "have I trained on this before?"
+@@ 9
+<strong>Two networks, same shape.</strong> A target f is randomly initialised and frozen forever; a predictor f̂ is trained by mean squared error to match f on observations the agent visits. Both use the convolutional encoder of the 2015 DQN followed by dense layers. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 10
+<strong>Normalise.</strong> Observations are whitened with running statistics and clipped to [−5, 5] so the random target's outputs have a sensible scale; intrinsic rewards are divided by a running estimate of the intrinsic return's standard deviation. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 11
+<strong>Two value heads.</strong> PPO fits V<sub>E</sub> to the extrinsic return (episodic, γ<sub>E</sub> = 0.999) and V<sub>I</sub> to the intrinsic return (non-episodic, γ<sub>I</sub> = 0.99), then uses V = V<sub>E</sub> + V<sub>I</sub>. The intrinsic return "is not truncated at 'game over'", so dying is not a way to escape boredom; raising γ<sub>I</sub> to 0.999 hurt. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 12
+<strong>Scale.</strong> Most runs use 128 parallel environments and about 1.97 billion frames, with sticky actions so the agent cannot memorise a deterministic sequence; the predictor trains on 25% of the experience so its update rate matches a 32-environment run. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 13 attr
+RND: the next observation is whitened and clipped, then fed to a frozen random target network and a trainable predictor network; the squared difference of their outputs is normalised to form the intrinsic reward, which joins the extrinsic reward in PPO through two value heads
+@@ 14
+whiten, clip ±5
+@@ 15
+Target f (frozen)
+@@ 16
+random init, never trained
+@@ 17
+Predictor f̂
+@@ 18
+MSE toward f
+@@ 19
+÷ running std → rⁱ
+@@ 20
+non-episodic
+@@ 21
+same error is the predictor's training loss (25% of samples)
+@@ 22
+One observation, a frozen random network and a trainable copy; their disagreement is the bonus. A deterministic target means noise cannot keep the bonus high; a learning predictor means familiar rooms stop paying.
+@@ 23 attr
+Six learning curves of mean episodic return against frames for Gravitar, Montezuma's Revenge, Pitfall!, Private Eye, Solaris and Venture, comparing RND, a dynamics-based curiosity bonus and plain PPO; RND leads clearly on Montezuma's Revenge, Gravitar and Venture
+@@ 24
+<a class="src" href="https://arxiv.org/abs/1810.12894">Figure 7, Burda 2018</a> Mean episodic return of RNN-based policies: RND, a dynamics-prediction bonus, and PPO with extrinsic reward only, on six hard-exploration games.
+@@ 25
+Table 1 (final mean score, RND / PPO / average human): Montezuma's Revenge 8,152 / 2,497 / 4,753; Gravitar 3,906 / 3,426 / 3,351; Venture 1,859 / 0 / 1,188. The dynamics-based curiosity baseline scored 400 on Montezuma. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> The best agents "often find 22 out of the 24 rooms on the first level"; a scaled-up run with 1,024 parallel environments averaged 10,070 and one run passed the first level once for a best return of 17,500. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> With no extrinsic reward at all, the non-episodic agent still explored up to 21 rooms. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> The same table shows where it fails: Pitfall! −3, Private Eye 8,666 against a human 69,571, Solaris 3,282 against 12,327. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 26
+RND was the first agent to beat the average human on Montezuma's Revenge "without using demonstrations or having access to the underlying state of the game", in October 2018. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> Its bonus became a standard component: Agent57 (March 2020), the first agent above the human baseline on all 57 Atari games, uses RND as the lifelong-novelty factor of its Never Give Up reward. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a> It is also the cleanest example in <a href="#d11">Day 11</a> of separating "new" from "unpredictable".
+@@ 27
+The bonus decays wherever the predictor has trained, so the agent can forget how to return to a frontier it found earlier; Go-Explore (January 2019) named this <em>detachment</em>, kept an explicit archive of states instead, and scored 43,763 on Montezuma without domain knowledge. <a class="src" href="https://arxiv.org/abs/1901.10995">Ecoffet 2019</a> RND needs about 2 billion frames, two discount factors to tune, and still leaves Pitfall!, Private Eye and Solaris far below human. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> The abstract itself says it only "occasionally completes the first level". <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a>
+@@ 28
+Sections 2.2–2.2.1 (the four error sources) are the idea, 2.3 the two-head trick, Figure 1 the bonus spiking along a real episode. Then Section 3.6, Table 1 and the pseudocode in Appendix A.2; skip the ablations in 3.2–3.5 on a first pass. About 40 minutes.
+@@ 29
+Q1. Which of RND's two networks is trained?
+@@ 30
+Both, so they converge together
+@@ 31
+Only the predictor; the target stays at its random initialisation
+@@ 32
+Only the target, on visited observations
+@@ 33
+Neither; both are frozen and the bonus is their fixed difference
+@@ 34
+The target is fixed forever; the predictor learns to copy it. Novel observations give large copy errors.
+@@ 35
+Q2. RND's mean score on Montezuma's Revenge vs the average human was:
+@@ 36
+2,497 vs 4,753
+@@ 37
+4,753 vs 8,152
+@@ 38
+8,152 vs 4,753
+@@ 39
+17,500 vs 10,070
+@@ 40
+8,152 (RND) vs 4,753 (human); 2,497 is PPO; 17,500 is the best single return.
+@@ 41
+Q3. Why does a noisy TV not trap an RND agent?
+@@ 42
+The target is a deterministic function of the frame, so the predictor can learn it and the bonus fades
+@@ 43
+The agent is penalised for staying still
+@@ 44
+Observations are clipped to ±5, removing the noise
+@@ 45
+It does: RND fails on games with randomness
+@@ 46
+Forward models chase irreducible stochasticity; RND predicts a fixed random mapping, so static becomes learnable and stops paying.
+@@ 47
+Burda, Edwards, Storkey, Klimov. Exploration by Random Network Distillation. 30 Oct 2018. <a href="https://arxiv.org/abs/1810.12894">arXiv 1810.12894</a>
+@@ 48
+Bellemare et al. Unifying Count-Based Exploration and Intrinsic Motivation. 2016. <a href="https://arxiv.org/abs/1606.01868">arXiv 1606.01868</a>
+@@ 49
+Pathak et al. Curiosity-driven Exploration by Self-supervised Prediction (ICM). 2017. <a href="https://arxiv.org/abs/1705.05363">arXiv 1705.05363</a>
+@@ 50
+Ecoffet et al. Go-Explore: a New Approach for Hard-Exploration Problems. 2019. <a href="https://arxiv.org/abs/1901.10995">arXiv 1901.10995</a>
+@@ 51
+Badia et al. Agent57: Outperforming the Atari Human Benchmark. 2020. <a href="https://arxiv.org/abs/2003.13350">arXiv 2003.13350</a>

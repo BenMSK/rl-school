@@ -1,0 +1,120 @@
+@@ 1
+<span class="eyebrow">2015 · Schulman et al. · ICML 2015 (arXiv 1502.05477)</span>
+@@ 2
+TRPO: Trust region policy optimization
+@@ 3
+A policy update with a proof that the true return cannot fall, approximated into an algorithm that learned to swim, hop and walk in simulation where unconstrained natural gradient produced only standing.
+@@ 4
+Taught in <a href="#d8">Day 8</a> · Read time of the original: ~2 h (16 pages with appendices)
+@@ 5
+Maximise a surrogate objective, the old policy's advantages re-weighted by the new-to-old probability ratio, subject to the constraint that the average KL divergence between new and old policies stays below δ = 0.01, which the theory shows guarantees monotonic improvement. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 6
+Learning to ride a bike, you lean a little at a time. Lean too far at once and you fall, and you have to start again from where you fell, which is worse than where you began. TRPO is a rule for the computer: "each practice session, change what you would do by no more than a small, fixed amount", with a bit of maths that says why that amount is safe.
+@@ 7
+A policy gradient is only a local direction. Take too big a step and the policy changes, the states it visits change, and the next batch of data comes from a worse policy; the loop can collapse and not recover. The PPO paper later measured it: on seven MuJoCo tasks an unconstrained surrogate scored −0.39 on a scale where random is 0 and the best run is 1, because on HalfCheetah it ended worse than random. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> Step size is also a hyperparameter you cannot set once: the same α is huge for one parameter and tiny for another. Natural gradient fixes the geometry but not the step length; in TRPO's own experiments, natural gradient without the trust region failed to produce hopping or walking. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 8
+Bound how much the policy may change, measured in behaviour (KL divergence between action distributions), not in parameters. Theorem 1 gives a lower bound on the new policy's return: the surrogate improvement minus a penalty C · D<sub>KL</sub><sup>max</sup>(π, π̃) with C = 4εγ/(1−γ)<sup>2</sup>, where ε is the largest advantage magnitude. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a> Maximising that bound each step cannot decrease the true return. The penalty coefficient from the theory gives very small steps, so the practical algorithm swaps the penalty for a hard constraint on the <em>average</em> KL, with radius δ. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 9
+Collect trajectories with the current policy π<sub>θk</sub> (the "single path" scheme; "vine" branches extra rollouts from visited states). Estimate advantages A.
+@@ 10
+Form the surrogate and the constraint:
+@@ 11
+maximise L(θ) = E<sub>s,a∼π<sub>θk</sub></sub>[ π<sub>θ</sub>(a|s) / π<sub>θk</sub>(a|s) · A(s,a) ]   subject to   D̄<sub>KL</sub>(θ<sub>k</sub> ‖ θ) ≤ δ
+@@ 12
+Approximate: L ≈ g<sup>T</sup>(θ − θ<sub>k</sub>) and D̄<sub>KL</sub> ≈ ½ (θ − θ<sub>k</sub>)<sup>T</sup> H (θ − θ<sub>k</sub>), where H is the Fisher information matrix. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Achiam 2018</a>
+@@ 13
+Never invert H. Solve Hx = g by conjugate gradient, 10 iterations, using Fisher-vector products computed on 10% of the data. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 14
+Step to the edge of the trust region:
+@@ 15
+θ<sub>k+1</sub> = θ<sub>k</sub> + sqrt( 2δ / (x<sup>T</sup>Hx) ) · x
+@@ 16
+Backtracking line search: shrink the step by a factor until the measured KL is ≤ δ and the surrogate actually improved. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Achiam 2018</a>
+@@ 17
+Check the arithmetic: with δ = 0.01 and x<sup>T</sup>Hx = 4 the step scale is sqrt(0.02/4) = sqrt(0.005) ≈ 0.0707 along x. If the realised KL is 0.013, backtrack to 0.8 × 0.0707, then 0.64 × 0.0707, until KL ≤ 0.01 (RL School arithmetic from the formula above).
+@@ 18 attr
+TRPO pipeline left to right: rollouts with the old policy give advantages and the policy gradient g; a conjugate gradient box solves H x equals g with Fisher vector products; the step is scaled to the trust region radius delta; a line search shrinks the step until the KL constraint holds and the surrogate improves; the new parameters feed back to the rollouts
+@@ 19
+rollouts π<tspan baseline-shift="sub" font-size="10">θk</tspan>
+@@ 20
+advantages A
+@@ 21
+gradient g
+@@ 22
+of surrogate L
+@@ 23
+solve Hx = g
+@@ 24
+conjugate gradient, 10 iters
+@@ 25
+scale step
+@@ 26
+√(2δ / xᵀHx)
+@@ 27
+line
+@@ 28
+search
+@@ 29
+θ<tspan baseline-shift="sub" font-size="10">k+1</tspan> accepted only if KL ≤ δ = 0.01 and L improved; otherwise shrink and retry
+@@ 30
+TRPO: one iteration, second-order step without forming H
+@@ 31
+H is touched only through Fisher-vector products on 10% of the batch
+@@ 32
+the constraint is on behaviour (KL of action distributions), not on parameter distance
+@@ 33
+The practical algorithm of Section 6. The expensive part is the conjugate-gradient solve, which is why PPO was built to remove it. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 34
+Locomotion in MuJoCo: swimmer, hopper and walker, with "δ = 0.01 for all experiments". Figure 4 compares single-path and vine TRPO against natural gradient, CEM and CMA, "averaged across five runs of each algorithm with random initializations"; the caption warns that for hopper and walker "a score of −1 is achievable without any forward velocity, indicating a policy that simply learned balanced standing, but not walking", which is where the baselines sat. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a> Atari from pixels, 7 games with a 33,500-parameter convolutional policy: TRPO "only outperformed the prior methods on some of the games" but "consistently achieved reasonable scores", beating DQN on Q*bert (vine) and Enduro (single path) in Table 1. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 35 attr
+Learning curves for swimmer, hopper and walker: total reward against iterations for single-path TRPO, vine TRPO, natural gradient, CEM and CMA, averaged over five runs; the TRPO curves rise while the others stay near the standing-still score
+@@ 36
+<a class="src" href="https://arxiv.org/abs/1502.05477">Figure 4, Schulman 2015</a> Locomotion learning curves, five runs each. The two TRPO variants learn to move; natural gradient, CEM and CMA plateau near the "balanced standing" score of −1 on hopper and walker.
+@@ 37
+TRPO turned "how big a step?" from a tuning problem into a constraint with a meaning, and it worked on neural-network policies with tens of thousands of parameters. Its direct descendant is PPO (2017), whose stated aim is "the data efficiency and reliable performance of TRPO, while using only first-order optimization". <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> The idea of bounding behaviour change by KL reappears wherever policies are fine-tuned from a reference: InstructGPT's RLHF adds "a per-token KL penalty from the SFT model at each token" to keep the language model close to its starting point. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> See <a href="#p-ppo">the PPO review</a> for what replaced the constraint.
+@@ 38
+The theory bounds the <em>maximum</em> KL over states; the algorithm constrains the <em>average</em>, and the authors say so. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a> Each update needs a conjugate-gradient solve with Fisher-vector products, and the method "is not compatible with architectures that include noise (such as dropout) or parameter sharing (between the policy and value function, or with auxiliary tasks)". <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> On Atari the authors "could not obtain error statistics due to time constraints". <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a> Reproducibility bit later: Henderson et al. split 10 identical TRPO runs on HalfCheetah into two groups of five and found them significantly different (p = 0.0016) from random seeds alone. <a class="src" href="https://arxiv.org/abs/1709.06560">Henderson 2018</a>
+@@ 39
+Sections 1–2 for notation (15 min). Section 3 for Theorem 1 and the bound; read the statement, skip Appendix A's proof the first time (20 min). Section 4 for the switch from penalty to constraint, Section 6 for the algorithm you would implement (30 min). Section 8.1 with Figure 4 (15 min). Then the Spinning Up TRPO page for the conjugate-gradient and line-search pseudocode. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Achiam 2018</a> Appendix C is where the Fisher-vector product trick lives, if you need to implement it.
+@@ 40
+Q1. What value of the trust-region radius δ did the paper use?
+@@ 41
+0.01, for all experiments
+@@ 42
+It was tuned per task
+@@ 43
+"We used δ = 0.01 for all experiments." 0.2 is PPO's clip ε; 0.95 is GAE's λ.
+@@ 44
+Q2. "TRPO inverts the Fisher matrix H." What does it actually do?
+@@ 45
+Forms H explicitly and inverts it with LU decomposition
+@@ 46
+Ignores H and uses the plain gradient
+@@ 47
+Solves Hx = g by conjugate gradient using Hessian-vector products, never forming H
+@@ 48
+Approximates H by the identity
+@@ 49
+Ten CG iterations with Fisher-vector products on a 10% subsample. For a network with many parameters, forming H would be impossible.
+@@ 50
+Q3. Theory and practice differ in TRPO. How?
+@@ 51
+The theory uses a clipped ratio; the algorithm uses KL
+@@ 52
+The theory bounds the maximum KL over states with a penalty; the algorithm constrains the average KL with a hard radius
+@@ 53
+The theory requires discrete actions
+@@ 54
+There is no difference
+@@ 55
+The penalty coefficient from Theorem 1 gives tiny steps, so the authors replace it with a constraint, and the per-state max with an average that can be estimated from samples.
+@@ 56
+Schulman, J., Levine, S., Moritz, P., Jordan, M. I. &amp; Abbeel, P. (2015). Trust Region Policy Optimization. ICML 2015. <a href="https://arxiv.org/abs/1502.05477">arXiv:1502.05477</a>; full text <a href="https://ar5iv.labs.arxiv.org/html/1502.05477">ar5iv</a>.
+@@ 57
+Achiam, J. (2018). Spinning Up: Trust Region Policy Optimization. <a href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">spinningup.openai.com</a>.
+@@ 58
+Schulman, J. et al. (2017). Proximal Policy Optimization Algorithms. <a href="https://arxiv.org/abs/1707.06347">arXiv:1707.06347</a>.
+@@ 59
+Henderson, P. et al. (2018). Deep Reinforcement Learning that Matters. <a href="https://arxiv.org/abs/1709.06560">arXiv:1709.06560</a>.
+@@ 60
+Ouyang, L. et al. (2022). Training language models to follow instructions with human feedback. <a href="https://arxiv.org/abs/2203.02155">arXiv:2203.02155</a>.

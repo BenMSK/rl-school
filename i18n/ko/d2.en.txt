@@ -1,0 +1,256 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 2</span>
+@@ 2
+Bandits: the exploration problem in miniature
+@@ 3
+After today you can run ε-greedy, UCB and Thompson sampling on a 10-armed testbed, define regret and read a regret curve, and explain why exploration never fully goes away.
+@@ 4
+About 90 min · Needs Day 1
+@@ 5
+Take the loop from Day 1 and delete the state: every step looks the same, and the only thing an action changes is the reward you get right now. What is left is the k-armed bandit, and the only problem left in it is exploration. Every method today is a different rule for the same trade-off: pull the arm that looks best so far, or pull another one to find out whether it is actually better. The cost of that trade-off has a name, regret, and a provable floor: it can grow as slowly as log n, but never slower.
+@@ 6
+1. The k-armed bandit
+@@ 7
+Picture a row of k slot machines (one-armed bandits), each with a fixed but unknown payout distribution. Each round you pull one and collect a reward drawn from its distribution. Sutton and Barto's definition: "you are faced repeatedly with a choice among k different options, or actions. After each choice you receive a numerical reward chosen from a stationary probability distribution that depends on the action you selected. Your objective is to maximize the expected total reward over some time period." <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 8
+Each action a has a true <strong>action value</strong>, the expected reward for pulling it: q*(a) = E[R<sub>t</sub> | A<sub>t</sub> = a]. If you knew q*(a) for every arm you would always pull the largest. You do not, so you keep an <strong>estimate</strong> Q<sub>t</sub>(a) and try to make it accurate while also collecting reward. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> The term "action value" is due to Chris Watkins, whose 1989 thesis also contains what may be the first use of ε-greedy. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 9
+The playground for this lesson is Sutton and Barto's <strong>10-armed testbed</strong>: 10 arms whose true values q*(a) are drawn from a normal distribution with mean 0 and variance 1, and whose rewards are normal with mean q*(a) and variance 1. Each run is 1,000 pulls, repeated on 2,000 fresh problems; the book's curves are averages over those runs. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> The best arm is worth about 1.54 on average, so 1.54 reward per pull is the most any method could hope for.
+@@ 10
+There are ten ice-cream shops in town and you have never tried any of them. Every day you can visit one. If you keep going to the one you liked best so far, you might miss a better one. If you keep trying new ones, you eat a lot of mediocre ice cream. The question of the day is: what is the smartest rule for deciding, each morning, where to go?
+@@ 11
+2. Estimating action values
+@@ 12
+The natural estimate is the <strong>sample average</strong>: the mean of all rewards received so far from that arm. Storing every reward would be wasteful. Instead, keep one number per arm and update it. If Q<sub>n</sub> is the estimate after n−1 rewards and R<sub>n</sub> is the n-th reward, then <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 13
+which is exactly the sample mean and "holds even for n = 1". Check it by hand. Arm 1 pays 4, then 2, then 6. Q<sub>2</sub> = 4. Q<sub>3</sub> = 4 + ½(2 − 4) = 3. Q<sub>4</sub> = 3 + ⅓(6 − 3) = 4. The plain average (4 + 2 + 6)/3 is also 4.
+@@ 14
+The shape of that line is the single most reused pattern in this course, so memorise it in words: <strong>NewEstimate ← OldEstimate + StepSize · [Target − OldEstimate]</strong>. The bracket is an error; the step size says how far to move toward the target. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> With step size 1/n you get the exact average, and old rewards matter as much as new ones. With a <strong>constant step size</strong> α (say 0.1) you get an exponentially recency-weighted average, which forgets the past and is the right choice when arm values drift over time (a <strong>nonstationary</strong> bandit). Same rewards 4, 2, 6 with α = 0.1 from Q<sub>1</sub> = 0: 0 → 0.4 → 0.56 → 1.104. Slow, but it would keep tracking if the arm's true value changed next week. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 15
+3. ε-greedy and the testbed numbers
+@@ 16
+The <strong>greedy</strong> rule always pulls the arm with the highest current estimate, A<sub>t</sub> = argmax<sub>a</sub> Q<sub>t</sub>(a). It never explores, so if the best arm has a bad first draw it may never be tried again. <strong>ε-greedy</strong> fixes this with a coin: with probability ε pick an arm uniformly at random; otherwise be greedy. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 17
+Sutton and Barto's Figure 2.2 compares the two on the testbed. Their text says the greedy method "achieved a reward-per-step of only about 1, compared with the best possible of about 1.54", and "found the optimal action in only approximately one-third of the tasks". ε = 0.1 "explores more, and usually finds the optimal action earlier, but it never selects that action more than 91% of the time". ε = 0.01 "improves more slowly, but eventually would perform better than the ε = 0.1 method". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> The table gives the numbers from a replication of that figure (500 problems, same setup, averaged over pulls 901–1,000); the book's text states only the greedy row, the rest are read off its figure and reproduced here.
+@@ 18
+Method (after 1,000 pulls)
+@@ 19
+Reward per pull
+@@ 20
+% pulls on the best arm
+@@ 21
+Verdict
+@@ 22
+Greedy (ε = 0)
+@@ 23
+Locks onto a wrong arm two times in three
+@@ 24
+Still improving; would win over a longer run
+@@ 25
+Best at 1,000 pulls; capped at 91%
+@@ 26
+Best possible
+@@ 27
+Knowing q* in advance
+@@ 28
+The 91% ceiling is simple arithmetic: ε = 0.1 spends a tenth of its pulls on random arms, and only one in ten of those lands on the best arm, so the best arm is pulled at most 90% + 1% of the time. That is the first sign of today's theme: a fixed exploration rate pays an exploration tax forever, even after you know the answer.
+@@ 29
+Try it: the widget runs one 10-armed Gaussian testbed problem with a fixed random seed, so the same problem comes back after every reset. Choose a method, pull a thousand times, and compare the hollow bars (true values) with the filled ones (estimates). Then switch methods and compare the regret curves.
+@@ 30
+Notice that a single problem is noisier than the table, which averages hundreds; greedy sometimes gets lucky. Notice the shape of the regret curves: ε-greedy is a straight line (a constant fraction of wasted pulls), while UCB and Thompson sampling bend over and flatten. The bad arms' estimates stay rough because they are rarely pulled; that is fine, you do not need to know exactly how bad a bad arm is.
+@@ 31
+<strong>"More exploration is always better."</strong> ε = 0.1 beats ε = 0.01 over 1,000 pulls and loses to it over a longer run. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> Once you know the best arm, every exploratory pull is a pure loss.
+@@ 32
+<strong>"Greedy is safe because it uses what it knows."</strong> On the testbed it finds the best arm only a third of the time. Early bad luck on a good arm is never corrected.
+@@ 33
+<strong>"Optimistic initial values solve exploration."</strong> Only on stationary problems; their exploratory drive is "inherently temporary" (next section).
+@@ 34
+4. Optimistic initial values
+@@ 35
+Here is a trick that explores without a coin. Start every estimate too high, say Q<sub>1</sub>(a) = +5 when the true values are around 0. Whichever arm is tried first pays less than 5, so its estimate drops and the greedy rule moves on to another arm, which also disappoints, and so on. The learner tours all the arms "being 'disappointed'" before it settles. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> In the book's Figure 2.3, greedy with Q<sub>1</sub> = +5 and α = 0.1 "initially performs worse because it explores more, but eventually it performs better" than ε = 0.1 with Q<sub>1</sub> = 0. In the replication, the optimistic method is at 0.58 reward and 30% optimal at pull 100, but reaches 1.50 and 85% by pulls 901–1,000, better than ε-greedy's 1.39 and 81%. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 36
+The catch is in the mechanism. The drive to explore is spent as the estimates fall to realistic levels; it is "inherently temporary", so if an arm's value changes later the method never re-explores. Sutton and Barto therefore call it "not well suited to nonstationary problems". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> It is a good trick for stationary problems, not a general solution.
+@@ 37
+Optimism is assuming every ice-cream shop in town is amazing until proven otherwise. You will try all of them, which is exactly what you want in week one. But if the shop you settled on changes owners in year three, your rule gives you no reason to ever look around again. UCB, next, is a version of optimism that never runs out.
+@@ 38
+5. Upper confidence bounds: optimism that shrinks
+@@ 39
+ε-greedy explores blindly: a random pull is as likely to land on an arm you already know is terrible as on one you have barely tried. <strong>Upper confidence bound</strong> (UCB) action selection explores on purpose. It pulls the arm that maximises the estimate plus a bonus for uncertainty: <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 40
+A<sub>t</sub> = argmax<sub>a</sub> [ Q<sub>t</sub>(a) + c · √( ln t / N<sub>t</sub>(a) ) ]
+@@ 41
+Here N<sub>t</sub>(a) is how often arm a has been pulled (an arm with N = 0 is pulled first), t is the total number of pulls, and c &gt; 0 sets how much optimism you want. The square-root term "is a measure of the uncertainty or variance in the estimate of a's value". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> Work one out: at t = 100 with c = 2, an arm pulled 10 times has bonus 2·√(ln 100 / 10) = 2·√0.4605 ≈ 1.36; an arm pulled 50 times has bonus 2·√(4.605/50) ≈ 0.61. Each pull of an arm shrinks its bonus (N grows); each pull of some <em>other</em> arm raises it slightly (ln t grows). No arm is ignored forever, but the attention given to an arm that keeps disappointing falls toward zero, whereas ε-greedy's attention to bad arms is constant.
+@@ 42
+Try it: one arm's bonus as the run grows. The upper line is an arm you never pull again (N fixed): its bonus creeps up with ln t. The lower line is an arm you pull one time in ten: its bonus shrinks like √(10 ln t / t).
+@@ 43
+Notice the scales. The ignored arm's bonus grows only logarithmically: from t = 100 to t = 10,000 it rises by a factor of √2, not 100. The regularly pulled arm's bonus heads to zero. UCB's exploration is permanent but ever cheaper.
+@@ 44
+On the testbed with c = 2, "UCB generally performs better than ε-greedy action selection, except in the first k steps, when it selects randomly among the as-yet-untried actions"; the replication reaches 1.46 reward and 86% optimal by pulls 901–1,000. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> The curve spikes at pull 11: every arm has been tried once, and the eleventh pull goes to whichever had the luckiest draw, often the best arm. The book's version is <strong>UCB1</strong>; Auer, Cesa-Bianchi and Fischer introduced it in 2002 with c = √2 and proved that its regret grows only logarithmically in the number of pulls, "uniformly over time" rather than just in the limit. <a class="src" href="https://link.springer.com/article/10.1023/A:1013689704352">Auer 2002</a>
+@@ 45
+6. Thompson sampling: explore by sampling your beliefs
+@@ 46
+The oldest bandit algorithm is also, as of October 2026, one of the most used in practice. William Thompson proposed it in 1933, in a paper about deciding which of two treatments is better while trials are still running. <a class="src" href="https://academic.oup.com/biomet/article-abstract/25/3-4/285/200862">Thompson 1933</a> The idea: keep a probability distribution over what each arm's value might be, draw one plausible value for each arm, and pull the arm whose draw is highest. Arms you know well produce draws near their true value; arms you know little about produce wild draws that sometimes win, which is exactly when you should try them.
+@@ 47
+The textbook case is rewards that are 0 or 1 (a click or no click). For each arm k keep a <strong>Beta(α<sub>k</sub>, β<sub>k</sub>)</strong> distribution, starting at Beta(1, 1), which is uniform on [0, 1]. Each round: sample θ̂<sub>k</sub> ∼ Beta(α<sub>k</sub>, β<sub>k</sub>) for every arm, pull x<sub>t</sub> = argmax<sub>k</sub> θ̂<sub>k</sub>, observe r ∈ {0, 1}, and update only the pulled arm: α ← α + r, β ← β + (1 − r). The posterior mean is α/(α + β) and "the distribution becomes more concentrated as α<sub>k</sub> + β<sub>k</sub> grows". <a class="src" href="https://arxiv.org/abs/1707.02038">Russo 2018</a> Work one out: arm A has 3 wins and 1 loss, so Beta(4, 2) with mean 0.67; arm B has 1 win and 0 losses, so Beta(2, 1), also mean 0.67. Same mean, but B's distribution is much wider, so B's draw exceeds A's more often than not, and the less-tried arm gets explored without any explicit exploration rule.
+@@ 48
+Chapelle and Li's 2011 evaluation on simulated bandits and display-advertising data found Thompson sampling "highly competitive" with UCB and ε-greedy and revived interest in it. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a> Russo and colleagues' tutorial flags a common misconception: you sample a plausible <em>success probability</em> for each arm from the posterior, not a predicted outcome of the next pull. <a class="src" href="https://arxiv.org/abs/1707.02038">Russo 2018</a> The widget above uses the Gaussian version for its normally distributed rewards: each arm's belief is a normal distribution with mean N·Q/(N+1) and variance 1/(N+1), which narrows by the same logic as the Beta.
+@@ 49
+7. Regret: the price of not knowing
+@@ 50
+How do you compare bandit algorithms? Not by total reward, which depends on the problem, but by how much reward you gave up relative to someone who knew the best arm from the start. That quantity is <strong>regret</strong>. With μ* the best arm's mean and X<sub>t</sub> the reward at pull t, the regret after n pulls is <a class="src" href="https://tor-lattimore.com/downloads/book/book.pdf">Lattimore &amp; Szepesvári 2020</a>
+@@ 51
+Regret is never negative, and it is zero only if you already know the best arm. It has a useful <strong>decomposition</strong>: define the <strong>gap</strong> Δ<sub>a</sub> = μ* − μ<sub>a</sub> of each arm and let T<sub>a</sub>(n) be how many times you pulled it; then <a class="src" href="https://tor-lattimore.com/downloads/book/book.pdf">Lattimore &amp; Szepesvári 2020</a>
+@@ 52
+Read it as a bill: every pull of a suboptimal arm costs its gap. A good algorithm pulls large-gap arms rarely (they are easy to rule out) and can afford more pulls on arms whose gap is tiny. The goal is <strong>sublinear</strong> regret, R<sub>n</sub>/n → 0: the <em>fraction</em> of pulls wasted goes to zero. ε-greedy with fixed ε fails this test: it wastes about ε·(k−1)/k of its pulls forever, so its regret is a straight line, as you saw in the widget.
+@@ 53
+How low can regret go? In 1985 Lai and Robbins proved a lower bound, best said in words: for any "reasonable" algorithm (one that does well on every problem, not just this one), regret must grow at least like a constant times log n, where the constant depends on the gaps and on how hard each suboptimal arm is to tell apart from the best. <a class="src" href="https://tor-lattimore.com/downloads/book/book.pdf">Lattimore &amp; Szepesvári 2020</a> Auer and colleagues summarise: Lai and Robbins "were the first to show that regret must grow at least logarithmically in the number of plays", and UCB1 matches that rate; <a class="src" href="https://link.springer.com/article/10.1023/A:1013689704352">Auer 2002</a> so does Thompson sampling. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a>
+@@ 54
+This answers the lesson's title. Why does exploration never fully go away? Because log n keeps growing. A method whose regret flattened to a constant would have to stop exploring, and any method that stops exploring can be fooled by some problem on which an arm it gave up on was actually best. The best you can do is explore less and less, at the rate your confidence justifies, which is exactly what the shrinking UCB bonus and the narrowing Thompson posterior implement.
+@@ 55
+Going deeper (optional): the UCB1 regret bound
+@@ 56
+Auer, Cesa-Bianchi and Fischer's Theorem 1 states that for rewards in [0, 1], UCB1 with c = √2 has expected regret after n pulls of at most 8·Σ<sub>i: μ<sub>i</sub>&lt;μ*</sub> (ln n)/Δ<sub>i</sub> + (1 + π²/3)·Σ<sub>j</sub> Δ<sub>j</sub>. <a class="src" href="https://link.springer.com/article/10.1023/A:1013689704352">Auer 2002</a> The first term is the log n growth; notice that arms with a small gap contribute more, since 1/Δ<sub>i</sub> is large: they are pulled more often, but each pull is cheap. The Lai–Robbins floor has the same log n shape with a smaller constant, Σ<sub>i</sub> Δ<sub>i</sub>/D(p<sub>i</sub>‖p*), where D is the KL divergence between arm i's reward distribution and the best arm's. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a> <a href="#d11">Day 11</a> brings the same optimism-in-the-face-of-uncertainty idea to full RL, where the "arms" are whole states and the bonus becomes an exploration reward.
+@@ 57
+8. Contextual bandits in the real world
+@@ 58
+Real decisions come with side information. Sutton and Barto's version: suppose that each round you are handed a bandit task to play but also "some distinctive clue about its identity (but not its action values)", say the machine's colour. Then you can learn a policy from clue to action, "if red, select arm 1; if green, select arm 2". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> This is the <strong>contextual bandit</strong> (the book calls it associative search): a <strong>context</strong> x arrives, you pick an action, you see a reward for that action only. It is "intermediate between the k-armed bandit problem and the full reinforcement learning problem" because the action affects the immediate reward but not the next context. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> Remove that last restriction, let actions change what comes next, and you are back to the full loop of <a href="#d1">Day 1</a>, which is <a href="#d3">Day 3</a>.
+@@ 59
+This is where the lesson meets production systems. In 2010 Li, Chu, Langford and Schapire framed the choice of which story to show on the Yahoo! front page as a contextual bandit, with user features as context and the click as reward. Evaluated offline on over 33 million logged events, their algorithm achieved "a 12.5% click lift compared to a standard context-free bandit algorithm". <a class="src" href="https://arxiv.org/abs/1003.0146">Li 2010</a> Chapelle and Li ran Thompson sampling with a logistic-regression click model on display-advertising data and found it competitive there too. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a> The same logic applies to the A/B test: a fixed 50/50 split keeps sending half your users to the losing version for the whole experiment, while a bandit shifts traffic toward the winner as evidence accumulates; Steven Scott made this Bayesian case for business experiments in 2010. <a class="src" href="https://research.google/pubs/a-modern-bayesian-look-at-the-multi-armed-bandit/">Scott 2010</a> Whenever a system picks among a few options for a stream of users and gets quick feedback (headlines, ads, recommendations, prices), there is a bandit underneath.
+@@ 60
+A bandit agent is the smallest possible RL agent, so its diagram is the smallest too. The top row is the k-armed case; the bottom row shows what changes when a context arrives.
+@@ 61 attr
+Bandit agent architecture. Top row: a table of estimates Q(a) and counts N(a) feeds a selection rule (epsilon-greedy, UCB or Thompson), which emits an action to an environment of k arms; the environment returns a reward, which flows into an update rule that writes back to the table. Bottom row: for contextual bandits, a context x and a model mapping (x, a) to a predicted value replace the table.
+@@ 62
+table
+@@ 63
+Q(a) estimates
+@@ 64
+N(a) counts · or Beta(α, β)
+@@ 65
+selection rule
+@@ 66
+ε-greedy · UCB bonus ·
+@@ 67
+Thompson draw
+@@ 68
+k arms, fixed unknown q*(a)
+@@ 69
+reward ∼ P(r | a)
+@@ 70
+reward r → update: Q(a) += (1/N(a))·(r − Q(a)), N(a) += 1
+@@ 71
+contextual bandit: the table becomes a model
+@@ 72
+context x
+@@ 73
+user features
+@@ 74
+model f(x, a)
+@@ 75
+linear or logistic → value
+@@ 76
+select
+@@ 77
+UCB or TS
+@@ 78
+users
+@@ 79
+click?
+@@ 80
+the click (0 or 1) is the reward; it trains f, and only for the action that was shown
+@@ 81
+Top: a k-armed bandit agent is a table plus a selection rule plus an update rule. Bottom: a contextual bandit replaces the table with a model from (context, action) to predicted reward; selection and update are the same.
+@@ 82
+Read the top row left to right. The agent's entire memory is a table with one row per arm: an estimate Q(a) and a count N(a) (for Thompson sampling, the two Beta parameters play both roles). The selection rule reads the table and emits one action; it is the only place the three methods differ. The environment draws a reward from the chosen arm and sends it back; the update rule writes it into the one row that was pulled, using the incremental-mean line from Section 2. There is no state, so nothing carries from one step to the next except the table.
+@@ 83
+The bottom row is the contextual version. A context x (user features, time of day) arrives before each decision. A table cannot index a continuous context, so it becomes a model f(x, a) that predicts each action's reward in this context, with an uncertainty estimate for UCB or a posterior over its weights for Thompson sampling: a linear model per article in <a class="src" href="https://arxiv.org/abs/1003.0146">Li 2010</a>, logistic regression in <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a>. The reward still arrives for the chosen action only, which is the defining feature of a bandit: you never learn what the other headline would have done.
+@@ 84
+Everything in the top row fits in a few kilobytes: ten estimates, ten counts, one rule. The widget on this page runs 1,000 pulls faster than the page can redraw. The cost in production is elsewhere: the Yahoo! system was evaluated offline on more than 33 million logged events, which required an unbiased way to replay a logged policy's data for a new one, <a class="src" href="https://arxiv.org/abs/1003.0146">Li 2010</a> and Chapelle and Li's advertising evaluation was run over a 4-day test period. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a> Logging, delayed feedback (a click can arrive seconds after the page is shown) and offline evaluation are the engineering of bandits; the algorithm is the easy part.
+@@ 85
+Q1. An arm pays 4, then 2, then 6. Using Q<sub>n+1</sub> = Q<sub>n</sub> + (1/n)(R<sub>n</sub> − Q<sub>n</sub>), its estimate after the three pulls is…
+@@ 86
+6, the latest reward
+@@ 87
+4, the sample mean
+@@ 88
+3, the estimate after two pulls
+@@ 89
+Answer 2. Q<sub>2</sub> = 4, Q<sub>3</sub> = 4 + ½(2−4) = 3, Q<sub>4</sub> = 3 + ⅓(6−3) = 4, identical to (4+2+6)/3. Option 4 is what you get with a constant step size α = 0.1 starting from 0.
+@@ 90
+Q2. Why can ε-greedy with ε = 0.1 never pull the best of 10 arms more than 91% of the time?
+@@ 91
+Because its estimates are biased by the first pull
+@@ 92
+Because the UCB bonus never reaches zero
+@@ 93
+Because 1,000 pulls is too few to find the best arm
+@@ 94
+Because 10% of pulls are random and only one in ten of those lands on the best arm
+@@ 95
+Answer 4. 90% greedy pulls plus 10% × 1/10 random pulls that happen to hit the best arm gives 91% at most, even with perfect estimates. The exploration tax of a fixed ε is paid forever.
+@@ 96
+Q3. At t = 100, with c = 2, the UCB bonus of an arm pulled 10 times is about…
+@@ 97
+Answer 1. 2·√(ln 100 / 10) = 2·√0.4605 ≈ 1.36. Option 2 is the bonus for an arm pulled 50 times; option 3 is ln 100 itself.
+@@ 98
+Q4. "Sublinear regret" means that…
+@@ 99
+The algorithm eventually stops making mistakes entirely
+@@ 100
+Total regret stays below a fixed constant
+@@ 101
+The fraction of pulls wasted on suboptimal arms goes to zero, even though the total keeps growing
+@@ 102
+Regret becomes negative once the best arm is found
+@@ 103
+Answer 3. R<sub>n</sub>/n → 0. The total still grows, at least like log n by the Lai–Robbins bound, so mistakes never stop; they just become rare. Regret is never negative.
+@@ 104
+Q5. In Beta–Bernoulli Thompson sampling, what do you sample for each arm every round?
+@@ 105
+A predicted outcome, 0 or 1, of the next pull
+@@ 106
+A plausible success probability drawn from the arm's current Beta posterior
+@@ 107
+A random arm with probability ε
+@@ 108
+The posterior mean α/(α+β)
+@@ 109
+Answer 2. You draw θ̂<sub>k</sub> ∼ Beta(α<sub>k</sub>, β<sub>k</sub>) and pull the largest draw. Sampling the mean (option 4) would be greedy and never explore; sampling an outcome (option 1) is the misconception Russo et al. warn against.
+@@ 110
+Q6. Which method's exploration is "inherently temporary", making it unsuitable for arms whose values drift?
+@@ 111
+ε-greedy with fixed ε
+@@ 112
+UCB
+@@ 113
+Thompson sampling
+@@ 114
+Greedy with optimistic initial values
+@@ 115
+Answer 4. Optimism is spent as the inflated estimates fall to realistic levels; afterwards the method is plain greedy. UCB's bonus and Thompson's posterior keep exploring (less and less), and ε-greedy keeps exploring at a constant rate.
+@@ 116
+A k-armed bandit is RL with no state: k actions, unknown mean rewards q*(a), one pull per round. Only exploration is left.
+@@ 117
+Estimates update as NewEstimate ← OldEstimate + StepSize·[Target − OldEstimate]; step size 1/n gives the exact mean, a constant α forgets the past.
+@@ 118
+On the 10-armed testbed greedy gets about 1.00 reward per pull and finds the best arm a third of the time; ε = 0.1 gets about 1.39 and is capped at 91% optimal; the best possible is about 1.54.
+@@ 119
+UCB adds a bonus c·√(ln t / N(a)) that shrinks for pulled arms and creeps up for ignored ones; Thompson sampling draws a plausible value from each arm's posterior and pulls the largest draw. Both explore less and less, never zero.
+@@ 120
+Regret R<sub>n</sub> = Σ<sub>a</sub> Δ<sub>a</sub> E[T<sub>a</sub>(n)] is what you lose to the best arm; Lai and Robbins (1985) proved it must grow at least like log n, so exploration never fully goes away. Contextual bandits add side information and run headline, ad and A/B systems in practice (Yahoo!: 12.5% click lift).
+@@ 121
+<a href="http://incompleteideas.net/book/the-book-2nd.html">Reinforcement Learning: An Introduction, 2nd edition</a> — Sutton &amp; Barto, MIT Press, 2018. Chapter 2 is today's lesson: sections 2.1–2.7 and 2.9, Figures 2.2–2.4.
+@@ 122
+<a href="https://link.springer.com/article/10.1023/A:1013689704352">Finite-time Analysis of the Multiarmed Bandit Problem</a> — Auer, Cesa-Bianchi &amp; Fischer, Machine Learning 47, 2002. UCB1 and its logarithmic regret bound (Theorem 1).
+@@ 123
+<a href="https://academic.oup.com/biomet/article-abstract/25/3-4/285/200862">On the likelihood that one unknown probability exceeds another in view of the evidence of two samples</a> — W. R. Thompson, Biometrika 25, 1933. The origin of Thompson sampling.
+@@ 124
+<a href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">An Empirical Evaluation of Thompson Sampling</a> — Chapelle &amp; Li, NIPS 2011. The paper that brought Thompson sampling back; Algorithm 1 and the display-advertising experiments.
+@@ 125
+<a href="https://arxiv.org/abs/1707.02038">A Tutorial on Thompson Sampling</a> — Russo, Van Roy, Kazerouni, Osband &amp; Wen, 2018. Algorithm 3.2 (BernTS) and the "common misconception" in Section 3.
+@@ 126
+<a href="https://tor-lattimore.com/downloads/book/book.pdf">Bandit Algorithms</a> — Lattimore &amp; Szepesvári, Cambridge University Press, 2020 (free PDF). Chapter 4 for regret and its decomposition (Lemmas 4.4–4.5), Chapter 16 for the Lai–Robbins lower bound (Theorem 16.2).
+@@ 127
+<a href="https://arxiv.org/abs/1003.0146">A Contextual-Bandit Approach to Personalized News Article Recommendation</a> — Li, Chu, Langford &amp; Schapire, WWW 2010. LinUCB and the Yahoo! front-page result.
+@@ 128
+<a href="https://research.google/pubs/a-modern-bayesian-look-at-the-multi-armed-bandit/">A modern Bayesian look at the multi-armed bandit</a> — Steven L. Scott, Applied Stochastic Models in Business and Industry 26, 2010. Bandits as a replacement for fixed-split experiments.

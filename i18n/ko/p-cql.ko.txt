@@ -1,0 +1,96 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+policy가 좋아하는 action에서는 Q를 끌어내리고 데이터셋에 있는 action에서는 끌어올리는 Q-learning regulariser입니다. 그래서 학습된 value가 실제 값의 lower bound가 됩니다. mixed 데이터에서 이전 offline 방법보다 2–5배 높은 return을 냈고, 모든 baseline이 0.0점을 받은 antmaze-medium-play에서 61.2점을 기록했습니다.
+@@ 4
+<a href="#d10">Day 10</a>에서 다룸 · 원문 읽는 시간: 약 60분
+@@ 5
+CQL은 보통의 Bellman loss에 항 하나를 더합니다. α에 (모든 action에 대한 Q의 soft-maximum에서 데이터셋 action에 대한 Q의 평균을 뺀 값)을 곱한 항입니다. 이 항은 데이터가 아무것도 말해 주지 않는 바로 그곳에서 Q-function을 pessimistic하게 만듭니다. 이것만으로 SAC는 "코드 20줄만으로" 강력한 offline 학습 알고리즘이 됩니다.
+@@ 6
+요리책 한 권만 보고 요리를 배워야 하고, 시험 날까지는 아무것도 맛볼 수 없다고 해 봐요. 덤벙대는 요리사는 책에 나쁘다는 말이 없다는 이유만으로 "수프에 초콜릿을 넣으면 끝내줄지도 몰라!" 하고 생각해요. CQL의 규칙은 이래요. 책에서 해 본 적 없는 것은 보기보다 맛이 없다고 여기고, 책에서 실제로 쓴 조리법은 조금 더 믿어 주는 거예요. 그러면 엉뚱한 요리를 지어내는 대신, 그저 그런 여러 조리법에서 가장 좋은 부분만 골라 합치게 돼요.
+@@ 7
+<strong>Offline RL</strong>은 어떤 behaviour policy가 모아 둔 고정된 데이터셋으로만 학습하며, environment와 더 상호작용하지 않습니다. 표준 off-policy 방법은 여기서 실패합니다. Bellman target max<sub>a'</sub> Q(s', a')이 데이터에 없는 action을 조회하기 때문입니다. 그런 action의 value는 추측일 뿐인데, max는 가장 over-estimate된 추측을 고르고, 그 오차가 계속 전파됩니다. Fujimoto et al.은 2018년에 이를 <em>extrapolation error</em>라고 이름 붙였습니다. <a class="src" href="https://arxiv.org/abs/1812.02900">Fujimoto 2018</a> CQL 논문의 표에서도 offline으로 학습한 SAC는 hopper-mixed에서 3.5점, walker2d-mixed에서 1.9점으로, 단순한 behaviour cloning(11.8점과 11.3점)보다 낮습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a>
+@@ 8
+policy를 제약하지 말고 Q-function을 pessimistic하게 만듭니다. 학습된 policy 아래에서 Q의 기댓값이 실제 value의 <em>lower bound</em>라면, 그 값을 최대화하는 policy는 본 적 없는 action의 허깨비 같은 value에 속을 수 없습니다. regulariser는 모든 action에 대한 soft-max에서 데이터셋 action에 대한 평균을 뺀 값입니다. 이 값은 음수가 될 수 없고, 본 적 없는 action이 본 action보다 높게 평가되지 않을 때에만 작아집니다.
+@@ 9
+<strong>policy의 action에 penalty 주기.</strong> Equation 1은 Bellman error에 α·E<sub>s~D, a~μ</sub>[Q(s,a)]를 더합니다. 여기서 μ는 평가 대상인 action의 분포입니다. Theorem 3.1: α가 충분히 크면 그 결과는 실제 Q의 pointwise lower bound가 됩니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a>
+@@ 10
+<strong>데이터셋 action에는 되돌려 주기.</strong> Equation 2는 α·E<sub>a~π̂<sub>β</sub></sub>[Q(s,a)]를 뺍니다. 이제 bound는 pointwise가 아니라 policy의 기댓값에 대해 성립하고, 더 tight합니다(Theorem 3.2). <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a>
+@@ 11
+<strong>regulariser로 μ 고르기.</strong> CQL(R)은 regulariser R(μ)를 두고 μ에 대해 최대화합니다. entropy를 쓰면 CQL(H)가 되며, 실험에 쓰인 버전이 이것입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a>
+@@ 12
+=
+@@ 13
+action 세 개와 Q = [1, 2, 5]를 놓고 손으로 확인해 봅니다. 데이터에는 action 2만 있다고 하겠습니다. log(e<sup>1</sup> + e<sup>2</sup> + e<sup>5</sup>) ≈ 5.07이고 여기서 2를 빼면 penalty는 3.07인데, 거의 전부가 Q = 5인 본 적 없는 action에서 나옵니다. 그 action의 value를 1.5로 끌어내리면 penalty는 log(e + e<sup>2</sup> + e<sup>1.5</sup>) − 2 ≈ 0.68로 떨어집니다.
+@@ 14
+<strong>policy는 평소대로 학습하기.</strong> continuous control에서는 CQL을 SAC 위에 얹고, α는 "Lagrangian dual gradient descent로 자동 조정됩니다". Atari에서는 QR-DQN 위에 얹습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a>
+@@ 15 attr
+한 state에서 action 다섯 개의 Q-value를 나타낸 막대 그래프. action 두 개는 데이터셋에 있고 세 개는 없음. 화살표가 out-of-distribution 막대는 아래로, 데이터에 있는 막대는 위로 밀고, 점선이 실제 value를 표시함
+@@ 16
+a₁ ∈ D
+@@ 17
+a₂ ∈ D
+@@ 18
+a₃ 미관측
+@@ 19
+a₄ 미관측
+@@ 20
+a₅ 미관측
+@@ 21
++α·E_{a~π̂β}[Q]: 데이터셋 action을 올림
+@@ 22
+−α·log Σ_a exp Q: 높은 미관측 action일수록 더 내림
+@@ 23
+한 state에서 본 conservative loss입니다. 데이터셋 action(왼쪽)은 위로, 본 적 없는 action(오른쪽)은 아래로 밀리며, Q가 가장 높은 곳이 가장 세게 밀립니다. 본 action보다 높게 평가된 본 적 없는 action이 하나도 남지 않으면 두 항은 상쇄되고 Bellman error만 남습니다.
+@@ 24
+D4RL gym task(random이 0, expert가 100이 되도록 normalise한 점수)에서 CQL(H)는 hopper-mixed에서 48.6점으로 이전 최고 방법(BEAR)의 25.3점을 넘었고, walker2d-mixed에서는 26.7점 대 11.3점(BC), walker2d-medium-expert에서는 98.7점 대 11.3점이었습니다. Table 1의 caption은 CQL이 "복잡한 분포에서 이전 방법들을 크게 앞선다"고 말합니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a> 모든 곳에서 이긴 것은 아닙니다. hopper-medium-expert에서는 BC가 111.9점, CQL이 111.0점입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a> antmaze-medium-play는 agent가 방향성 없는 trajectory의 조각들을 stitch해야 하는 task인데, 여기서 CQL(H)는 61.2점에 도달했고 BC, SAC, BEAR, BRAC-p, BRAC-v는 모두 0.0점이었습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a> Adroit에서는 CQL 계열이 "BC보다 나아진 유일한 방법"입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a> DQN replay 데이터의 1%만 쓴 Atari에서는 Q*bert 점수가 383.6(QR-DQN)에서 14,012.0으로 올랐습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a>
+@@ 25
+CQL은 offline RL을 기존 알고리즘에서 한 줄만 바꾸면 되는 일로 만들었고, 이후의 모든 방법이 비교 대상으로 삼는 baseline이 되었습니다. IQL(2021년 10월)은 본 적 없는 action을 아예 조회하지 않는 방식으로 AntMaze에서 합계 378.0 대 303.6으로 CQL을 이겼고, locomotion에서는 비슷했습니다(692.4 대 698.5). <a class="src" href="https://arxiv.org/abs/2110.06169">Kostrikov 2021</a> Decision Transformer(2021년 6월)도 CQL과 비교한 수치를 보고했습니다(<a href="#p-dt">DT 논문 리뷰</a>). <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a> <a href="#d10">Day 10</a>에서 CQL은 "그냥 데이터셋에 DQN을 돌리면 안 되나"라는 질문에 대한 정석적인 답입니다.
+@@ 26
+pessimism은 깨끗한 expert 데이터(hopper-medium-expert)에서 성능을 깎고, α는 직접 정하거나 dual 방식으로 조정해야 합니다. 저자들은 "deep neural net을 쓴 CQL에 대한 엄밀한 이론적 분석"을 후속 연구로 남겼습니다. 또 offline 방법은 overfit할 수 있으므로 "간단하고 효과적인 early stopping 방법"을 찾는 일이 열린 문제라고 지적합니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2006.04779">Kumar 2020</a> CQL은 본 적 없는 action에 penalty를 주기 위해 여전히 그 action에서 Q를 평가합니다. IQL의 expectile 기법은 이 조회를 완전히 피합니다. 그리고 CQL을 튜닝하는 데 쓰인 D4RL-gym task는 나중에 방법들 사이의 차이를 가려내지 못하게 되었고, 이것이 2024년에 OGBench가 나온 동기가 되었습니다. <a class="src" href="https://arxiv.org/abs/2410.20092">Park 2024</a>
+@@ 27
+Section 3.1(Equation 1–2, theorem은 statement만), CQL(H)를 다루는 3.2, 20줄 recipe가 나오는 Section 4를 읽고, 결과는 Table 1–2와 Figure 1에서 확인합니다. 이론적 보장이 필요하지 않다면 3.3과 Appendix C의 증명은 건너뛰어도 됩니다. 약 60분이 걸립니다. 긴 논문입니다.
+@@ 28
+Q1. CQL(H) regulariser는 state마다 무엇을 계산합니까?
+@@ 29
+학습된 policy와 behaviour policy 사이의 KL
+@@ 30
+action에 대한 Q의 분산
+@@ 31
+Q의 최댓값에서 최솟값을 뺀 값
+@@ 32
+log Σ<sub>a</sub> exp Q(s,a)에서 데이터셋 action에 대한 Q의 평균을 뺀 값
+@@ 33
+모든 action에 대한 soft-max에서 본 action에 대한 평균을 뺀 값입니다. 음수가 될 수 없고, 본 적 없는 action이 over-value되지 않을 때에만 0이 됩니다.
+@@ 34
+Q2. antmaze-medium-play에서 CQL(H)는 61.2점을 받았습니다. BC, SAC, BEAR와 두 BRAC 변형은 몇 점을 받았습니까?
+@@ 35
+약 25
+@@ 36
+약 48
+@@ 37
+baseline 다섯 개 모두 0.0점이었습니다. 이 task는 sub-trajectory를 stitch해야 풀 수 있는데, naive한 방법과 BC는 그렇게 하지 못합니다.
+@@ 38
+Q3. "Offline RL은 조금 번거롭게 한 behaviour cloning일 뿐이다." 어떤 사실이 이 말과 모순됩니까?
+@@ 39
+CQL은 hopper-medium-expert에서 BC와 비슷하다(111.0 대 111.9)
+@@ 40
+BC가 0.0점인 antmaze-medium-play에서 CQL은 평범한 trajectory의 좋은 조각들을 stitch해 61.2점에 도달한다
+@@ 41
+CQL은 reward label이 필요 없다
+@@ 42
+CQL은 BC와 같은 loss를 쓴다
+@@ 43
+BC는 평균적인 demonstrator를 따라 합니다. CQL은 reward와 Bellman backup을 써서 가장 좋은 조각들을 결합하며, 그렇게 해서 BC가 못 푸는 task를 풉니다.
+@@ 44
+Kumar, Zhou, Tucker, Levine. Conservative Q-Learning for Offline Reinforcement Learning. 2020년 6월 (v3 2020년 8월). <a href="https://arxiv.org/abs/2006.04779">arXiv 2006.04779</a>
+@@ 45
+=
+@@ 46
+=
+@@ 47
+=
+@@ 48
+=

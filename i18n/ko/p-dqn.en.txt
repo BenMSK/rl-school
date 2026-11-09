@@ -1,0 +1,102 @@
+@@ 1
+<span class="eyebrow">2015 · Mnih et al. · Nature 518:529–533 (arXiv 1312.5602, Dec 2013)</span>
+@@ 2
+DQN: Human-level control through deep RL
+@@ 3
+One convolutional network, one set of hyperparameters, 49 Atari games learned from pixels and score alone, at a level "comparable to that of a professional human games tester".
+@@ 4
+Taught in <a href="#d6">Day 6</a> · Read time of the original: ~40 min (5 pages plus Methods)
+@@ 5
+DQN is Watkins's Q-learning with a deep convolutional network as the Q table, kept stable by two tricks, a replay memory of past transitions and a slowly updated copy of the network for computing targets; it beat the best prior methods on 43 of 49 games and reached at least 75% of a professional tester's score on 29. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 6
+A computer learns to play old TV games by looking only at the screen and the score, the way you would. It keeps a diary of moments it has seen and re-reads random pages instead of only the last one, so it does not fixate on today. And it grades its new guesses against a photocopy of its older self, taken every so often, so the target it is chasing stays still long enough to hit.
+@@ 7
+Combining Q-learning with a neural network was known to be unstable. The Nature paper names the causes: consecutive observations are correlated; small changes to Q can change the policy and so the data distribution; and the Q values are correlated with their own targets r + γ max<sub>a′</sub> Q(s′,a′). <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> In Sutton and Barto's terms, this is the deadly triad: function approximation, bootstrapping and off-policy learning all at once. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The best Atari agents before DQN were linear learners over hand-built features (Bellemare et al. 2012, the baseline in Figure 3). The December 2013 arXiv version was the first crack: seven games, "outperforms all previous approaches on six of the games and surpasses a human expert on three of them". <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a>
+@@ 8
+Two stabilisers around a plain Q-learning loss. <strong>Experience replay</strong> stores transitions and trains on random minibatches drawn from the store, which "breaks these correlations and therefore reduces the variance of the updates" and averages the training distribution over many past behaviours. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> A <strong>target network</strong> with parameters θ<sup>−</sup>, copied from the online network only every C steps, computes the targets, so an update to Q no longer moves its own target immediately. Replay only works because Q-learning is off-policy: the replayed actions came from older policies. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 9
+<strong>Preprocess.</strong> Take the 210×160 colour frame, max over two consecutive frames to remove flicker, convert to luminance, rescale to 84×84, stack the last 4 frames: input 84×84×4. The agent acts every 4th frame. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 10
+<strong>Q-network.</strong> Conv 32 filters 8×8 stride 4, conv 64 filters 4×4 stride 2, conv 64 filters 3×3 stride 1, each with ReLU; fully connected 512 units; a linear output per valid action (4 to 18). One forward pass gives all Q values. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 11
+<strong>Act</strong> ε-greedily, ε annealed from 1.0 to 0.1 over the first million frames, then fixed. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 12
+<strong>Store</strong> (φ<sub>t</sub>, a<sub>t</sub>, r<sub>t</sub>, φ<sub>t+1</sub>) in a replay memory holding the last 1 million frames. Rewards are clipped to +1, −1 or 0 during training. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 13
+<strong>Learn.</strong> Sample 32 transitions uniformly and minimise the squared TD error, with the target network held fixed between copies:
+@@ 14
+L<sub>i</sub>(θ<sub>i</sub>) = E<sub>(s,a,r,s′)∼U(D)</sub> [ ( r + γ max<sub>a′</sub> Q(s′,a′; θ<sub>i</sub><sup>−</sup>) − Q(s,a; θ<sub>i</sub>) )<sup>2</sup> ]
+@@ 15
+The error term is clipped to [−1, 1], which the authors found "further improved the stability"; the optimiser is RMSProp, γ = 0.99. Every C steps set θ<sup>−</sup> ← θ. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> The restated hyperparameters are C = 10,000 updates and learning rate 0.00025. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a>
+@@ 16
+Train for 50 million frames per game, about 38 days of play; the 2013 version used 10 million. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a>
+@@ 17 attr
+Schematic of the DQN convolutional network: four stacked 84 by 84 frames pass through three convolutional layers and a fully connected layer to one output per action
+@@ 18
+<a class="src" href="https://www.nature.com/articles/nature14236">Figure 1, Mnih 2015</a> The network. Four preprocessed frames go in; three convolutions and one dense layer later, one Q value per joystick action comes out. The same architecture was used for all 49 games.
+@@ 19
+Evaluation: 30 episodes of up to 5 minutes with ε = 0.05, against a professional tester who practised about 2 hours. Scores are normalised as 100 × (DQN − random)/(human − random). DQN beat the best existing RL methods on 43 of 49 games and scored at or above 75% of the human on 29. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> The spread is enormous; a few raw scores as restated in the Double DQN paper: <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a>
+@@ 20
+Game
+@@ 21
+Random
+@@ 22
+Human
+@@ 23
+Normalised
+@@ 24
+Video Pinball
+@@ 25
+Breakout
+@@ 26
+Pong
+@@ 27 attr
+Horizontal bar chart of human-normalised DQN scores on 49 Atari games, sorted from Video Pinball at the top to Montezuma's Revenge at the bottom, with a 75 percent line and the best linear learner marked
+@@ 28
+<a class="src" href="https://www.nature.com/articles/nature14236">Figure 3, Mnih 2015</a> Human-normalised score per game, 100% = the human tester. Reaction games sit at the top; games needing long-horizon exploration, Montezuma's Revenge last, sit at zero.
+@@ 29
+Spinning Up calls DQN "a classic which substantially launched the field of deep RL". <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro2.html">Achiam 2018</a> Within a year the components were improved one at a time: Double DQN (September 2015) evaluated the arg-max with the target network and raised the median normalised score from 93.5% to 114.7%; prioritised replay (November 2015) improved 41 of 49 games; the dueling architecture (November 2015) split V and A. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> <a class="src" href="https://arxiv.org/abs/1511.05952">Schaul 2015</a> <a class="src" href="https://arxiv.org/abs/1511.06581">Wang 2015</a> Rainbow (2017) combined six of them for a median of 223% against DQN's 79%, and matched DQN's final score after 7 of its 200 million frames. <a class="src" href="https://arxiv.org/abs/1710.02298">Hessel 2017</a> Agent57 (2020) was the first to beat the human benchmark on all 57 games. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a>
+@@ 30
+Fifty million frames per game is about 38 days of play; a human needs hours. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> Exploration is ε-greedy, so sparse-reward games score zero (Montezuma's Revenge); RND's exploration bonus reached 8,152 there in 2018. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> The max in the target overestimates: Double DQN measured overestimation in all 49 games. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> Reward clipping means the agent "cannot differentiate between rewards of different magnitude". <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> Actions must be discrete and few. And "one network" means one architecture: weights were reset and trained separately for each game. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Stability is empirical; the deadly triad has no convergence theorem here.
+@@ 31
+Main text first (20 min): the opening page for the three instability causes, Figure 1, Figure 3, and Figure 2's learning curves. Then Methods (20 min): "Model architecture", "Training details", the loss with θ<sup>−</sup>, and Extended Data Table 3, the ablation that removes replay and the target network in turn. Skip the t-SNE figure. The 2013 arXiv paper is a good second read: its Algorithm 1 is the whole method in a dozen lines, before the target network was added. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a>
+@@ 32
+Q1. On how many of the 49 games did DQN reach at least 75% of the human tester's score?
+@@ 33
+29 of 49 at ≥75%; 43 of 49 beat the best previous RL methods; 7 was the 2013 game count.
+@@ 34
+Q2. "The target network is a second network trained on its own loss." What is it really?
+@@ 35
+A smaller network trained on rewards only
+@@ 36
+A periodic copy of the online network, never trained directly, used only to compute targets
+@@ 37
+A network trained on human demonstrations
+@@ 38
+The average of all past online networks
+@@ 39
+θ⁻ ← θ every C steps; between copies it is frozen. Its job is to keep the regression target still.
+@@ 40
+Q3. Why does experience replay require an off-policy learner?
+@@ 41
+Because replay stores rewards, not actions
+@@ 42
+Because the target network is off-policy
+@@ 43
+It does not; Sarsa would work equally well
+@@ 44
+Because replayed transitions were generated by older, different policies
+@@ 45
+Q-learning's target uses max over next actions, so it does not care which policy produced the transition. An on-policy target like Sarsa's would be wrong for stale data.
+@@ 46
+Mnih, V. et al. (2015). Human-level control through deep reinforcement learning. <em>Nature</em> 518:529–533, 25 Feb 2015. <a href="https://www.nature.com/articles/nature14236">nature.com/articles/nature14236</a>.
+@@ 47
+Mnih, V. et al. (2013). Playing Atari with Deep Reinforcement Learning. <a href="https://arxiv.org/abs/1312.5602">arXiv:1312.5602</a>; full text <a href="https://arxiv.org/abs/1312.5602">ar5iv</a>.
+@@ 48
+van Hasselt, H., Guez, A. &amp; Silver, D. (2015). Deep Reinforcement Learning with Double Q-learning. <a href="https://arxiv.org/abs/1509.06461">arXiv:1509.06461</a>.
+@@ 49
+Schaul, T. et al. (2015). Prioritized Experience Replay. <a href="https://arxiv.org/abs/1511.05952">arXiv:1511.05952</a>.
+@@ 50
+Wang, Z. et al. (2015). Dueling Network Architectures for Deep RL. <a href="https://arxiv.org/abs/1511.06581">arXiv:1511.06581</a>.
+@@ 51
+Hessel, M. et al. (2017). Rainbow: Combining Improvements in Deep RL. <a href="https://arxiv.org/abs/1710.02298">arXiv:1710.02298</a>.

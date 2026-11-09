@@ -1,0 +1,84 @@
+@@ td
+"The five-state random walk: TD(0) versus Monte Carlo"
+==
+"5-state random walk: TD(0) 대 Monte Carlo"
+@@ td
+"Start at C, move left or right with probability ½, +1 for exiting right, γ = 1, all values start at 0.5. Both methods learn from the same seeded episodes."
+==
+"C에서 출발해 확률 ½로 왼쪽이나 오른쪽으로 움직입니다. 오른쪽으로 나가면 +1, γ = 1이고 모든 value는 0.5에서 시작합니다. 두 방법은 같은 seed로 만든 동일한 episode들로 학습합니다."
+@@ td
+"Show"
+==
+"표시"
+@@ td
+"Both"
+==
+"둘 다"
+@@ td
+"Run 1 episode"
+==
+"episode 1개 실행"
+@@ td
+"Run 10"
+==
+"10개 실행"
+@@ td
+"Run 100"
+==
+"100개 실행"
+@@ td
+"RMS error of the value estimates versus episodes"
+==
+"episode 수에 따른 value 추정값의 RMS error"
+@@ td
+"episodes (this single run)"
+==
+"episodes (이번 한 번의 실행)"
+@@ td
+"Current value estimates for states A to E against the true values"
+==
+"state A부터 E까지의 현재 value 추정값과 true value 비교"
+@@ td
+"grey = true value · each group: true, TD, MC"
+==
+"회색 = true value · 각 묶음: true, TD, MC"
+@@ trace
+"Eligibility traces after a ten-step episode"
+==
+"10step episode가 끝난 뒤의 eligibility trace"
+@@ trace
+"The path below is walked with V = 0 everywhere, so only the final step produces a TD error. Each state's trace decays by γλ every step and gains 1 when visited; the update is α·δ·z(s) with α = 0.1."
+==
+"아래 경로는 모든 곳에서 V = 0인 채로 걷기 때문에 마지막 step에서만 TD error가 생깁니다. 각 state의 trace는 매 step γλ만큼 감쇠하고 방문하면 1이 더해집니다. update는 α·δ·z(s)이고 α = 0.1입니다."
+@@ trace
+"exit → R = +1"
+==
+"나감 → R = +1"
+@@ trace
+s+" (visited "+vis+"×)"
+==
+s+" (방문 "+vis+"회)"
+@@ trace
+"γλ per step"
+==
+"step당 γλ"
+@@ trace
+"trace decay"
+==
+"trace 감쇠"
+@@ trace
+"Final TD error δ"
+==
+"마지막 TD error δ"
+@@ trace
+"= 10 visits: this is MC"
+==
+"= 방문 10회: 이것이 MC"
+@@ trace
+"= 1: this is TD(0)"
+==
+"= 1: 이것이 TD(0)"
+@@ trace
+"between TD(0) and MC"
+==
+"TD(0)와 MC 사이"

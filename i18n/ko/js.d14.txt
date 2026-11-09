@@ -1,0 +1,296 @@
+@@ timeline
+"Milestones 2013 → 2026"
+==
+"마일스톤 2013 → 2026"
+@@ timeline
+"Timeline data not available."
+==
+"타임라인 데이터를 불러올 수 없습니다."
+@@ timeline
+"All ("
+==
+"전체 ("
+@@ timeline
+"Other ("
+==
+"기타 ("
+@@ timeline
+"milestones"
+==
+"마일스톤"
+@@ timeline
+f==="all"?"in the list":"for "+f
+==
+f==="all"?"목록 전체":(f==="other"?"기타":f)+" 항목"
+@@ timeline
+"years covered"
+==
+"포함된 연도 수"
+@@ timeline
+"busiest year"
+==
+"가장 많았던 해"
+@@ timeline
+"Thirty-six dated results, grouped by year. Filter by organisation; every entry links to the paper."
+==
+"날짜가 붙은 결과 36개를 연도별로 묶었습니다. 기관별로 걸러 볼 수 있고, 모든 항목은 논문으로 연결됩니다."
+@@ bench
+"Benchmarks saturate"
+==
+"벤치마크의 포화"
+@@ bench
+"Benchmark data not available."
+==
+"벤치마크 데이터를 불러올 수 없습니다."
+@@ bench
+"After MuZero (Nov 2019) the median stopped separating methods: Agent57 scores lower on this statistic yet was the first agent above human on all 57 games. Work moved to Atari-100k, where the question is sample efficiency, not score."
+==
+"MuZero(2019년 11월) 이후로는 중앙값이 방법들을 가르지 못했습니다. Agent57은 이 통계량에서 점수가 더 낮지만 57개 게임 모두에서 인간을 넘은 첫 agent였습니다. 연구는 Atari-100k로 옮겨 갔고, 거기서 묻는 것은 점수가 아니라 sample efficiency입니다."
+@@ bench
+"From 9.3% to 79.8% in eight months of 2024–25, then 100% on a fresh exam by October 2026. The 2026 rows are AIME 2026 results from a secondary aggregator of MathArena, which itself has deprecated AIME and moved to proof and research-level questions."
+==
+"2024–25년의 8개월 동안 9.3%에서 79.8%로 올랐고, 2026년 10월에는 새 시험에서 100%가 되었습니다. 2026년 행은 MathArena를 옮겨 싣는 2차 집계 사이트의 AIME 2026 결과입니다. MathArena 자신은 AIME를 중단하고 증명 문제와 연구 수준 문제로 옮겨 갔습니다."
+@@ bench
+"From 72% to 98% in sixteen months. All πRL numbers are measured in simulation; a benchmark where the best method fails on 2 trials in 100 can no longer rank new methods."
+==
+"16개월 만에 72%에서 98%로 올랐습니다. πRL 수치는 모두 시뮬레이션에서 잰 것입니다. 가장 좋은 방법이 100번 중 2번만 실패하는 벤치마크로는 새 방법들의 순위를 더는 매길 수 없습니다."
+@@ bench
+", secondary"
+==
+", 2차 출처"
+@@ bench
+"% of human (log)"
+==
+"인간 대비 % (log)"
+@@ bench
+"score %"
+==
+"점수 %"
+@@ bench
+"best so far"
+==
+"지금까지 최고"
+@@ bench
+"other reports"
+==
+"그 밖의 보고"
+@@ bench
+b.name+" over time; best-so-far line with each model labelled"
+==
+"시간에 따른 "+b.name+"; 지금까지 최고 기록을 잇는 선에 모델 이름 표시"
+@@ bench
+label:"year"
+==
+label:"연도"
+@@ bench
+"first"
+==
+"처음"
+@@ bench
+"best"
+==
+"최고"
+@@ bench
+"gain"
+==
+"향상"
+@@ bench
+"in "+Math.round((toX(front[front.length-1].date)-toX(front[0].date))*12)+" months"
+==
+Math.round((toX(front[front.length-1].date)-toX(front[0].date))*12)+"개월 동안"
+@@ bench
+"Date"
+==
+"날짜"
+@@ bench
+"Model"
+==
+"모델"
+@@ bench
+"Score"
+==
+"점수"
+@@ bench
+"Source"
+==
+"출처"
+@@ bench
+"source"
+==
+"출처"
+@@ bench
+" (secondary source)"
+==
+" (2차 출처)"
+@@ bench
+" Every curve here flattens near its ceiling, and each time the field moved on to a harder test."
+==
+" 여기 있는 곡선은 모두 천장 근처에서 평평해졌고, 그때마다 이 분야는 더 어려운 시험으로 옮겨 갔습니다."
+@@ bench
+"Pick a benchmark. The line follows the best reported score so far; grey dots are other reports. Hover or tap a dot for the model and date."
+==
+"벤치마크를 고르세요. 선은 그때까지 보고된 최고 점수를 따라가고, 회색 점은 그 밖의 보고입니다. 점에 마우스를 올리거나 점을 누르면 모델과 날짜가 보입니다."
+@@ data
+"note": "CNN Q-learning from pixels on 7 Atari games"
+==
+"note": "픽셀을 입력으로 받는 CNN Q-learning, Atari 게임 7개"
+@@ data
+"note": "experience replay + target network; comparable to a professional games tester across 49 games"
+==
+"note": "experience replay + target network; 49개 게임 전체에서 전문 게임 테스터에 견줄 만한 수준"
+@@ data
+"note": "policy optimisation with guaranteed monotonic improvement via a KL trust region"
+==
+"note": "KL trust region으로 monotonic improvement를 보장하는 policy optimisation"
+@@ data
+"note": "supervised learning from human games + RL self-play + value net + MCTS; 5–0 vs Fan Hui"
+==
+"note": "사람 기보로 지도학습 + RL self-play + value net + MCTS; Fan Hui에게 5–0 승"
+@@ data
+"note": "16 CPU threads, no GPU; median 116.6% human-normalised (human starts, 4 days)"
+==
+"note": "CPU thread 16개, GPU 없음; human-normalised 중앙값 116.6% (human starts, 4일)"
+@@ data
+"note": "clipped surrogate objective, ε = 0.2, multiple epochs of minibatch updates"
+==
+"note": "clipped surrogate objective, ε = 0.2, 여러 epoch의 minibatch update"
+@@ data
+"note": "six DQN extensions combined; median 223% vs DQN 79% (no-op starts)"
+==
+"note": "DQN 확장 여섯 가지를 결합; 중앙값 223%, DQN은 79% (no-op starts)"
+@@ data
+"note": "tabula rasa self-play; superhuman chess, shogi and Go within 24 hours"
+==
+"note": "tabula rasa self-play; 24시간 안에 체스, 쇼기, 바둑에서 초인적 수준"
+@@ data
+"note": "maximum-entropy off-policy actor-critic; stable across random seeds"
+==
+"note": "maximum-entropy off-policy actor-critic; random seed가 달라도 안정적"
+@@ data
+"note": "exploration bonus; Montezuma's Revenge mean 8,152 vs human average 4,753"
+==
+"note": "exploration bonus; Montezuma's Revenge 평균 8,152, 인간 평균은 4,753"
+@@ data
+"note": "first AI system to defeat the world champions at an esports game (Dota 2, Team OG); 10 months of training"
+==
+"note": "e스포츠 게임에서 세계 챔피언을 꺾은 최초의 AI 시스템 (Dota 2, Team OG); 훈련 10개월"
+@@ data
+"note": "Grandmaster StarCraft II, above 99.8% of ranked human players; league training with exploiters"
+==
+"note": "StarCraft II Grandmaster, 랭킹에 오른 인간 플레이어의 99.8%보다 위; exploiter를 둔 league training"
+@@ data
+"note": "planning with a learned model; Atari median 2041% at 20B frames (Nature, Dec 2020)"
+==
+"note": "학습한 모델로 planning; 20B 프레임에서 Atari 중앙값 2041% (Nature, 2020년 12월)"
+@@ data
+"note": "first deep RL agent above the human benchmark on all 57 Atari games"
+==
+"note": "Atari 게임 57개 모두에서 인간 벤치마크를 넘은 최초의 deep RL agent"
+@@ data
+"note": "offline-RL benchmark suite"
+==
+"note": "offline RL 벤치마크 suite"
+@@ data
+"note": "conservative Q-learning; 2–5× higher final return offline"
+==
+"note": "conservative Q-learning; offline에서 최종 return이 2–5× 높음"
+@@ data
+"note": "offline RL as return-conditioned sequence modelling"
+==
+"note": "offline RL을 return-conditioned sequence modelling으로 풀기"
+@@ data
+"note": "SFT → reward model → PPO; 1.3B RLHF model preferred over 175B GPT-3"
+==
+"note": "SFT → reward model → PPO; 1.3B RLHF 모델이 175B GPT-3보다 선호됨"
+@@ data
+"note": "one configuration across 150+ tasks; first to collect Minecraft diamonds from scratch (Nature, Apr 2025)"
+==
+"note": "설정 하나로 150개 넘는 task; 처음부터 학습해 Minecraft 다이아몬드를 모은 최초 사례 (Nature, 2025년 4월)"
+@@ data
+"note": "action diffusion for visuomotor imitation; +46.9% average over 12 tasks"
+==
+"note": "visuomotor imitation을 위한 action diffusion; 12개 task 평균 +46.9%"
+@@ data
+"note": "RLHF with only a simple classification loss; no sampling, no reward model"
+==
+"note": "단순한 classification loss만으로 하는 RLHF; sampling도 reward model도 없음"
+@@ data
+"note": "super-human performance in the Atari 100K benchmark"
+==
+"note": "Atari 100K 벤치마크에서 초인적인 성능"
+@@ data
+"note": "RL-trained reasoning; AIME 2024 pass@1 74.4 (o1-0912) and 79.2 (o1-1217), as reported in the DeepSeek-R1 paper"
+==
+"note": "RL로 훈련한 추론; AIME 2024 pass@1 74.4 (o1-0912), 79.2 (o1-1217), DeepSeek-R1 논문에 보고된 수치"
+@@ data
+"note": "pure-RL reasoning with GRPO; R1-Zero AIME 2024 15.6% → 77.9% during training; R1 79.8"
+==
+"note": "GRPO를 쓴 순수 RL 추론; R1-Zero의 AIME 2024가 훈련 중 15.6% → 77.9%; R1은 79.8"
+@@ data
+"note": "data–compute Pareto frontier governed by the update-to-data ratio"
+==
+"note": "update-to-data ratio가 지배하는 데이터–compute Pareto frontier"
+@@ data
+"note": "open RL system; AIME 2024 50 with Qwen2.5-32B vs 47 for R1-Zero-Qwen-32B at half the steps"
+==
+"note": "공개된 RL 시스템; 절반의 step으로 Qwen2.5-32B가 AIME 2024 50, R1-Zero-Qwen-32B는 47"
+@@ data
+"note": "agents learn from streams of experience with rewards grounded in the environment"
+==
+"note": "agent는 streams of experience에서 학습하고 reward는 environment에 근거함"
+@@ data
+"note": "RL as a foundational methodology for turning LLMs into reasoning models"
+==
+"note": "LLM을 추론 모델로 바꾸는 근본 방법론으로서의 RL"
+@@ data
+"note": "first agent to obtain Minecraft diamonds purely from offline data; real-time world model on one GPU"
+==
+"note": "오직 offline 데이터만으로 Minecraft 다이아몬드를 얻은 최초의 agent; GPU 한 장에서 실시간으로 도는 world model"
+@@ data
+"note": "400,000+ GPU-hours; sigmoidal compute → performance; 100k GPU-hour run predicted from its first 50k"
+==
+"note": "400,000+ GPU-hour; compute → 성능이 sigmoid 모양; 100k GPU-hour 실행을 처음 50k로 예측"
+@@ data
+"note": "online RL for flow-matching VLAs; LIBERO 77.1% → 98.3%"
+==
+"note": "flow-matching VLA를 위한 online RL; LIBERO 77.1% → 98.3%"
+@@ data
+"note": "FastSAC / FastTD3 on one RTX 4090; Unitree G1 and Booster T1"
+==
+"note": "RTX 4090 한 장에서 FastSAC / FastTD3; Unitree G1, Booster T1"
+@@ data
+"note": "sim-real co-training for VLAs; real-robot success 40.0% → 64.0% (OpenVLA)"
+==
+"note": "VLA를 위한 sim-real co-training; 실제 로봇 성공률 40.0% → 64.0% (OpenVLA)"
+@@ data
+"note": "100 generated scenes; real-robot success 21.7% → 75% (CoRL 2026)"
+==
+"note": "생성한 장면 100개; 실제 로봇 성공률 21.7% → 75% (CoRL 2026)"
+@@ data
+"note": "static benchmarks are quickly saturated; GPT-5.5 98% on USAMO 2026 proofs"
+==
+"note": "정적 벤치마크는 금세 포화됨; GPT-5.5가 USAMO 2026 증명에서 98%"
+@@ data
+"name": "Atari-57 median (% of human)"
+==
+"name": "Atari-57 중앙값 (인간 대비 %)"
+@@ data
+"unit": "% human-normalised, no-op starts (100 = human level)"
+==
+"unit": "human-normalised %, no-op starts (100 = 인간 수준)"
+@@ data
+"name": "AIME accuracy (%)"
+==
+"name": "AIME 정확도 (%)"
+@@ data
+"unit": "% pass@1 on AIME 2024; 2026 rows are AIME 2026 from a secondary source"
+==
+"unit": "AIME 2024의 pass@1 %; 2026년 행은 2차 출처의 AIME 2026 결과"
+@@ data
+"name": "LIBERO success (%)"
+==
+"name": "LIBERO 성공률 (%)"
+@@ data
+"unit": "% average success over the four LIBERO suites"
+==
+"unit": "LIBERO suite 네 개의 평균 성공률 %"

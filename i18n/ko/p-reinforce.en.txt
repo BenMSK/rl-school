@@ -1,0 +1,112 @@
+@@ 1
+<span class="eyebrow">1992 · Williams · Machine Learning 8:229–256</span>
+@@ 2
+REINFORCE: climb the expected reward by sampling
+@@ 3
+A 28-page paper showing that a network of stochastic units can follow the gradient of expected reward by nudging up the log-probability of whatever it did, scaled by the reward it got, without ever computing that gradient explicitly.
+@@ 4
+Taught in <a href="#d7">Day 7</a> · Read time of the original: ~90 min
+@@ 5
+REINFORCE algorithms "make weight adjustments in a direction that lies along the gradient of expected reinforcement" for immediate-reward tasks and "certain limited forms of delayed-reinforcement tasks", and they do it "without explicitly computing gradient estimates". <a class="src" href="https://link.springer.com/article/10.1007/BF00992696">Williams 1992</a>
+@@ 6
+After each game of darts you remember every throw you made. If the game went well, you try to repeat all of those throws a little more often; if it went badly, a little less. You never need to know <em>why</em> a throw was good. It takes many games, because luck is mixed in with skill, and a good trick is to ask "did I do better than usual?" instead of "did I win?".
+@@ 7
+Value methods pick actions by an arg-max over Q(s,a). That needs a short list of actions and gives a deterministic policy. Both fail somewhere. Continuous actions have no list. And some problems want randomness: in Sutton and Barto's short-corridor gridworld, where two states look identical but have swapped actions, no ε-greedy policy scores better than about −44 per episode, while a policy that goes right with probability about 0.59 scores about −11.6. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The obvious fix, give the policy its own parameters θ and do gradient ascent on expected reward J(θ), hits a wall: the reward comes from the environment as a number, and you cannot backpropagate through the environment. Williams's connectionist setting made this sharp: his units are stochastic (Bernoulli-logistic), so even the network's own output is a sample, not a differentiable function. <a class="src" href="https://link.springer.com/article/10.1007/BF00992696">Williams 1992</a>
+@@ 8
+The <strong>log-derivative trick</strong>: for any probability P(x|θ), ∇P = P · ∇log P. So the gradient of an expectation E<sub>x∼P</sub>[R(x)] is itself an expectation, E[R(x) ∇log P(x|θ)], which you can estimate by sampling. Applied to a trajectory, the environment's transition probabilities appear inside log P but do not depend on θ, so they vanish under ∇<sub>θ</sub>; only Σ<sub>t</sub> ∇log π(a<sub>t</sub>|s<sub>t</sub>,θ) survives. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a> You differentiate only your own network, never the world.
+@@ 9
+Run one episode with the current stochastic policy π(a|s,θ): S<sub>0</sub>, A<sub>0</sub>, R<sub>1</sub>, …, S<sub>T−1</sub>, A<sub>T−1</sub>, R<sub>T</sub>.
+@@ 10
+For each step t compute the return from there, G<sub>t</sub> = Σ<sub>k&gt;t</sub> γ<sup>k−t−1</sup> R<sub>k</sub>.
+@@ 11
+Update the parameters toward making A<sub>t</sub> more likely, in proportion to G<sub>t</sub> (Sutton &amp; Barto eq. 13.8, with the γ<sup>t</sup> of the boxed algorithm):
+@@ 12
+θ ← θ + α γ<sup>t</sup> G<sub>t</sub> ∇<sub>θ</sub> ln π(A<sub>t</sub>|S<sub>t</sub>,θ)
+@@ 13
+Optionally subtract a <strong>baseline</strong> b(S<sub>t</sub>) from G<sub>t</sub>. Because Σ<sub>a</sub> b(s) ∇π(a|s,θ) = b(s) ∇1 = 0, the baseline "leaves the expected value of the update unchanged, but it can have a large effect on its variance". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 14
+Discard the episode and go back to step 1. The data is on-policy; after θ moves, old episodes are from the wrong distribution.
+@@ 15
+Why the ∇ln π rather than ∇π? Dividing by π(A<sub>t</sub>|S<sub>t</sub>) stops frequently chosen actions from winning merely because they are updated more often. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Check it by hand with a two-action softmax, logits [0, 0], so π(right) = 0.5. Take "right", observe G = +10, α = 0.01. The gradient of log π(right) with respect to the logits is [0.5, −0.5], so the logits become [0.05, −0.05] and π(right) rises to about 0.525. With a baseline b = 12 the same return counts as −2 and π(right) falls to about 0.495: the same episode is "good" or "bad" only relative to what you expected. (RL School arithmetic from eq. 13.8 and 13.11.) <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 16 attr
+The REINFORCE loop drawn as a cycle: policy network with parameters theta samples an action; the environment returns reward and next state; at episode end the returns G t are computed; for every step the gradient of log probability of the action taken is multiplied by G t minus an optional baseline; the sum is added to theta; the episode is discarded and the loop repeats
+@@ 17
+policy π(a|s,θ)
+@@ 18
+softmax or Gaussian
+@@ 19
+sample A<tspan baseline-shift="sub" font-size="10">t</tspan>
+@@ 20
+returns R<tspan baseline-shift="sub" font-size="10">t+1</tspan>, S<tspan baseline-shift="sub" font-size="10">t+1</tspan>
+@@ 21
+next state, until the episode ends
+@@ 22
+at T
+@@ 23
+returns G<tspan baseline-shift="sub" font-size="10">t</tspan>
+@@ 24
+Σ γ<tspan baseline-shift="super" font-size="10">k−t−1</tspan> R<tspan baseline-shift="sub" font-size="10">k</tspan>, each t
+@@ 25
+Δθ = α Σ<tspan baseline-shift="sub" font-size="10">t</tspan> (G<tspan baseline-shift="sub" font-size="10">t</tspan> − b(S<tspan baseline-shift="sub" font-size="10">t</tspan>)) ∇ln π(A<tspan baseline-shift="sub" font-size="10">t</tspan>|S<tspan baseline-shift="sub" font-size="10">t</tspan>,θ)
+@@ 26
+baseline optional; expected direction unchanged
+@@ 27
+θ ← θ + Δθ; discard the episode
+@@ 28
+REINFORCE: one whole episode per update, no critic, no model
+@@ 29
+The loop. Nothing is learned until the episode ends, and nothing from the environment is differentiated: the gradient flows only through ln π. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 30
+Williams's paper is a theory paper. Its results are the proofs that the expected weight change of each REINFORCE rule is proportional to the gradient of expected reinforcement, the demonstration that the rules "can be naturally integrated with backpropagation", and a discussion of their limiting behaviour. <a class="src" href="https://link.springer.com/article/10.1007/BF00992696">Williams 1992</a> The GAE paper (2016) states the price in one line: the Monte Carlo estimator with λ = 1 is unbiased "regardless of the accuracy of V, but it has high variance due to the sum of terms". <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> In practice the method is judged by its descendants; the short-corridor example above is the clean demonstration that a learned stochastic policy beats every ε-greedy one. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 31
+Every policy-gradient method is REINFORCE with a better weight on ∇log π. The list of valid weights, R(τ), reward-to-go, reward-to-go minus a baseline, Q<sup>π</sup>, the advantage A<sup>π</sup>, is the spine of modern policy optimisation. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a> A3C (2016) used a learned value baseline and 5-step returns on 16 CPU threads (<a href="#p-a3c">the A3C review</a>). <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> PPO's surrogate, a probability ratio times an advantage, equals the policy gradient to first order around the old policy (<a href="#p-ppo">the PPO review</a>). <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> Outside games: YouTube's 2019 recommender is literally a REINFORCE policy over millions of videos, with off-policy and top-K corrections, and lifted ViewTime by 0.85% in live A/B tests. <a class="src" href="https://arxiv.org/abs/1812.02353">Chen 2019</a> DeepSeek-R1's GRPO (2025) replaces the learned critic with a group-mean baseline, which is REINFORCE's baseline idea again. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a>
+@@ 32
+Variance: one return credits every action in the episode equally, so learning needs many episodes. The theory covers immediate reinforcement and only "certain limited forms" of delayed reinforcement. <a class="src" href="https://link.springer.com/article/10.1007/BF00992696">Williams 1992</a> You must wait for the episode to end, and each batch is used once. Later work attacked each: critics and k-step returns (A3C, 2016), the λ knob of GAE trading bias for variance (2016), and trust regions or clipping to allow larger, reusable updates (TRPO 2015, PPO 2017). <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 33
+We could open only Springer's abstract page; the body is paywalled, so section-level advice below is for Sutton &amp; Barto's treatment, which is the standard modern route. Read §13.1 (why parameterise the policy) and Example 13.1 (15 min), §13.2 for the policy gradient theorem (20 min), §13.3 for REINFORCE and the boxed algorithm (20 min), §13.4 for the baseline (15 min). Then the Spinning Up derivation for the trajectory form (20 min). Return to Williams's abstract last; it will read as a summary.
+@@ 34
+Q1. Starting from logits [0, 0], you take "right", get G = +10 and update with α = 0.01. What is π(right) afterwards?
+@@ 35
+0.5, unchanged
+@@ 36
+About 0.60
+@@ 37
+About 0.525
+@@ 38
+About 0.75
+@@ 39
+∇ log π(right) = [0.5, −0.5]; logits become [0.05, −0.05]; the softmax of a 0.1 gap is σ(0.1) ≈ 0.525.
+@@ 40
+Q2. "Subtracting a baseline biases the gradient." Why is this wrong?
+@@ 41
+Σ<sub>a</sub> b(s) ∇π(a|s) = b(s) ∇1 = 0, so any state-only baseline leaves the expected update unchanged
+@@ 42
+It is right; baselines are a bias–variance trade
+@@ 43
+Baselines only work when b depends on the action
+@@ 44
+It is wrong only for deterministic policies
+@@ 45
+The identity holds because probabilities sum to one. A baseline that depended on the action would break it.
+@@ 46
+Q3. What does the log-derivative trick let you avoid?
+@@ 47
+Sampling actions
+@@ 48
+Differentiating through the environment's dynamics
+@@ 49
+Computing returns
+@@ 50
+Using a step size
+@@ 51
+Transition probabilities appear inside log P(τ|θ) but do not depend on θ, so they vanish under the gradient; only ∇ log π terms remain.
+@@ 52
+Williams, R. J. (1992). Simple statistical gradient-following algorithms for connectionist reinforcement learning. <em>Machine Learning</em> 8(3–4):229–256. <a href="https://link.springer.com/article/10.1007/BF00992696">doi:10.1007/BF00992696</a> (abstract page opened; body paywalled; bibliographic data also as given in Sutton &amp; Barto's bibliography).
+@@ 53
+Sutton, R. S. &amp; Barto, A. G. (2018). <em>Reinforcement Learning: An Introduction</em>, 2nd ed., Chapter 13. <a href="http://incompleteideas.net/book/RLbook2020.pdf">PDF</a>.
+@@ 54
+Achiam, J. (2018). Spinning Up: Intro to Policy Optimization. <a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">spinningup.openai.com</a>.
+@@ 55
+Mnih, V. et al. (2016). Asynchronous Methods for Deep Reinforcement Learning. <a href="https://arxiv.org/abs/1602.01783">arXiv:1602.01783</a>.
+@@ 56
+Chen, M. et al. (2019). Top-K Off-Policy Correction for a REINFORCE Recommender System. <a href="https://arxiv.org/abs/1812.02353">arXiv:1812.02353</a>.

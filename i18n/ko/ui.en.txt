@@ -1,0 +1,92 @@
+@@ 1
+RL School
+@@ 2 attr
+A two-week, plain-English course on reinforcement learning, from bandits to world models and RL for language models, with interactive widgets, architecture diagrams, quizzes, and a paper bible.
+@@ 3
+RL School needs JavaScript for navigation, quizzes, and the interactive widgets.
+@@ 4
+How reinforcement learning works, in two weeks · <span class="ver">v1.1 (2026-11-09)</span>
+@@ 5
+<a class="btn" id="lang" href="ko.html" aria-label="한국어 / English">KR</a>
+@@ 6 attr
+Switch color theme
+@@ 7
+<span class="em">☾</span><span class="lbl">Dark</span>
+@@ 8 attr
+Sections
+@@ 9
+Course · 14 days
+@@ 10
+Paper Bible
+@@ 11 attr
+Days
+@@ 12
+<span class="eyebrow">A two-week course</span>
+@@ 13
+Understand reinforcement learning, properly.
+@@ 14
+Fourteen lessons, about 90 minutes each, from "what is a reward" to world models, RL-trained reasoning models, and robots, as of October 2026. Plain English, real numbers, an architecture diagram for every method, interactive widgets, and sources you can check.
+@@ 15
+Start Day 1
+@@ 16
+Lessons
+@@ 17
+14 days
+@@ 18
+Widgets
+@@ 19
+interactive
+@@ 20
+Papers
+@@ 21
+reviews
+@@ 22
+How to use this course
+@@ 23
+<strong>One day per sitting.</strong> Read the lesson top to bottom. Each one is self-contained but builds on the day before. Week 1 builds the classical machine; Week 2 goes from deep RL to the research frontier.
+@@ 24
+<strong>Play with every widget.</strong> The widgets are small, real computations running in your browser: a bandit that actually learns, a grid that actually converges, a PPO objective you can bend. Drag the sliders until the idea clicks.
+@@ 25
+<strong>Look at the architecture.</strong> Every method gets a diagram of its parts and what flows between them (networks, buffers, environments, workers). If you can redraw the diagram from memory, you understand the method.
+@@ 26
+<strong>Take the quiz, then mark the day done.</strong> Progress is saved on this device only. Nothing is sent anywhere.
+@@ 27
+<strong>Open the sources.</strong> The small chips after sentences (like this one <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>) link to the original book chapter, paper, blog, or documentation. When you finish the course, read the originals in the <a href="#papers">Paper Bible</a>.
+@@ 28
+If you have done <a href="https://benmsk.github.io/llm-school/">LLM School</a>, you already know what a neural network, gradient descent, and a Transformer are; this course assumes that and nothing more. Equations are shown and explained, never proved. Code snippets are ten lines or fewer.
+@@ 29
+The map
+@@ 30
+Week 1 builds the machine: rewards, bandits, Markov decision processes, Bellman equations, dynamic programming, learning from experience, Q-learning and DQN, policy gradients. Week 2 is the modern toolkit and where it is used: PPO and SAC, world models, offline RL, exploration and self-play, RL for language models and agents, RL in robots and industry, and the open problems.
+@@ 31
+What the colored boxes mean
+@@ 32
+The one thing to remember.
+@@ 33
+The same idea with no jargon at all.
+@@ 34
+A picture to hang the idea on.
+@@ 35
+Myths you will hear, and why they are wrong.
+@@ 36
+Going deeper
+@@ 37
+Optional detail for the curious.
+@@ 38
+Recap
+@@ 39
+Five things to remember.
+@@ 40
+About the sources
+@@ 41
+Every lesson was researched against primary sources (the Sutton &amp; Barto textbook, the original papers, official lab blogs and documentation, and university courses) and checked on 2026-10-25. Fast-moving facts (which model is best, benchmark scores, what frontier labs are doing) are marked "as of October 2026" and will age. If you spot an error, <a href="https://github.com/BenMSK/rl-school/issues">open an issue</a>.
+@@ 42
+<span class="eyebrow">Paper Bible</span>
+@@ 43
+The papers that built modern RL.
+@@ 44
+The landmark papers, each explained three ways: in one sentence, for a 10-year-old, and step by step for an adult who wants the real mechanism. With the headline numbers, the architecture, how to read the original, and what came after.
+@@ 45
+The figures inside each review are reproduced from the papers for study, with the source linked under every one. Tap a figure to open it full size.
+@@ 46
+RL School · <span class="ver">v1.1 (2026-11-09)</span> · <a href="https://github.com/BenMSK/rl-school">source</a> · Progress is saved on this device only. Paper figures are reproduced for study with the source linked; copyright stays with the authors.

@@ -1,0 +1,256 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 2</span>
+@@ 2
+Bandit: 축소판으로 보는 exploration 문제
+@@ 3
+오늘을 마치면 10-armed testbed에서 ε-greedy, UCB, Thompson sampling을 돌려 볼 수 있고, regret을 정의하고 regret 곡선을 읽을 수 있으며, exploration이 왜 끝내 사라지지 않는지 설명할 수 있습니다.
+@@ 4
+약 90분 · Day 1 필요
+@@ 5
+Day 1의 loop에서 state를 지워 봅시다. 모든 step이 똑같아 보이고, action이 바꾸는 것은 지금 당장 받는 reward뿐입니다. 그렇게 남는 것이 k-armed bandit이고, 그 안에 남는 문제는 exploration 하나뿐입니다. 오늘 배우는 방법은 모두 같은 trade-off에 대한 서로 다른 규칙입니다. 지금까지 가장 좋아 보이는 arm을 당길 것인가, 아니면 다른 arm이 실제로 더 좋은지 알아보려고 그쪽을 당길 것인가. 이 trade-off의 비용에는 regret이라는 이름이 있고, 증명된 하한도 있습니다. regret은 log n만큼 느리게 증가할 수는 있어도 그보다 느리게 증가할 수는 없습니다.
+@@ 6
+1. k-armed bandit
+@@ 7
+슬롯머신(one-armed bandit) k대가 한 줄로 늘어서 있다고 상상해 보세요. 기계마다 지급 분포는 고정되어 있지만 우리는 그 분포를 모릅니다. 매 라운드마다 한 대를 골라 당기고, 그 기계의 분포에서 뽑힌 reward를 받습니다. Sutton과 Barto의 정의는 이렇습니다. "여러분은 k개의 서로 다른 선택지, 즉 action 가운데 하나를 고르는 일을 반복해서 마주합니다. 선택할 때마다, 고른 action에 따라 정해지는 stationary 확률분포에서 뽑힌 수치 reward를 받습니다. 목표는 일정 기간 동안 기대 총 reward를 최대화하는 것입니다." <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 8
+각 action a에는 실제 <strong>action value</strong>(행동 가치)가 있습니다. 그 arm을 당겼을 때의 기대 reward, 즉 q*(a) = E[R<sub>t</sub> | A<sub>t</sub> = a]입니다. 모든 arm의 q*(a)를 안다면 언제나 가장 큰 것을 당기면 됩니다. 하지만 모르기 때문에 <strong>추정값</strong>(estimate) Q<sub>t</sub>(a)를 두고, reward를 모으는 동시에 이 추정값을 정확하게 만들어 가야 합니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> "action value"라는 용어는 Chris Watkins가 만들었고, 그의 1989년 학위논문에는 ε-greedy가 처음 쓰인 것으로 보이는 사례도 들어 있습니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 9
+이 레슨의 놀이터는 Sutton과 Barto의 <strong>10-armed testbed</strong>입니다. arm은 10개이고, 실제 value q*(a)는 평균 0, 분산 1인 정규분포에서 뽑으며, reward는 평균 q*(a), 분산 1인 정규분포를 따릅니다. 한 번의 실행은 1,000번의 pull이고, 이를 새로운 문제 2,000개에 대해 반복합니다. 책의 곡선은 이 실행들의 평균입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 가장 좋은 arm의 value는 평균적으로 약 1.54이므로, 어떤 방법이든 기대할 수 있는 최대치는 pull당 reward 1.54입니다.
+@@ 10
+동네에 아이스크림 가게가 열 군데 있는데, 아직 한 곳도 가 본 적이 없어요. 하루에 한 곳씩 갈 수 있어요. 지금까지 가장 맛있었던 가게만 계속 가면 더 맛있는 가게를 놓칠 수 있어요. 반대로 계속 새로운 가게만 가면 그저 그런 아이스크림을 잔뜩 먹게 돼요. 오늘의 질문은 이거예요. 매일 아침 어디로 갈지 정하는 가장 똑똑한 규칙은 무엇일까요?
+@@ 11
+2. Action value 추정하기
+@@ 12
+가장 자연스러운 추정값은 <strong>표본 평균</strong>(sample average)입니다. 그 arm에서 지금까지 받은 모든 reward의 평균입니다. reward를 전부 저장하는 것은 낭비입니다. 대신 arm마다 숫자 하나만 두고 갱신합니다. Q<sub>n</sub>이 reward n−1개를 받은 뒤의 추정값이고 R<sub>n</sub>이 n번째 reward라면 다음과 같습니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 13
+이 식은 표본 평균과 정확히 일치하며 "n = 1일 때도 성립"합니다. 손으로 확인해 봅시다. arm 1이 4, 2, 6을 차례로 줍니다. Q<sub>2</sub> = 4. Q<sub>3</sub> = 4 + ½(2 − 4) = 3. Q<sub>4</sub> = 3 + ⅓(6 − 3) = 4. 단순 평균 (4 + 2 + 6)/3도 4입니다.
+@@ 14
+이 식의 형태는 이 코스에서 가장 많이 재사용되는 패턴이므로 말로 외워 두세요. <strong>NewEstimate ← OldEstimate + StepSize · [Target − OldEstimate]</strong>. 대괄호 안은 error이고, step size는 target 쪽으로 얼마나 움직일지를 정합니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> step size가 1/n이면 정확한 평균이 되고, 오래된 reward와 새 reward가 똑같은 비중을 가집니다. <strong>constant step size</strong> α(예: 0.1)를 쓰면 최근 reward일수록 지수적으로 더 큰 가중치를 받는 평균(exponentially recency-weighted average)이 됩니다. 이 평균은 과거를 잊기 때문에, arm의 value가 시간에 따라 변하는 경우(<strong>nonstationary</strong> bandit)에 알맞습니다. 같은 reward 4, 2, 6에 α = 0.1을 쓰고 Q<sub>1</sub> = 0에서 시작하면 0 → 0.4 → 0.56 → 1.104가 됩니다. 느리지만, 다음 주에 arm의 실제 value가 바뀌더라도 계속 따라갑니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 15
+3. ε-greedy와 testbed 수치
+@@ 16
+<strong>greedy</strong> 규칙은 언제나 현재 추정값이 가장 높은 arm을 당깁니다. A<sub>t</sub> = argmax<sub>a</sub> Q<sub>t</sub>(a)입니다. 전혀 탐색하지 않으므로, 가장 좋은 arm이 처음에 운 나쁘게 낮은 reward를 내면 다시는 시도되지 않을 수 있습니다. <strong>ε-greedy</strong>는 동전 던지기로 이 문제를 고칩니다. 확률 ε로는 arm 하나를 균등하게 무작위로 고르고, 나머지 경우에는 greedy하게 고릅니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 17
+Sutton과 Barto의 Figure 2.2는 testbed에서 이 둘을 비교합니다. 본문에 따르면 greedy 방법은 "가능한 최댓값이 약 1.54인 데 비해 step당 reward가 약 1에 그쳤고", "전체 task의 약 3분의 1에서만 optimal action을 찾았습니다". ε = 0.1은 "더 많이 탐색하고 대개 optimal action을 더 일찍 찾지만, 그 action을 선택하는 비율은 결코 91%를 넘지 못합니다". ε = 0.01은 "더 느리게 향상되지만 결국에는 ε = 0.1 방법보다 좋은 성능을 낼 것입니다". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 아래 표의 수치는 이 그림을 재현한 실험(문제 500개, 같은 설정, pull 901–1,000 구간 평균)에서 나온 것입니다. 책 본문에는 greedy 행의 수치만 나와 있고, 나머지는 책의 그림에서 읽은 값을 여기서 재현한 것입니다.
+@@ 18
+방법 (1,000 pull 이후)
+@@ 19
+pull당 reward
+@@ 20
+가장 좋은 arm을 당긴 비율(%)
+@@ 21
+평가
+@@ 22
+=
+@@ 23
+세 번 중 두 번은 틀린 arm에 고착
+@@ 24
+아직 향상 중, 더 길게 돌리면 역전
+@@ 25
+1,000 pull 시점의 최고, 91%가 상한
+@@ 26
+가능한 최댓값
+@@ 27
+q*를 미리 아는 경우
+@@ 28
+91%라는 상한은 간단한 산수입니다. ε = 0.1은 pull의 10분의 1을 무작위 arm에 쓰고, 그중 열 번에 한 번만 가장 좋은 arm에 걸립니다. 그래서 가장 좋은 arm을 당기는 비율은 많아야 90% + 1%입니다. 이것이 오늘 주제의 첫 신호입니다. exploration 비율을 고정해 두면 답을 알고 난 뒤에도 exploration 세금을 영원히 냅니다.
+@@ 29
+직접 해 보기: 이 위젯은 고정된 random seed로 10-armed Gaussian testbed 문제 하나를 실행하므로, 초기화할 때마다 같은 문제가 다시 나옵니다. 방법을 고르고 천 번 당긴 다음, 빈 막대(실제 value)와 채운 막대(추정값)를 비교해 보세요. 그런 다음 방법을 바꿔 가며 regret 곡선을 비교해 보세요.
+@@ 30
+눈여겨볼 점: 문제 하나만 보면 수백 개를 평균한 표보다 noise가 큽니다. greedy가 운 좋게 잘될 때도 있습니다. regret 곡선의 모양도 보세요. ε-greedy는 직선이고(낭비되는 pull의 비율이 일정), UCB와 Thompson sampling은 휘어지며 평평해집니다. 나쁜 arm은 거의 당기지 않기 때문에 그 추정값이 계속 엉성합니다. 그래도 괜찮습니다. 나쁜 arm이 정확히 얼마나 나쁜지는 알 필요가 없습니다.
+@@ 31
+<strong>"exploration은 많을수록 좋다."</strong> ε = 0.1은 1,000 pull까지는 ε = 0.01을 이기지만, 더 길게 돌리면 집니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 가장 좋은 arm을 알고 나면 탐색용 pull은 모두 순손실입니다.
+@@ 32
+<strong>"greedy는 아는 것을 활용하니 안전하다."</strong> testbed에서 greedy는 세 번에 한 번꼴로만 가장 좋은 arm을 찾습니다. 좋은 arm이 초반에 운이 나빴다면 그 오류는 끝내 바로잡히지 않습니다.
+@@ 33
+<strong>"optimistic initial values가 exploration을 해결한다."</strong> stationary 문제에서만 그렇습니다. 그 탐색 동력은 "본질적으로 일시적"입니다(다음 절).
+@@ 34
+4. Optimistic initial values
+@@ 35
+동전 없이 탐색하는 요령이 있습니다. 모든 추정값을 지나치게 높게 잡고 시작하는 것입니다. 예를 들어 실제 value가 0 근처일 때 Q<sub>1</sub>(a) = +5로 둡니다. 어떤 arm을 먼저 당기든 5보다 적게 주므로 그 추정값이 내려가고, greedy 규칙은 다른 arm으로 옮겨 갑니다. 그 arm도 실망스럽고, 같은 일이 되풀이됩니다. 학습자는 정착하기 전에 "'실망'하면서" 모든 arm을 한 바퀴 돕니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 책의 Figure 2.3에서 Q<sub>1</sub> = +5, α = 0.1인 greedy는 Q<sub>1</sub> = 0인 ε = 0.1에 비해 "처음에는 더 많이 탐색하기 때문에 성능이 나쁘지만, 결국에는 더 좋은 성능을 냅니다". 재현 실험에서 optimistic 방법은 pull 100에서 reward 0.58, optimal 30%이지만, pull 901–1,000에서는 1.50과 85%에 도달해 ε-greedy의 1.39와 81%보다 좋습니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 36
+함정은 작동 원리에 있습니다. 탐색하려는 동력은 추정값이 현실적인 수준으로 내려가면서 소진됩니다. 이 동력은 "본질적으로 일시적"이어서, 나중에 어떤 arm의 value가 바뀌어도 이 방법은 다시 탐색하지 않습니다. 그래서 Sutton과 Barto는 이 방법이 "nonstationary 문제에는 잘 맞지 않는다"고 말합니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> stationary 문제에는 좋은 요령이지만 일반적인 해법은 아닙니다.
+@@ 37
+낙관이란, 아니라는 증거가 나오기 전까지는 동네의 모든 아이스크림 가게가 끝내준다고 가정하는 것입니다. 그러면 모든 가게를 다 가 보게 되는데, 첫 주에는 바로 그것이 필요합니다. 하지만 정착한 가게의 주인이 3년째에 바뀌어도, 이 규칙으로는 다시 둘러볼 이유가 생기지 않습니다. 다음에 나올 UCB는 바닥나지 않는 낙관입니다.
+@@ 38
+5. Upper confidence bound: 줄어드는 낙관
+@@ 39
+ε-greedy는 무턱대고 탐색합니다. 무작위 pull은 이미 형편없다고 아는 arm에 걸릴 확률과 거의 시도해 보지 않은 arm에 걸릴 확률이 똑같습니다. <strong>Upper confidence bound</strong>(UCB) action 선택은 목적을 가지고 탐색합니다. 추정값에 불확실성에 대한 bonus를 더한 값이 가장 큰 arm을 당깁니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 40
+=
+@@ 41
+여기서 N<sub>t</sub>(a)는 arm a를 당긴 횟수이고(N = 0인 arm을 먼저 당깁니다), t는 전체 pull 횟수이며, c &gt; 0은 얼마나 낙관할지를 정합니다. 제곱근 항은 "a의 value 추정값에 담긴 불확실성 또는 분산의 척도"입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 직접 계산해 봅시다. t = 100, c = 2일 때 10번 당긴 arm의 bonus는 2·√(ln 100 / 10) = 2·√0.4605 ≈ 1.36이고, 50번 당긴 arm의 bonus는 2·√(4.605/50) ≈ 0.61입니다. 어떤 arm을 당길 때마다 그 arm의 bonus는 줄어들고(N이 커짐), <em>다른</em> arm을 당길 때마다 조금씩 올라갑니다(ln t가 커짐). 영원히 무시되는 arm은 없습니다. 다만 계속 실망을 주는 arm에 쏟는 관심은 0을 향해 줄어듭니다. 반면 ε-greedy가 나쁜 arm에 쏟는 관심은 일정합니다.
+@@ 42
+직접 해 보기: 실행이 길어질 때 arm 하나의 bonus가 어떻게 변하는지 봅니다. 위쪽 선은 다시는 당기지 않는 arm입니다(N 고정). 이 arm의 bonus는 ln t를 따라 서서히 올라갑니다. 아래쪽 선은 열 번에 한 번 당기는 arm입니다. 이 arm의 bonus는 √(10 ln t / t)처럼 줄어듭니다.
+@@ 43
+눈여겨볼 점: 스케일을 보세요. 방치된 arm의 bonus는 로그 수준으로만 커집니다. t = 100에서 t = 10,000이 되는 동안 100배가 아니라 √2배 늘어납니다. 꾸준히 당기는 arm의 bonus는 0으로 향합니다. UCB의 exploration은 영구적이지만 갈수록 싸집니다.
+@@ 44
+c = 2인 testbed에서 "UCB는 대체로 ε-greedy action 선택보다 성능이 좋습니다. 단, 아직 시도하지 않은 action 가운데서 무작위로 고르는 처음 k step은 예외입니다". 재현 실험에서는 pull 901–1,000에서 reward 1.46, optimal 86%에 도달합니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 곡선은 pull 11에서 뾰족하게 솟습니다. 모든 arm을 한 번씩 시도한 뒤 열한 번째 pull은 가장 운 좋은 값을 낸 arm으로 가는데, 그것이 가장 좋은 arm일 때가 많기 때문입니다. 책에 실린 버전은 <strong>UCB1</strong>입니다. Auer, Cesa-Bianchi, Fischer가 2002년에 c = √2로 이를 소개했고, 그 regret이 pull 횟수에 대해 로그 수준으로만 증가하며, 극한에서만이 아니라 "시간에 대해 균일하게" 그렇다는 것을 증명했습니다. <a class="src" href="https://link.springer.com/article/10.1023/A:1013689704352">Auer 2002</a>
+@@ 45
+6. Thompson sampling: belief에서 sampling해 탐색하기
+@@ 46
+가장 오래된 bandit 알고리즘은 2026년 10월 기준으로 실무에서 가장 많이 쓰이는 알고리즘 중 하나이기도 합니다. William Thompson은 1933년에, 임상 시험이 아직 진행 중일 때 두 치료법 중 어느 쪽이 나은지 결정하는 문제를 다룬 논문에서 이를 제안했습니다. <a class="src" href="https://academic.oup.com/biomet/article-abstract/25/3-4/285/200862">Thompson 1933</a> 아이디어는 이렇습니다. 각 arm의 value가 얼마일지에 대한 확률분포를 유지하고, arm마다 그럴듯한 value 하나를 뽑은 뒤, 뽑은 값이 가장 높은 arm을 당깁니다. 잘 아는 arm에서는 실제 value에 가까운 값이 뽑힙니다. 잘 모르는 arm에서는 들쭉날쭉한 값이 뽑혀 가끔 이기는데, 바로 그때가 그 arm을 시도해 봐야 할 때입니다.
+@@ 47
+교과서적인 경우는 reward가 0 또는 1인 경우입니다(클릭했거나 안 했거나). 각 arm k에 대해 <strong>Beta(α<sub>k</sub>, β<sub>k</sub>)</strong> 분포를 유지하며, [0, 1]에서 균등한 Beta(1, 1)에서 시작합니다. 매 라운드마다 모든 arm에 대해 θ̂<sub>k</sub> ∼ Beta(α<sub>k</sub>, β<sub>k</sub>)를 sampling하고, x<sub>t</sub> = argmax<sub>k</sub> θ̂<sub>k</sub>를 당기고, r ∈ {0, 1}을 관측한 뒤, 당긴 arm만 갱신합니다: α ← α + r, β ← β + (1 − r). posterior mean은 α/(α + β)이고, "α<sub>k</sub> + β<sub>k</sub>가 커질수록 분포가 더 집중됩니다". <a class="src" href="https://arxiv.org/abs/1707.02038">Russo 2018</a> 직접 계산해 봅시다. arm A는 3승 1패이므로 Beta(4, 2)이고 평균은 0.67입니다. arm B는 1승 0패이므로 Beta(2, 1)이고 평균은 역시 0.67입니다. 평균은 같지만 B의 분포가 훨씬 넓어서, B에서 뽑은 값이 A에서 뽑은 값보다 클 때가 절반을 넘습니다. 그래서 덜 시도한 arm이 명시적인 exploration 규칙 없이도 탐색됩니다.
+@@ 48
+Chapelle과 Li는 2011년에 시뮬레이션 bandit과 디스플레이 광고 데이터로 평가한 결과 Thompson sampling이 UCB, ε-greedy와 비교해 "경쟁력이 매우 높다"는 것을 확인했고, 이로써 Thompson sampling에 대한 관심이 되살아났습니다. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a> Russo와 동료들의 튜토리얼은 흔한 오해 하나를 짚습니다. sampling하는 것은 posterior에서 뽑은 각 arm의 그럴듯한 <em>성공 확률</em>이지, 다음 pull의 예측 결과가 아닙니다. <a class="src" href="https://arxiv.org/abs/1707.02038">Russo 2018</a> 위의 위젯은 reward가 정규분포를 따르므로 Gaussian 버전을 씁니다. 각 arm의 belief는 평균 N·Q/(N+1), 분산 1/(N+1)인 정규분포이고, Beta와 같은 논리로 좁아집니다.
+@@ 49
+7. Regret: 모른다는 것의 대가
+@@ 50
+bandit 알고리즘은 어떻게 비교할까요? 문제에 따라 달라지는 총 reward로 비교하지 않습니다. 처음부터 가장 좋은 arm을 알던 사람에 비해 reward를 얼마나 놓쳤는지로 비교합니다. 이 양이 <strong>regret</strong>(후회)입니다. μ*를 가장 좋은 arm의 평균, X<sub>t</sub>를 t번째 pull의 reward라고 하면, n번의 pull 뒤 regret은 다음과 같습니다. <a class="src" href="https://tor-lattimore.com/downloads/book/book.pdf">Lattimore &amp; Szepesvári 2020</a>
+@@ 51
+regret은 절대 음수가 되지 않으며, 가장 좋은 arm을 이미 알 때에만 0입니다. regret에는 유용한 <strong>분해</strong>(decomposition)가 있습니다. 각 arm의 <strong>gap</strong> Δ<sub>a</sub> = μ* − μ<sub>a</sub>를 정의하고 T<sub>a</sub>(n)을 그 arm을 당긴 횟수라고 하면 다음이 성립합니다. <a class="src" href="https://tor-lattimore.com/downloads/book/book.pdf">Lattimore &amp; Szepesvári 2020</a>
+@@ 52
+이 식을 청구서로 읽으세요. suboptimal arm을 한 번 당길 때마다 그 arm의 gap만큼 비용이 듭니다. 좋은 알고리즘은 gap이 큰 arm을 드물게 당기고(쉽게 배제할 수 있으므로), gap이 아주 작은 arm에는 pull을 더 써도 괜찮습니다. 목표는 <strong>sublinear</strong> regret, 즉 R<sub>n</sub>/n → 0입니다. 낭비되는 pull의 <em>비율</em>이 0으로 간다는 뜻입니다. ε을 고정한 ε-greedy는 이 시험에 떨어집니다. pull의 약 ε·(k−1)/k를 영원히 낭비하므로 regret이 직선이 됩니다. 위젯에서 본 그대로입니다.
+@@ 53
+regret은 얼마나 낮아질 수 있을까요? 1985년에 Lai와 Robbins는 lower bound(하한)를 증명했습니다. 말로 풀면 이렇습니다. "합리적인" 알고리즘(이 문제 하나가 아니라 모든 문제에서 잘하는 알고리즘)이라면 regret은 적어도 상수 곱하기 log n만큼은 증가해야 합니다. 이 상수는 gap들과, 각 suboptimal arm을 가장 좋은 arm과 구별하기가 얼마나 어려운지에 따라 정해집니다. <a class="src" href="https://tor-lattimore.com/downloads/book/book.pdf">Lattimore &amp; Szepesvári 2020</a> Auer와 동료들은 이렇게 요약합니다. Lai와 Robbins는 "regret이 플레이 횟수에 대해 적어도 로그 수준으로 증가해야 함을 처음으로 보였고", UCB1은 이 증가율과 일치합니다. <a class="src" href="https://link.springer.com/article/10.1023/A:1013689704352">Auer 2002</a> Thompson sampling도 마찬가지입니다. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a>
+@@ 54
+이것이 이 레슨이 던진 질문의 답입니다. exploration은 왜 끝내 사라지지 않을까요? log n이 계속 커지기 때문입니다. regret이 상수로 평평해지는 방법이라면 어느 순간 탐색을 멈춰야 합니다. 그런데 탐색을 멈추는 방법은, 포기한 arm이 사실은 가장 좋은 arm이었던 어떤 문제에서 속게 됩니다. 할 수 있는 최선은 확신이 뒷받침하는 속도에 맞춰 점점 덜 탐색하는 것이고, 줄어드는 UCB bonus와 좁아지는 Thompson posterior가 바로 그것을 구현합니다.
+@@ 55
+더 깊이 (선택): UCB1 regret bound
+@@ 56
+Auer, Cesa-Bianchi, Fischer의 Theorem 1에 따르면, reward가 [0, 1]에 있을 때 c = √2인 UCB1의 n번 pull 뒤 기대 regret은 많아야 8·Σ<sub>i: μ<sub>i</sub>&lt;μ*</sub> (ln n)/Δ<sub>i</sub> + (1 + π²/3)·Σ<sub>j</sub> Δ<sub>j</sub>입니다. <a class="src" href="https://link.springer.com/article/10.1023/A:1013689704352">Auer 2002</a> 첫째 항이 log n 증가분입니다. gap이 작은 arm일수록 1/Δ<sub>i</sub>가 커서 더 많이 기여한다는 점에 주목하세요. 그런 arm은 더 자주 당기지만 한 번 당길 때의 비용은 쌉니다. Lai–Robbins 하한도 같은 log n 형태이고 상수만 더 작습니다. 그 상수는 Σ<sub>i</sub> Δ<sub>i</sub>/D(p<sub>i</sub>‖p*)이며, 여기서 D는 arm i의 reward 분포와 가장 좋은 arm의 reward 분포 사이의 KL divergence입니다. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a> <a href="#d11">Day 11</a>에서는 불확실할 때는 낙관하라(optimism in the face of uncertainty)는 같은 아이디어를 완전한 RL로 가져갑니다. 거기서는 "arm"이 state 전체가 되고 bonus가 exploration reward가 됩니다.
+@@ 57
+8. 현실 세계의 contextual bandit
+@@ 58
+현실의 의사결정에는 부가 정보가 따라옵니다. Sutton과 Barto의 설명은 이렇습니다. 매 라운드마다 플레이할 bandit task 하나를 받는데, 이와 함께 "그 정체에 대한 뚜렷한 단서(action value는 아님)"도 받는다고 합시다. 예를 들면 기계의 색깔입니다. 그러면 단서에서 action으로 가는 policy를 학습할 수 있습니다. "빨간색이면 arm 1을, 초록색이면 arm 2를 선택"하는 식입니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 이것이 <strong>contextual bandit</strong>입니다(책에서는 associative search라고 부릅니다). <strong>context</strong>(맥락) x가 도착하고, action을 고르고, 그 action에 대한 reward만 봅니다. action이 즉각적인 reward에는 영향을 주지만 다음 context에는 영향을 주지 않으므로, 이 문제는 "k-armed bandit 문제와 완전한 강화학습 문제의 중간"에 있습니다. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> 이 마지막 제약을 없애 action이 다음에 올 것을 바꾸게 하면 <a href="#d1">Day 1</a>의 전체 loop로 돌아가며, 이것이 <a href="#d3">Day 3</a>의 주제입니다.
+@@ 59
+여기서 이 레슨이 실제 서비스 시스템과 만납니다. 2010년에 Li, Chu, Langford, Schapire는 Yahoo! 첫 페이지에 어떤 기사를 보여 줄지 고르는 문제를 contextual bandit으로 정식화했습니다. 사용자 feature가 context이고 클릭이 reward입니다. 3,300만 건이 넘는 로그 이벤트로 offline 평가한 결과, 이들의 알고리즘은 "context를 쓰지 않는 표준 bandit 알고리즘에 비해 12.5%의 클릭 상승"을 달성했습니다. <a class="src" href="https://arxiv.org/abs/1003.0146">Li 2010</a> Chapelle과 Li는 logistic regression 클릭 모델을 쓴 Thompson sampling을 디스플레이 광고 데이터에 돌렸고, 거기서도 경쟁력이 있음을 확인했습니다. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a> 같은 논리가 A/B 테스트에도 적용됩니다. 50/50 고정 분할은 실험 기간 내내 사용자 절반을 지는 버전으로 계속 보내지만, bandit은 증거가 쌓일수록 트래픽을 이기는 쪽으로 옮깁니다. Steven Scott는 2010년에 비즈니스 실험에 대해 이런 Bayesian 논거를 폈습니다. <a class="src" href="https://research.google/pubs/a-modern-bayesian-look-at-the-multi-armed-bandit/">Scott 2010</a> 시스템이 끊임없이 들어오는 사용자를 상대로 몇 가지 선택지 중 하나를 고르고 빠른 피드백을 받는 곳이라면(헤드라인, 광고, 추천, 가격) 어디든 그 밑에 bandit이 있습니다.
+@@ 60
+bandit agent는 가능한 가장 작은 RL agent이므로 다이어그램도 가장 작습니다. 위쪽 줄은 k-armed 경우이고, 아래쪽 줄은 context가 들어올 때 무엇이 달라지는지 보여 줍니다.
+@@ 61 attr
+Bandit agent 아키텍처. 위쪽 줄: 추정값 Q(a)와 횟수 N(a)를 담은 테이블이 선택 규칙(epsilon-greedy, UCB 또는 Thompson)으로 들어가고, 선택 규칙은 arm k개로 이루어진 environment에 action을 내보냅니다. environment는 reward를 돌려주고, 이 reward는 테이블에 다시 기록하는 갱신 규칙으로 흘러갑니다. 아래쪽 줄: contextual bandit에서는 context x와, (x, a)를 예측 value로 매핑하는 모델이 테이블을 대신합니다.
+@@ 62
+테이블
+@@ 63
+Q(a) 추정값
+@@ 64
+N(a) 횟수 · 또는 Beta(α, β)
+@@ 65
+선택 규칙
+@@ 66
+=
+@@ 67
+Thompson sample
+@@ 68
+arm k개, 미지의 고정 q*(a)
+@@ 69
+=
+@@ 70
+reward r → 갱신: Q(a) += (1/N(a))·(r − Q(a)), N(a) += 1
+@@ 71
+contextual bandit: 테이블이 모델로 바뀜
+@@ 72
+=
+@@ 73
+사용자 feature
+@@ 74
+모델 f(x, a)
+@@ 75
+선형·logistic → value
+@@ 76
+선택
+@@ 77
+UCB 또는 TS
+@@ 78
+사용자
+@@ 79
+클릭?
+@@ 80
+클릭(0 또는 1)이 reward. 보여 준 action에 대해서만 f를 학습
+@@ 81
+위: k-armed bandit agent는 테이블, 선택 규칙, 갱신 규칙으로 이루어집니다. 아래: contextual bandit은 테이블을 (context, action)에서 예측 reward로 가는 모델로 바꿉니다. 선택과 갱신은 같습니다.
+@@ 82
+위쪽 줄을 왼쪽에서 오른쪽으로 읽어 보세요. agent의 기억 전체는 arm마다 한 행씩 있는 테이블입니다. 각 행에는 추정값 Q(a)와 횟수 N(a)가 들어 있습니다(Thompson sampling에서는 Beta 파라미터 두 개가 두 역할을 모두 맡습니다). 선택 규칙은 테이블을 읽고 action 하나를 내보냅니다. 세 방법이 달라지는 곳은 여기뿐입니다. environment는 선택된 arm에서 reward를 뽑아 돌려보냅니다. 갱신 규칙은 2절의 점진적 평균 식을 써서, 당긴 arm의 행 하나에 이 reward를 반영합니다. state가 없으므로 한 step에서 다음 step으로 넘어가는 것은 테이블뿐입니다.
+@@ 83
+아래쪽 줄은 contextual 버전입니다. 결정을 내리기 전마다 context x(사용자 feature, 시간대)가 도착합니다. 테이블로는 연속적인 context를 인덱싱할 수 없으므로, 테이블은 이 context에서 각 action의 reward를 예측하는 모델 f(x, a)가 됩니다. 여기에 UCB를 위한 불확실성 추정값이나 Thompson sampling을 위한 가중치의 posterior가 붙습니다. <a class="src" href="https://arxiv.org/abs/1003.0146">Li 2010</a>에서는 기사마다 선형 모델을, <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a>에서는 logistic regression을 썼습니다. reward는 여전히 선택한 action에 대해서만 도착하며, 이것이 bandit을 정의하는 특징입니다. 다른 헤드라인을 보여 줬다면 어떻게 됐을지는 결코 알 수 없습니다.
+@@ 84
+위쪽 줄의 모든 것은 몇 킬로바이트에 들어갑니다. 추정값 열 개, 횟수 열 개, 규칙 하나입니다. 이 페이지의 위젯은 페이지가 다시 그려지는 것보다 빠르게 1,000번의 pull을 실행합니다. 실제 서비스에서 비용은 다른 곳에 있습니다. Yahoo! 시스템은 3,300만 건이 넘는 로그 이벤트로 offline 평가했는데, 그러려면 로그를 남긴 policy의 데이터를 새 policy에 대해 편향 없이 재생하는 방법이 필요했습니다. <a class="src" href="https://arxiv.org/abs/1003.0146">Li 2010</a> 그리고 Chapelle과 Li의 광고 평가는 4일간의 테스트 기간에 걸쳐 진행되었습니다. <a class="src" href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">Chapelle &amp; Li 2011</a> 로깅, 지연된 피드백(클릭은 페이지가 표시되고 몇 초 뒤에 도착할 수 있습니다), offline 평가가 bandit의 엔지니어링입니다. 알고리즘은 쉬운 부분입니다.
+@@ 85
+Q1. 어떤 arm이 4, 2, 6을 차례로 줍니다. Q<sub>n+1</sub> = Q<sub>n</sub> + (1/n)(R<sub>n</sub> − Q<sub>n</sub>)을 쓰면, 세 번 당긴 뒤의 추정값은…
+@@ 86
+6, 가장 최근의 reward
+@@ 87
+4, 표본 평균
+@@ 88
+3, 두 번 당긴 뒤의 추정값
+@@ 89
+정답 2. Q<sub>2</sub> = 4, Q<sub>3</sub> = 4 + ½(2−4) = 3, Q<sub>4</sub> = 3 + ⅓(6−3) = 4이며, (4+2+6)/3과 같습니다. 4번 선택지는 0에서 시작해 constant step size α = 0.1을 쓸 때 나오는 값입니다.
+@@ 90
+Q2. ε = 0.1인 ε-greedy는 왜 10개의 arm 중 가장 좋은 arm을 91% 넘게 당길 수 없을까요?
+@@ 91
+추정값이 첫 pull 때문에 편향되므로
+@@ 92
+UCB bonus가 0에 도달하지 않으므로
+@@ 93
+1,000번의 pull은 가장 좋은 arm을 찾기에 너무 적으므로
+@@ 94
+pull의 10%가 무작위이고 그중 열 번에 한 번만 가장 좋은 arm에 걸리므로
+@@ 95
+정답 4. greedy pull 90%에, 무작위 pull 10% × 1/10이 우연히 가장 좋은 arm에 걸리는 몫을 더하면, 추정값이 완벽해도 많아야 91%입니다. ε을 고정하면 exploration 세금을 영원히 냅니다.
+@@ 96
+Q3. t = 100, c = 2일 때 10번 당긴 arm의 UCB bonus는 약…
+@@ 97
+정답 1. 2·√(ln 100 / 10) = 2·√0.4605 ≈ 1.36. 2번 선택지는 50번 당긴 arm의 bonus이고, 3번 선택지는 ln 100 자체입니다.
+@@ 98
+Q4. "Sublinear regret"의 뜻은…
+@@ 99
+알고리즘이 결국 실수를 완전히 멈춘다
+@@ 100
+총 regret이 고정된 상수 아래에 머문다
+@@ 101
+총량은 계속 늘어나도, suboptimal arm에 낭비되는 pull의 비율은 0으로 간다
+@@ 102
+가장 좋은 arm을 찾고 나면 regret이 음수가 된다
+@@ 103
+정답 3. R<sub>n</sub>/n → 0. 총량은 여전히 늘어나며, Lai–Robbins bound에 따라 적어도 log n만큼은 늘어납니다. 그래서 실수는 멈추지 않고 드물어질 뿐입니다. regret은 절대 음수가 되지 않습니다.
+@@ 104
+Q5. Beta–Bernoulli Thompson sampling에서 매 라운드 각 arm에 대해 무엇을 sampling할까요?
+@@ 105
+다음 pull의 예측 결과, 0 또는 1
+@@ 106
+그 arm의 현재 Beta posterior에서 뽑은 그럴듯한 성공 확률
+@@ 107
+확률 ε로 무작위 arm
+@@ 108
+posterior mean α/(α+β)
+@@ 109
+정답 2. θ̂<sub>k</sub> ∼ Beta(α<sub>k</sub>, β<sub>k</sub>)를 뽑고, 뽑은 값이 가장 큰 arm을 당깁니다. 평균을 쓰면(4번 선택지) greedy가 되어 전혀 탐색하지 않습니다. 결과를 sampling하는 것(1번 선택지)은 Russo et al.이 경고하는 오해입니다.
+@@ 110
+Q6. exploration이 "본질적으로 일시적"이어서 value가 변하는 arm에 맞지 않는 방법은 무엇일까요?
+@@ 111
+ε을 고정한 ε-greedy
+@@ 112
+=
+@@ 113
+=
+@@ 114
+optimistic initial values를 쓴 greedy
+@@ 115
+정답 4. 부풀린 추정값이 현실적인 수준으로 내려가면서 낙관은 소진되고, 그 뒤에는 그냥 greedy가 됩니다. UCB의 bonus와 Thompson의 posterior는 (점점 덜) 계속 탐색하고, ε-greedy는 일정한 비율로 계속 탐색합니다.
+@@ 116
+k-armed bandit은 state가 없는 RL입니다. action k개, 알려지지 않은 평균 reward q*(a), 라운드마다 pull 한 번. 남는 것은 exploration뿐입니다.
+@@ 117
+추정값은 NewEstimate ← OldEstimate + StepSize·[Target − OldEstimate]로 갱신합니다. step size 1/n은 정확한 평균을 주고, 상수 α는 과거를 잊습니다.
+@@ 118
+10-armed testbed에서 greedy는 pull당 reward 약 1.00을 얻고 세 번에 한 번꼴로 가장 좋은 arm을 찾습니다. ε = 0.1은 약 1.39를 얻고 optimal 비율이 91%에서 막힙니다. 가능한 최댓값은 약 1.54입니다.
+@@ 119
+UCB는 bonus c·√(ln t / N(a))를 더합니다. 이 bonus는 당긴 arm에서는 줄어들고 방치된 arm에서는 서서히 올라갑니다. Thompson sampling은 각 arm의 posterior에서 그럴듯한 value를 뽑아 그 값이 가장 큰 arm을 당깁니다. 둘 다 점점 덜 탐색하지만 0이 되지는 않습니다.
+@@ 120
+regret R<sub>n</sub> = Σ<sub>a</sub> Δ<sub>a</sub> E[T<sub>a</sub>(n)]은 가장 좋은 arm에 비해 잃는 양입니다. Lai와 Robbins(1985)는 이것이 적어도 log n만큼은 증가해야 함을 증명했고, 그래서 exploration은 끝내 사라지지 않습니다. contextual bandit은 부가 정보를 더한 것으로, 실무에서 헤드라인, 광고, A/B 시스템을 돌립니다(Yahoo!: 클릭 12.5% 상승).
+@@ 121
+<a href="http://incompleteideas.net/book/the-book-2nd.html">Reinforcement Learning: An Introduction, 2nd edition</a> — Sutton &amp; Barto, MIT Press, 2018. Chapter 2가 오늘 레슨입니다. 2.1–2.7절과 2.9절, Figure 2.2–2.4.
+@@ 122
+<a href="https://link.springer.com/article/10.1023/A:1013689704352">Finite-time Analysis of the Multiarmed Bandit Problem</a> — Auer, Cesa-Bianchi &amp; Fischer, Machine Learning 47, 2002. UCB1과 로그 수준의 regret bound(Theorem 1).
+@@ 123
+<a href="https://academic.oup.com/biomet/article-abstract/25/3-4/285/200862">On the likelihood that one unknown probability exceeds another in view of the evidence of two samples</a> — W. R. Thompson, Biometrika 25, 1933. Thompson sampling의 기원.
+@@ 124
+<a href="https://proceedings.neurips.cc/paper/2011/hash/e53a0a2978c28872a4505bdb51db06dc-Abstract.html">An Empirical Evaluation of Thompson Sampling</a> — Chapelle &amp; Li, NIPS 2011. Thompson sampling을 되살린 논문. Algorithm 1과 디스플레이 광고 실험.
+@@ 125
+<a href="https://arxiv.org/abs/1707.02038">A Tutorial on Thompson Sampling</a> — Russo, Van Roy, Kazerouni, Osband &amp; Wen, 2018. Algorithm 3.2(BernTS)와 Section 3의 "흔한 오해".
+@@ 126
+<a href="https://tor-lattimore.com/downloads/book/book.pdf">Bandit Algorithms</a> — Lattimore &amp; Szepesvári, Cambridge University Press, 2020(무료 PDF). regret과 그 분해는 Chapter 4(Lemma 4.4–4.5), Lai–Robbins lower bound는 Chapter 16(Theorem 16.2).
+@@ 127
+<a href="https://arxiv.org/abs/1003.0146">A Contextual-Bandit Approach to Personalized News Article Recommendation</a> — Li, Chu, Langford &amp; Schapire, WWW 2010. LinUCB와 Yahoo! 첫 페이지 결과.
+@@ 128
+<a href="https://research.google/pubs/a-modern-bayesian-look-at-the-multi-armed-bandit/">A modern Bayesian look at the multi-armed bandit</a> — Steven L. Scott, Applied Stochastic Models in Business and Industry 26, 2010. 고정 분할 실험의 대안으로서의 bandit.

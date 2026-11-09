@@ -1,0 +1,156 @@
+@@ offline
+"dataset: how often each action appears (N = "+NT+")"
+==
+"데이터셋: 각 action의 등장 횟수 (N = "+NT+")"
+@@ offline
+"True Q is hidden until you fit. Actions 4 and 5 never appear in the data."
+==
+"fit하기 전에는 실제 Q가 숨겨져 있습니다. Action 4와 5는 데이터에 한 번도 나오지 않습니다."
+@@ offline
+"true Q (never seen by the learner)"
+==
+"실제 Q (학습자는 볼 수 없음)"
+@@ offline
+"estimated Q after penalty α·(1/5 − π̂β(a))"
+==
+"penalty α·(1/5 − π̂β(a)) 적용 후의 추정 Q"
+@@ offline
+"estimated Q̂ (α = 0, no penalty)"
+==
+"추정 Q̂ (α = 0, penalty 없음)"
+@@ offline
+"greedy picks"
+==
+"greedy 선택"
+@@ offline
+"true Q = "
+==
+"실제 Q = "
+@@ offline
+" · never in the data"
+==
+" · 데이터에 없음"
+@@ offline
+"best true Q "+TRUE[best]+" − chosen"
+==
+"최고 실제 Q "+TRUE[best]+" − 선택한 값"
+@@ offline
+"copies the most frequent action"
+==
+"가장 자주 나온 action을 복사"
+@@ offline
+"raw guesses a4, a5"
+==
+"a4, a5의 원래 추측값"
+@@ offline
+"blind extrapolation"
+==
+"근거 없는 extrapolation"
+@@ offline
+"Correct: the penalty lets the data-supported best action win."
+==
+"정답: penalty 덕분에 데이터가 뒷받침하는 최선의 action이 선택됩니다."
+@@ offline
+"Suboptimal but safe: a seen action."
+==
+"최선은 아니지만 안전합니다: 데이터에 있는 action입니다."
+@@ offline
+"Extrapolation error: the learner chose an action it has never observed, because its guess happened to land high."
+==
+"Extrapolation error: 학습자가 한 번도 관측하지 못한 action을 골랐습니다. 그 action의 추측값이 우연히 높게 나왔기 때문입니다."
+@@ offline
+"Extrapolation error in one state"
+==
+"State 하나로 보는 extrapolation error"
+@@ offline
+"Five actions, true values 4, 6, 5, 3, 2. The dataset covers actions 1–3 only. Fit a noisy Q estimator and see which action a greedy policy picks; then add a conservative penalty."
+==
+"Action은 다섯 개이고 실제 value는 4, 6, 5, 3, 2입니다. 데이터셋에는 action 1–3만 있습니다. noise 섞인 Q estimator를 fit해서 greedy policy가 어떤 action을 고르는지 본 다음, conservative penalty를 더해 봅니다."
+@@ denoise
+"A square action space with two target modes; the current action dot and its denoising path from noise toward one mode."
+==
+"두 개의 목표 mode가 있는 정사각형 action 공간. 현재 action 점과, noise에서 한 mode로 향하는 denoising 경로."
+@@ denoise
+"right route"
+==
+"오른쪽 경로"
+@@ denoise
+"left route"
+==
+"왼쪽 경로"
+@@ denoise
+"MSE average"
+==
+"MSE 평균"
+@@ denoise
+"step k"
+==
+"step k"
+@@ denoise
+" of "
+==
+" / "
+@@ denoise
+"press Denoise step"
+==
+"Denoise 한 step을 누르세요"
+@@ denoise
+"done: A^0"
+==
+"완료: A^0"
+@@ denoise
+"press Add noise"
+==
+"noise 추가를 누르세요"
+@@ denoise
+"current A^k"
+==
+"현재 A^k"
+@@ denoise
+"ᾱ_k (signal kept)"
+==
+"ᾱ_k (남은 신호)"
+@@ denoise
+"1 = clean, 0 = pure noise"
+==
+"1 = 깨끗함, 0 = 순수 noise"
+@@ denoise
+"20-sample runs"
+==
+"sample 20개 결과"
+@@ denoise
+ends.filter(e=>e[0]<0).length+" left · "+ends.filter(e=>e[0]>=0).length+" right"
+==
+"왼쪽 "+ends.filter(e=>e[0]<0).length+" · 오른쪽 "+ends.filter(e=>e[0]>=0).length
+@@ denoise
+"where A^0 ends up"
+==
+"A^0의 도착 위치"
+@@ denoise
+"Denoise an action from noise to a mode"
+==
+"noise에서 mode까지: action denoising"
+@@ denoise
+"A 2-D action (x, y). Demonstrators went left or right around an obstacle, never through the middle. The denoiser here is the exact optimal noise predictor for this two-mode target; a trained ε_θ approximates it."
+==
+"2차원 action (x, y)입니다. 시연자들은 장애물을 왼쪽이나 오른쪽으로 돌아갔고, 가운데로 지나간 적은 없습니다. 여기서 쓰는 denoiser는 mode가 두 개인 이 목표 분포에 대한 정확한 최적 noise 예측기이며, 학습된 ε_θ는 이를 근사합니다."
+@@ denoise
+"K steps"
+==
+"step 수 K"
+@@ denoise
+"Add noise"
+==
+"noise 추가"
+@@ denoise
+"Denoise step"
+==
+"Denoise 한 step"
+@@ denoise
+"Run K steps"
+==
+"K step 실행"
+@@ denoise
+"20 samples"
+==
+"sample 20개"

@@ -1,0 +1,108 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+400,000 GPU-hour가 넘는 ablation으로, RL 학습 곡선이 compute에 대해 sigmoid를 따르고 그 천장은 레시피에 따라 달라진다는 것을 보였습니다. 여기서 나온 ScaleRL 레시피는 100,000 GPU-hour run의 결과를 전반부만 보고 예측했습니다. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a>
+@@ 4
+<a href="#d12">Day 12</a>에서 다룸 · 원문 읽는 시간: 약 70분(28쪽, figure 20개. 대부분이 appendix)
+@@ 5
+모든 RL run을 R<sub>C</sub> − R<sub>0</sub> = (A − R<sub>0</sub>) / (1 + (C<sub>mid</sub>/C)<sup>B</sup>)로 fitting하면, 천장 A를 높이는 설계 선택과 천장에 더 빨리 닿게만 하는 선택(B)을 가려낼 수 있습니다. 알고 보니 대부분은 뒤쪽이었습니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 6
+reasoning model을 훈련시키는 사람들은 모두 레시피를 두고 다퉈요. 이 loss가 좋다, 저 batch size가 좋다, 이 요령이 좋다 하면서요. ScaleRL은 작은 빵 굽기 대결을 수백 번 열어 봤어요. 그랬더니 대부분의 요령은 케이크가 부푸는 빠르기만 바꿀 뿐, 얼마나 높이 부풀 수 있는지는 바꾸지 못했어요. 높이를 바꾸는 재료는 몇 가지뿐이었어요. 그리고 굽는 시간의 앞 절반 동안 케이크를 지켜보면, 마지막에 얼마나 높아질지 정확히 맞힐 수 있어요.
+@@ 7
+pretraining에는 scaling law가 있습니다. 작은 run들에 power law를 fitting해서 큰 run을 예측합니다. LLM을 위한 RL에는 그런 것이 없었습니다. 레시피들(GRPO, DAPO, Magistral, MiniMax-M1 등)은 작은 예산 하나에서만 비교되었습니다. 1,000 GPU-hour에서 이긴 레시피가 100,000에서도 이길지, 느린 출발과 낮은 천장을 어떻게 구별할지 아무도 몰랐습니다. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> 큰 규모에서 잘못 고르면 수십만 GPU-hour를 날립니다.
+@@ 8
+모든 레시피를 같은 방식으로 측정합니다. 고정된 8B dense 모델에 수학 prompt로 레시피를 돌리고, held-in validation set의 pass rate를 사용한 GPU-hour에 따라 기록한 뒤 <strong>sigmoid</strong>를 fitting합니다. power law 대신 sigmoid를 고른 이유는 compute가 적은 구간에서 더 안정적으로 fitting되고 천장이 있기 때문입니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a> 그런 다음 설계 선택 하나하나에 대해 묻습니다. A를 움직였는가, 아니면 B와 C<sub>mid</sub>만 움직였는가?
+@@ 9
+<strong>곡선</strong>(Eq. 1): A는 asymptotic pass rate(0 ≤ A ≤ 1), B는 scaling exponent(compute efficiency), C<sub>mid</sub>는 전체 향상의 절반에 도달하는 compute, R<sub>0</sub>는 시작 reward입니다. fitting은 약 1,500 GPU-hour 이후부터 시작합니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 10
+=
+@@ 11
+<strong>연구 설계.</strong> 8B 모델에서 leave-one-out ablation과 한 번에 하나씩 바꾸는 ablation을 각각 수천 GPU-hour까지 돌리고, Llama-4 Scout(17B×16 MoE)에서 확인했습니다. GB200 GPU로 모두 합쳐 400,000 GPU-hour 넘게 썼습니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 12
+<strong>천장 A를 움직이는 것.</strong> loss 종류(CISPO와 GSPO가 DAPO의 token-level clipped loss를 이깁니다), LM head의 logit을 <strong>FP32</strong>로 계산하는 것(A가 약 0.52에서 약 0.61로 올랐습니다), 더 큰 batch와 더 긴 generation length(출발은 느리지만 더 높은 곳에서 끝납니다)입니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 13
+<strong>주로 효율 B를 움직이는 것.</strong> PPO-off-policy 대신 비동기 PipelineRL을 쓰는 것(A는 같고 B가 더 좋습니다), loss aggregation, advantage normalisation, curriculum입니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 14
+<strong>레시피.</strong> ScaleRL = off-policy step 8개의 비동기 PipelineRL; CISPO(truncated importance sampling을 쓰는 REINFORCE loss); FP32 LM head; prompt-level loss averaging; batch-level advantage normalisation; zero-variance filtering(그룹 전체의 결과가 같은 prompt를 버립니다. DAPO의 dynamic sampling에 옷만 갈아입힌 것입니다); No-Positive-Resampling(과거 pass rate ≥ 0.9인 prompt를 버립니다); 그리고 중간에 자르는 대신 생각을 끝내는 문구를 강제로 넣는 interruption 기반 length control입니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 15 attr
+log compute에 따른 pass rate의 sigmoid 곡선 두 개. 첫째 곡선은 더 높은 천장 A까지 올라갑니다. 둘째 곡선은 천장은 같지만 더 빨리 올라가 B가 더 큼을 보여 줍니다. A, C_mid, R_0이 표시되어 있습니다.
+@@ 16
+=
+@@ 17
+=
+@@ 18
+R_0 시작
+@@ 19
+=
+@@ 20
+=
+@@ 21
+=
+@@ 22
+실선 vs 점선(같은 색): A 같고 B 큼
+@@ 23
+파랑 vs 주황: A(천장)가 다름
+@@ 24
+이 논문이 세상을 보는 렌즈입니다. asymptote A는 같고 exponent B만 다른 두 레시피(실선과 점선)는 결국 같은 곳에서 끝납니다. A가 더 낮은 레시피(두 번째 색)는 아무리 오래 돌려도 따라잡지 못합니다. 이 연구에서 조절해 본 항목 대부분은 B만 움직였습니다.
+@@ 25
+8B 모델로 돌린 ScaleRL run의 첫 50,000 GPU-hour로 만든 fit이 전체 100,000 GPU-hour run의 validation pass rate를 예측했습니다. Scout에서 돌린 50,000 GPU-hour run과 downstream AIME-24 곡선도 같은 모양을 따랐습니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a> 발표된 레시피 네 개를 같은 harness에서 다시 구현해 비교했을 때, fitting으로 얻은 asymptote는 ScaleRL이 A = 0.61로 가장 높았습니다. 다른 레시피들은 속도만이 아니라 A에서도 차이가 났습니다. "모든 레시피가 비슷한 asymptotic performance에 이르는 것은 아니다"라는 것입니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 26 attr
+왼쪽: GPU-hour에 따른 validation pass rate로, 8B 모델은 100,000 GPU-hour까지, Scout은 50,000까지 그렸고, 초반 구간으로 fitting한 sigmoid를 외삽해 함께 보여 줍니다. 오른쪽: 같은 run들의 AIME-24 정확도
+@@ 27
+<a class="src" href="https://arxiv.org/abs/2510.13786">Figure 1, Khatri 2025</a> (a) 100,000 GPU-hour run: fitting 구간을 넘어선 점들이 그 전에 fitting한 곡선 위에 놓입니다. (b) 같은 run들을 AIME-24로 채점한 결과입니다.
+@@ 28 attr
+ScaleRL, GRPO (DeepSeek), DAPO (Qwen-2.5), Magistral, MiniMax-M1 레시피의 compute에 따른 pass rate를 fitting한 sigmoid 곡선. ScaleRL이 가장 높은 asymptote에 도달합니다
+@@ 29
+<a class="src" href="https://arxiv.org/abs/2510.13786">Figure 2, Khatri 2025</a> 레시피 다섯 개를 harness 하나에서 비교했습니다. 곡선들은 기울기만이 아니라 천장에서도 갈립니다. ScaleRL은 A = 0.61에 도달합니다.
+@@ 30
+LLM-RL을 도박이 아니라 예산을 세울 수 있는 대상으로 다룬 첫 논문이며, ICLR 2026에 oral로 채택되었습니다(2026년 4월 25일). <a class="src" href="https://iclr.cc/virtual/2026/oral/10010608">ICLR 2026</a> 이 논문의 negative result는 레시피만큼 쓸모가 있습니다. 2025년의 objective 논문들(<a href="#p-dapo">DAPO</a>, Dr. GRPO, GSPO)은 대부분 B를 두고 다투고 있었다는 것입니다. 시스템 아이디어 두 가지도 표준으로 만들었습니다. 하나는 PipelineRL의 in-flight weight update로, inference engine이 새 weight를 받을 때만 잠깐 멈추고 절반쯤 생성하던 sequence를 그대로 이어 갑니다. <a class="src" href="https://arxiv.org/abs/2509.19128">Piché 2025</a> 다른 하나는 LM head의 FP32 logit으로, 이 논문이 sampler와 trainer의 확률이 어긋나는 원인을 그 layer까지 추적해 밝힌 데서 나왔습니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 31
+저자들이 밝힌 한계는 다음과 같습니다. 예측 대상은 in-distribution validation pass rate이고, held-out test로의 일반화는 충분히 규명되지 않았습니다. 실험은 거의 전부 수학이며, 수학과 코드를 함께 쓴 결과는 예비적이라고 합니다. prompt당 generation 수의 효과는 batch가 2,000 이상일 때만 나타날 수도 있습니다. 그리고 남은 설계 선택이 많은 만큼 ScaleRL이 "최종 결론은 아니다"라고 말합니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a> 모델 두 개, 연구실 한 곳, prompt 한 종류입니다. sigmoid 모양이 agentic multi-turn reward(<a href="#d12">Day 12</a>)에서도 유지되는지는 2026년 10월 기준으로 출판된 답이 없습니다.
+@@ 32
+먼저 Figure 1, Eq. 1, Figure 3(A/B/C<sub>mid</sub> 도식)을 읽습니다. 그다음 Section 3.2를 ablation 하나씩 읽되, A가 움직였는지 B가 움직였는지만 봅니다. Section 4는 레시피를 나열하고, Section 5는 scaling을 확인하는 부분입니다. 특정 ablation을 재현하려는 것이 아니라면 Appendix A.1–A.17은 건너뜁니다. 본문은 약 45분입니다.
+@@ 33
+Q1. fitting한 곡선에서, 저자들이 말하는 "더 좋은 레시피"는 어떤 파라미터를 바꿉니까?
+@@ 34
+B, exponent
+@@ 35
+A, asymptotic pass rate
+@@ 36
+R<sub>0</sub>, 시작점
+@@ 37
+C의 log 밑
+@@ 38
+대부분의 선택은 효율 B만 바꿉니다. 레시피를 결정짓는 선택들(loss 종류, FP32 head, batch와 length)이 천장 A를 움직입니다.
+@@ 39
+Q2. LM head의 logit을 FP32로 바꾸자 어떻게 되었습니까?
+@@ 40
+학습 속도가 두 배가 되었습니다
+@@ 41
+메모리가 절반으로 줄었습니다
+@@ 42
+측정할 만한 변화가 없었습니다
+@@ 43
+asymptote가 약 0.52에서 약 0.61로 올랐습니다
+@@ 44
+layer 하나의 precision을 고친 것이 속도만이 아니라 천장을 움직였습니다.
+@@ 45
+Q3. 왜 power law가 아니라 sigmoid를 fitting합니까?
+@@ 46
+compute가 적을 때 더 안정적으로 fitting되고, 범위가 정해진 pass rate에 맞는 유한한 천장이 있기 때문입니다
+@@ 47
+power law는 GPU에서 fitting할 수 없기 때문입니다
+@@ 48
+pretraining도 sigmoid를 쓰기 때문입니다
+@@ 49
+저자들이 power law를 시도하지 않았기 때문입니다
+@@ 50
+pass rate는 [0, 1] 범위 안에 있습니다. sigmoid는 천장 A를 주고, 초반에 fitting하기에도 더 안정적이었습니다.
+@@ 51
+Khatri, Madaan, Tiwari, Bansal, Duvvuri, Zaheer, Dhillon, Brandfonbrener, Agarwal. The Art of Scaling Reinforcement Learning Compute for LLMs. 2025; ICLR 2026 oral. <a href="https://arxiv.org/abs/2510.13786">arXiv 2510.13786</a> · <a href="https://arxiv.org/html/2510.13786">전문</a> · <a href="https://iclr.cc/virtual/2026/oral/10010608">ICLR 페이지</a>
+@@ 52
+=
+@@ 53
+=
+@@ 54
+=

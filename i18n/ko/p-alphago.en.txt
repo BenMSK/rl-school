@@ -1,0 +1,124 @@
+@@ 1
+<span class="eyebrow">2016 · Silver et al. · Nature 529:484–489</span>
+@@ 2
+AlphaGo: Mastering the game of Go with deep neural networks and tree search
+@@ 3
+Policy and value networks steering Monte Carlo tree search won 99.8% of games against other Go programs and beat the European champion 5–0; its descendant AlphaGo Zero, trained from random play, beat the Lee Sedol version 100–0.
+@@ 4
+Taught in <a href="#d11">Day 11</a> · Read time of the original: ~45 min
+@@ 5
+AlphaGo replaced the random rollouts and hand-written evaluation of earlier Go programs with a policy network that says which moves are worth considering and a value network that says who is winning, making Monte Carlo tree search both narrower and shallower than brute force.
+@@ 6
+Go has more possible games than atoms in the universe, so nobody can check every move. AlphaGo has two helpers: one whispers "only these three moves look sensible", the other looks at the board and says "you are probably winning". It plays many quick imaginary games with those hints and picks the move it tried most. AlphaGo Zero later learned both helpers by playing only against itself.
+@@ 7
+Chess fell in 1997 to deep search plus a hand-crafted evaluation function. Go resisted: a 19×19 board, hundreds of legal moves per position, and no simple formula for who is ahead. Monte Carlo tree search, which evaluates positions by playing random games to the end, had carried programs to strong amateur level, but beating a professional on a full-size board had not been done. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a>
+@@ 8
+Learn the two things search cannot brute-force. A <strong>policy network</strong> p(a|s) cuts the <em>breadth</em> of the search by giving each move a prior. A <strong>value network</strong> v(s) cuts the <em>depth</em>: the search can stop at a leaf and ask who is winning instead of playing out a random game. The networks alone, with no search, already played at the level of the best MCTS programs. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a>
+@@ 9
+<strong>Supervised policy network.</strong> A convolutional network is trained on positions from human expert games to predict the expert's move (Figure 1 shows the pipeline). <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a>
+@@ 10
+<strong>RL policy network.</strong> The same network is improved by self-play with the REINFORCE gradient of <a href="#d7">Day 7</a>: reward +1 for a win, −1 for a loss, at the end only.
+@@ 11
+<strong>Value network.</strong> A second network is regressed onto self-play outcomes, v<sub>θ</sub>(s) ≈ E[z | s].
+@@ 12
+<strong>Search.</strong> Each simulation descends the tree choosing the move with the best value plus an exploration bonus that scales with the prior and shrinks with visits; a new leaf is expanded with the policy's priors, scored by mixing the value network with a fast rollout, and the score is backed up. The most-visited root move is played (Figure 3). <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a>
+@@ 13
+a<sub>t</sub> = argmax<sub>a</sub> [ Q(s<sub>t</sub>,a) + u(s<sub>t</sub>,a) ],  u(s,a) ∝ P(s,a) / (1 + N(s,a))
+@@ 14
+<strong>AlphaGo Zero (2017).</strong> One residual network f<sub>θ</sub>(s) = (p, v), no human data, no rollouts; the search's visit counts π become the policy target and the game outcome z the value target. <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a>
+@@ 15
+loss = (z − v)² − π<sup>T</sup> log p + c‖θ‖²
+@@ 16
+<strong>AlphaZero (2017/2018).</strong> The same algorithm, "starting from random play, and given no domain knowledge except the game rules", for chess and shogi as well as Go. <a class="src" href="https://arxiv.org/abs/1712.01815">Silver 2017</a>
+@@ 17 attr
+AlphaGo architecture: a board position feeds a policy network, which supplies move priors to Monte Carlo tree search, and a value network, which scores leaf positions; the search outputs the move with most visits; self-play outcomes train both networks
+@@ 18
+Board s
+@@ 19
+19×19 planes
+@@ 20
+Policy net p(a|s)
+@@ 21
+SL on experts → RL self-play
+@@ 22
+Value net v(s)
+@@ 23
+regress on outcomes z
+@@ 24
+MCTS
+@@ 25
+select Q + u(P)
+@@ 26
+expand with priors
+@@ 27
+evaluate v + rollout, back up
+@@ 28
+Move
+@@ 29
+most visits
+@@ 30
+priors P
+@@ 31
+leaf value
+@@ 32
+self-play games → outcomes z (AlphaGo Zero: also visit counts π → policy target)
+@@ 33
+The policy network narrows the search; the value network shortens it. Self-play results flow back (dashed) to train both. In AlphaGo Zero the two networks become one with two heads and the rollout is dropped.
+@@ 34
+The 2016 paper reports a 99.8% win rate against other Go programs and a 5–0 win over the European champion Fan Hui, the first defeat of a professional on a full-size board (Figure 4, "Tournament evaluation of AlphaGo"). <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a> Two months after publication AlphaGo beat Lee Sedol 4–1 in Seoul (March 2016), watched by over 200 million people; move 37 of game two had a 1-in-10,000 chance of being played by a human, and the win earned an honorary 9-dan ranking. <a class="src" href="https://deepmind.google/research/breakthroughs/alphago/">DeepMind 2016</a>
+@@ 35
+AlphaGo Zero (Nature 550:354–359, October 2017) learned "solely from self-play" and won "100–0 against the previously published, champion-defeating AlphaGo"; its 3-day run used a 20-block residual network, its 40-day run 40 blocks. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017a</a> It passed AlphaGo Lee after 3 days and AlphaGo Master after 40, on 4 TPUs where AlphaGo Lee had used 48; the Elo chart puts it above 5000 against roughly 4800 for Master. <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a>
+@@ 36
+AlphaZero's preprint claims superhuman chess, shogi and Go "within 24 hours". <a class="src" href="https://arxiv.org/abs/1712.01815">Silver 2017</a> The 2018 evaluation has it overtaking Stockfish after 4 hours, Elmo after 2 and AlphaGo Lee after 30; it won 155 and lost 6 of 1,000 games against Stockfish, won 91.2% against Elmo and 61% against AlphaGo Zero, while searching about 60 thousand positions per second to Stockfish's 60 million, on 4 first-generation TPUs and 44 CPU cores. <a class="src" href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">DeepMind 2018</a>
+@@ 37
+AlphaGo made "deep RL plus search" the template for every later planning system here. MuZero (November 2019) kept the search but learned the model, so rules no longer had to be given (<a href="#p-muzero">the MuZero review</a>). <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> AlphaTensor (2022) and AlphaDev (2023) reused the AlphaZero loop to find faster matrix-multiplication and sorting algorithms, treating algorithm design as a single-player game. <a class="src" href="https://www.nature.com/articles/s41586-022-05172-4">Fawzi 2022</a> <a class="src" href="https://www.nature.com/articles/s41586-023-06004-9">Mankowitz 2023</a> Self-play as an automatic curriculum is the standard answer to "where does the opponent come from" in <a href="#d11">Day 11</a>.
+@@ 38
+The 2016 system was not tabula rasa: it started from human games, used hand-designed features for its fast rollouts, and ran as a distributed system; AlphaGo Zero removed the human data and the rollouts. <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a> All three systems are handed a perfect simulator, the rules of a two-player, zero-sum, perfect-information game; MuZero dropped that assumption. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> Training compute stayed large: the later MuZero board-game runs, which inherit the setup, used 16 TPUs for training and 1000 for self-play. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a>
+@@ 39
+The Nature text is paywalled, but the abstract and figure captions are free: Figure 1 (pipeline), Figure 3 (the four MCTS steps), Figure 4 (tournament); the formulas are in Methods. Then the AlphaGo Zero abstract plus the DeepMind blog for the 3-day and 40-day numbers, and the first two pages and Table 1 of the AlphaZero preprint. About 45 minutes.
+@@ 40
+Q1. What does the value network change about the search?
+@@ 41
+It chooses which move to play at the root
+@@ 42
+It supplies the prior probability of each move
+@@ 43
+It replaces the tree with a single forward pass
+@@ 44
+It lets the search stop at a leaf instead of playing a random game to the end
+@@ 45
+The value network reduces search depth; the policy network's priors reduce breadth.
+@@ 46
+Q2. After how many days of self-play did AlphaGo Zero beat the Lee Sedol version 100–0?
+@@ 47
+3 days
+@@ 48
+40 days
+@@ 49
+24 hours
+@@ 50
+30 hours
+@@ 51
+3 days to pass AlphaGo Lee, 40 to pass Master. The 24-hour and 30-hour figures belong to AlphaZero.
+@@ 52
+Q3. "AlphaGo learned Go without any human data." Which is right?
+@@ 53
+True: all versions started from random play
+@@ 54
+True: the human games were only used for testing
+@@ 55
+False: the 2016 AlphaGo started from expert games; AlphaGo Zero (2017) is the tabula-rasa one
+@@ 56
+False: no version ever used self-play
+@@ 57
+The 2016 pipeline begins with supervised learning on expert positions; learning from "completely random play" arrived with AlphaGo Zero.
+@@ 58
+Silver et al. Mastering the game of Go with deep neural networks and tree search. Nature 529:484–489, 27 Jan 2016. <a href="https://www.nature.com/articles/nature16961">nature.com</a>
+@@ 59
+Silver et al. Mastering the game of Go without human knowledge. Nature 550:354–359, 19 Oct 2017. <a href="https://www.nature.com/articles/nature24270">nature.com</a>; blog: <a href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">AlphaGo Zero: starting from scratch</a>
+@@ 60
+Silver et al. Mastering Chess and Shogi by Self-Play with a General RL Algorithm. 2017. <a href="https://arxiv.org/abs/1712.01815">arXiv 1712.01815</a>; blog: <a href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">AlphaZero (Dec 2018)</a>
+@@ 61
+DeepMind. AlphaGo breakthrough page. <a href="https://deepmind.google/research/breakthroughs/alphago/">deepmind.google</a>
+@@ 62
+Schrittwieser et al. Mastering Atari, Go, chess and shogi by planning with a learned model. 2019. <a href="https://arxiv.org/abs/1911.08265">arXiv 1911.08265</a>

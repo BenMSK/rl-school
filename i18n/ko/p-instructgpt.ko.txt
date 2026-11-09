@@ -1,0 +1,82 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+세 단계(supervised fine-tuning, 사람이 매긴 순위로 학습한 reward model, 그 reward model을 상대로 한 PPO)가 GPT-3를 바꾸어 놓았습니다. 그 결과 1.3B 파라미터 버전이 "파라미터가 100배 적은데도" 원래의 175B GPT-3보다 사람들에게 더 선호되었습니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a>
+@@ 4
+<a href="#d12">Day 12</a>에서 다룸 · 원문 읽는 시간: 약 50분 (본문 기준, 부록까지 읽으면 두 배)
+@@ 5
+사람은 "도움이 되고, 정직하고, 해롭지 않게"를 reward function으로 써낼 수는 없지만, 두 답 가운데 어느 쪽이 나은지는 말할 수 있습니다. InstructGPT는 그 판단을 흉내 내는 신경망을 학습시킨 다음, 출발점 모델에 KL 목줄로 묶어 둔 채 PPO로 언어 모델이 그 신경망에게서 더 높은 점수를 받게 만듭니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a>
+@@ 6
+영어 철자 맞히기 대회의 심사위원을 떠올려 봐요. 이 심사위원은 정답 단어를 알려 주지는 못하지만, 두 번의 시도 가운데 어느 쪽이 더 그럴듯하게 들렸는지는 언제나 말해 줄 수 있어요. 먼저 심사위원의 취향을 따라 하는 로봇을 만들어요. 그다음 그 로봇을 상대로 수천 번 연습하면서, 로봇이 좋아하는 것을 더 많이 해요. 규칙이 하나 있어요. 실력이 느는 건 괜찮지만, 하룻밤 사이에 완전히 다른 아이가 되면 안 돼요. 이 규칙이 바로 KL 목줄이에요.
+@@ 7
+GPT-3는 인터넷 텍스트의 다음 token을 예측했습니다. "6살 아이에게 달 착륙을 설명해 줘"라고 하면 설명을 내놓을 때만큼이나 자주 질문을 더 이어 썼습니다. 논문은 language modelling objective가 사용자가 원하는 것과 <strong>misaligned</strong>되어 있다고 문제를 규정합니다. 모델이 커져도 더 도움이 되지는 않았고, 여전히 사실이 아니거나 유해하거나 쓸모없는 출력을 냈습니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> 사람의 pairwise 비교로 reward를 학습하는 방법은 2017년에 이미 Atari와 시뮬레이션 보행에서 통했고, 이때 feedback은 agent의 상호작용 가운데 1% 미만에만 주어졌습니다. <a class="src" href="https://arxiv.org/abs/1706.03741">Christiano 2017</a> InstructGPT는 이 방법을 175B 파라미터 언어 모델에 적용했습니다.
+@@ 8
+언어 모델을 policy로 봅니다(<a href="#d12">Day 12</a>). state = prompt와 지금까지 나온 token, action = 다음 token이고, reward는 응답이 끝날 때 한 번 주어집니다. 없는 reward function은 사람이 매긴 순위로 학습한 <strong>reward model</strong>로 대신하고, PPO(<a href="#p-ppo">PPO 논문 리뷰</a>)로 이를 최적화합니다. 이때 supervised 출발점에서 멀어지면 penalty를 주어, policy가 reward model이 틀리는 영역으로 흘러가지 못하게 합니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a>
+@@ 9
+<strong>SFT.</strong> 계약직 작업자 약 40명이 약 13k개의 prompt에 대한 demonstration을 작성했습니다. GPT-3를 이 데이터로 일반적인 지도학습 방식으로 fine-tune합니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 10
+<strong>Reward model.</strong> 약 33k개의 prompt에 대해 labeler가 sampling한 출력 K = 4~9개의 순위를 매깁니다. 6B 모델(논문은 reward model로 6B만 씁니다. 175B는 학습이 불안정했습니다)이 scalar r<sub>θ</sub>(x, y)를 다음의 Bradley–Terry loss(Eq. 1)로 학습합니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 11
+=
+@@ 12
+순위 하나에서 C(K,2)개의 쌍이 나옵니다. 그 개수로 나누면 모든 prompt가 같은 가중치를 갖습니다. 손으로 확인해 봅시다. 이긴 쪽 점수가 2.0, 진 쪽이 0.5이면 σ(1.5) = 0.818이고 loss는 0.201입니다. 거꾸로 뒤집으면 σ(−1.5) = 0.182이고 loss는 1.70입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 13
+<strong>PPO.</strong> 약 31k개의 prompt에서 응답을 sampling하고, r<sub>θ</sub>로 점수를 매긴 뒤, PPO로 update합니다. objective(Eq. 2, "PPO-ptx")는 다음과 같습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 14
+=
+@@ 15
+β 항은 고정된 SFT 모델 쪽으로 당기는 token별 <strong>KL penalty</strong>입니다. γ 항은 pretraining loss를 섞어 모델이 범용 능력을 잃지 않게 합니다. 그냥 "PPO"는 γ = 0인 경우입니다. 메모리에는 신경망 네 개가 올라갑니다. policy와 PPO의 value model(학습됨), reference와 reward model(고정됨)입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 16 attr
+세 단계 다이어그램: demonstration을 모아 supervised policy를 학습하고, 비교 데이터를 모아 reward model을 학습하고, PPO로 reward model을 상대로 policy를 최적화합니다
+@@ 17
+<a class="src" href="https://arxiv.org/abs/2203.02155">Figure 2, Ouyang 2022</a> RLHF pipeline의 표준형입니다. 1단계는 사람이 쓴 답으로 하는 지도학습이고, 2단계는 사람이 매긴 순위를 재현하는 모델을 학습하며, 3단계는 그 모델을 상대로 한 RL입니다. RL은 3단계뿐입니다.
+@@ 18
+labeler들은 약 85%(±3%)의 경우에 175B GPT-3보다 175B InstructGPT를 선호했고, 1.3B PPO-ptx 모델조차 175B GPT-3보다 선호했습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a> closed-domain 과제에서 InstructGPT의 hallucination 빈도는 절반 수준이었고(21% 대 41%), 공손하게 답하라고 지시했을 때 toxic한 출력이 약 25% 적었습니다. 하지만 그 지시가 없으면 toxicity 개선은 사라졌고, bias 벤치마크는 나아지지 않았습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a> 그냥 PPO는 일부 공개 NLP 벤치마크에서 성능이 떨어졌습니다("alignment tax"). PPO-ptx는 이 하락을 줄였지만 DROP, SQuADv2, 번역에서는 여전히 GPT-3에 뒤졌습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 19 attr
+1.3B, 6B, 175B 파라미터에서 GPT-3, prompt를 준 GPT-3, SFT, PPO, PPO-ptx가 175B SFT 모델을 상대로 거둔 승률
+@@ 20
+<a class="src" href="https://arxiv.org/abs/2203.02155">Figure 1, Ouyang 2022</a> 각 모델의 출력이 175B SFT 모델의 출력보다 선호된 비율입니다. PPO 곡선은 모든 크기에서 모든 GPT-3 곡선 위에 있으며, "1.3B가 175B를 이긴다"는 주장이 여기서 나옵니다.
+@@ 21
+InstructGPT는 ChatGPT(2022년 11월)의 바탕이 된 레시피이고, 조금씩 바뀐 형태로 이후 대부분의 assistant 모델의 바탕이 되었습니다. 또한 이후 모두가 벗어나려고 애쓴 비용 구조도 정해 놓았습니다. 메모리에 올라가는 큰 모델 네 개와 느린 sampling loop입니다. DPO(2023년 5월)는 reward model과 sampling을 없앴습니다(<a href="#p-dpo">DPO 논문 리뷰</a>). <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a> GRPO(2024–25)는 value model을 없앴고, 수학과 코드에서는 학습된 reward를 verifier로 바꿨습니다(<a href="#p-deepseek-r1">DeepSeek-R1 논문 리뷰</a>). <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a>
+@@ 22
+저자들은 이 모델들이 "완전히 aligned된 것도, 완전히 안전한 것도 아니다"라고 말합니다. 여전히 사실을 지어내고 해로운 지시를 따릅니다. preference는 대부분 영어 사용자인 약 40명의 계약직 작업자에게서 나왔고, 비교의 대부분은 한 사람이 label을 붙였으며, 데이터는 거의 전부 영어입니다. 따라서 "aligned"는 그 집단에 맞춰졌다는 뜻입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a> 이후 연구는 reward model이 체계적으로 실패하는 두 가지 경우를 찾아냈습니다. preference 데이터는 사용자에게 동의하는 답을 선호하고(sycophancy), RLHF에서 reward가 오르는 것은 대체로 응답 길이를 따라갑니다. <a class="src" href="https://arxiv.org/abs/2310.13548">Sharma 2023</a> <a class="src" href="https://arxiv.org/abs/2310.03716">Singhal 2023</a>
+@@ 23
+abstract, Figure 1, Figure 2를 읽고, 이어서 Section 3.5(세 모델과 Eq. 1–2)와 Section 4.1을 읽습니다. Section 5.3(Limitations)은 짧고 솔직합니다. Section 3.4(labeler 모집)와 부록은 RLHF를 직접 돌릴 계획이 없다면 건너뜁니다. 약 35분입니다.
+@@ 24
+Q1. 세 단계 가운데 강화학습은 어느 것입니까?
+@@ 25
+1단계, supervised fine-tuning
+@@ 26
+3단계, reward model을 상대로 한 PPO
+@@ 27
+2단계, reward model 학습
+@@ 28
+세 단계 모두
+@@ 29
+1단계와 2단계는 지도학습입니다. policy에서 sampling하고 reward를 최적화하는 것은 3단계뿐입니다.
+@@ 30
+Q2. 175B policy에 쓰인 reward model의 크기는 얼마였습니까?
+@@ 31
+논문은 6B reward model만 씁니다. 175B reward model은 학습이 불안정했습니다.
+@@ 32
+Q3. PPO objective의 β 항은 무슨 일을 합니까?
+@@ 33
+SFT 모델과의 token별 divergence에 penalty를 줌
+@@ 34
+긴 답에 reward를 줌
+@@ 35
+pretraining loss를 섞음
+@@ 36
+learning rate의 크기를 조절함
+@@ 37
+β는 π<sup>SFT</sup> 쪽으로 당기는 KL penalty의 가중치이고, γ는 pretraining을 섞는 항입니다.
+@@ 38
+=
+@@ 39
+=
+@@ 40
+=
+@@ 41
+=

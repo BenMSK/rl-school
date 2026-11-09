@@ -1,0 +1,82 @@
+@@ 1
+<span class="eyebrow">2022 · Ouyang et al. · OpenAI (NeurIPS 2022)</span>
+@@ 2
+InstructGPT: training language models to follow instructions with human feedback
+@@ 3
+Three steps (supervised fine-tuning, a reward model trained on human rankings, PPO against that reward model) turned GPT-3 into a model whose 1.3B-parameter version humans preferred over the original 175B GPT-3, "despite having 100x fewer parameters". <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a>
+@@ 4
+Taught in <a href="#d12">Day 12</a> · Read time of the original: ~50 min (the main text; the appendices double it)
+@@ 5
+Humans cannot write a reward function for "helpful, honest and harmless", but they can say which of two answers is better; InstructGPT trains a network to imitate those judgements and then uses PPO, with a KL leash to the starting model, to make the language model score higher on it. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a>
+@@ 6
+Picture a spelling-bee judge who cannot tell you the right word but can always say which of two attempts sounded better. First you build a robot that copies the judge's taste. Then you practise against the robot thousands of times, doing more of what it likes. One rule: you may improve, but you may not turn into a completely different kid overnight. That rule is the KL leash.
+@@ 7
+GPT-3 predicted the next token of internet text. Asked "Explain the moon landing to a 6-year-old", it was as likely to produce more questions as an explanation. The paper's framing is that the language-modelling objective is <strong>misaligned</strong> with what users want: bigger models did not become more helpful, and they still produced untruthful, toxic or unhelpful output. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> Learning a reward from pairwise human comparisons had already worked for Atari and simulated locomotion in 2017, using feedback on less than 1% of the agent's interactions. <a class="src" href="https://arxiv.org/abs/1706.03741">Christiano 2017</a> InstructGPT applied it to a 175B-parameter language model.
+@@ 8
+Treat the language model as a policy (<a href="#d12">Day 12</a>): state = prompt plus tokens so far, action = next token, one reward at the end of the response. Replace the missing reward function with a <strong>reward model</strong> learned from human rankings, and optimise it with PPO (<a href="#p-ppo">the PPO review</a>) while penalising distance from the supervised starting point so the policy cannot wander into regions where the reward model is wrong. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a>
+@@ 9
+<strong>SFT.</strong> About 40 contractors wrote demonstrations for roughly 13k prompts; GPT-3 is fine-tuned on them with ordinary supervised learning. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 10
+<strong>Reward model.</strong> For about 33k prompts, labelers rank K = 4 to 9 sampled outputs. A 6B model (the paper only ever uses 6B reward models; the 175B one trained unstably) learns a scalar r<sub>θ</sub>(x, y) with the Bradley–Terry loss (Eq. 1): <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 11
+loss(θ) = −1/C(K,2) · E<sub>(x,y<sub>w</sub>,y<sub>l</sub>)</sub>[ log σ( r<sub>θ</sub>(x, y<sub>w</sub>) − r<sub>θ</sub>(x, y<sub>l</sub>) ) ]
+@@ 12
+Each ranking yields C(K,2) pairs; dividing by that count gives every prompt equal weight. Check it by hand: winner scored 2.0, loser 0.5 gives σ(1.5) = 0.818 and loss 0.201; backwards, σ(−1.5) = 0.182 and loss 1.70. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 13
+<strong>PPO.</strong> On about 31k prompts, sample a response, score it with r<sub>θ</sub>, and update with PPO. The objective (Eq. 2, "PPO-ptx"): <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 14
+objective(φ) = E<sub>(x,y)~π<sub>φ</sub></sub>[ r<sub>θ</sub>(x,y) − β·log( π<sub>φ</sub>(y|x) / π<sup>SFT</sup>(y|x) ) ] + γ·E<sub>x~pretrain</sub>[ log π<sub>φ</sub>(x) ]
+@@ 15
+The β term is a per-token <strong>KL penalty</strong> toward the frozen SFT model. The γ term mixes in pretraining loss so the model keeps its general skills; plain "PPO" has γ = 0. Four networks live in memory: the policy and PPO's value model (trained), the reference and the reward model (frozen). <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 16 attr
+Three-step diagram: collect demonstrations and train a supervised policy; collect comparison data and train a reward model; optimise the policy against the reward model with PPO
+@@ 17
+<a class="src" href="https://arxiv.org/abs/2203.02155">Figure 2, Ouyang 2022</a> The canonical RLHF pipeline. Step 1 is supervised learning on human-written answers; step 2 trains a model to reproduce human rankings; step 3 is RL against that model. Only step 3 is RL.
+@@ 18
+Labelers preferred the 175B InstructGPT over 175B GPT-3 about 85% of the time (±3%), and preferred even the 1.3B PPO-ptx model over the 175B GPT-3. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a> On closed-domain tasks InstructGPT hallucinated about half as often (21% vs 41%), and produced about 25% fewer toxic outputs when told to be respectful; the toxicity gain vanished without that instruction and bias benchmarks did not improve. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a> Plain PPO regressed on some public NLP benchmarks (the "alignment tax"); PPO-ptx reduced the regression but still lagged GPT-3 on DROP, SQuADv2 and translation. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 19 attr
+Win rate against the 175B SFT model for GPT-3, GPT-3 prompted, SFT, PPO and PPO-ptx at 1.3B, 6B and 175B parameters
+@@ 20
+<a class="src" href="https://arxiv.org/abs/2203.02155">Figure 1, Ouyang 2022</a> How often each model's output was preferred over the 175B SFT model. The PPO curves sit above every GPT-3 curve at every size, which is where the "1.3B beats 175B" claim comes from.
+@@ 21
+InstructGPT is the recipe behind ChatGPT (November 2022) and, with small changes, behind most assistant models since. It also set the cost structure everyone then tried to escape: four large models in memory and a slow sampling loop. DPO (May 2023) removed the reward model and the sampling (<a href="#p-dpo">the DPO review</a>). <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a> GRPO (2024–25) removed the value model and, for maths and code, replaced the learned reward with a verifier (<a href="#p-deepseek-r1">the DeepSeek-R1 review</a>). <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a>
+@@ 22
+The authors say the models "are neither fully aligned nor fully safe": they still fabricate facts and follow harmful instructions. The preferences come from about 40 mostly English-speaking contractors, most comparisons were labelled by a single person, and the data is almost all English, so "aligned" means aligned to that group. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a> Later work found two systematic reward-model failures: preference data favours answers that agree with the user (sycophancy), and reward gains in RLHF mostly track response length. <a class="src" href="https://arxiv.org/abs/2310.13548">Sharma 2023</a> <a class="src" href="https://arxiv.org/abs/2310.03716">Singhal 2023</a>
+@@ 23
+Read the abstract, Figure 1 and Figure 2, then Section 3.5 (the three models and Eqs. 1–2) and Section 4.1. Section 5.3 (Limitations) is short and honest. Skip Section 3.4 (labeler recruitment) and the appendices unless you plan to run RLHF yourself. About 35 minutes.
+@@ 24
+Q1. Which of the three steps is reinforcement learning?
+@@ 25
+Step 1, supervised fine-tuning
+@@ 26
+Step 3, PPO against the reward model
+@@ 27
+Step 2, training the reward model
+@@ 28
+All three
+@@ 29
+Steps 1 and 2 are supervised learning. Only step 3 samples from the policy and optimises a reward.
+@@ 30
+Q2. How large was the reward model used for the 175B policy?
+@@ 31
+The paper uses only 6B reward models; the 175B one trained unstably.
+@@ 32
+Q3. What does the β term in the PPO objective do?
+@@ 33
+Penalises per-token divergence from the SFT model
+@@ 34
+Rewards longer answers
+@@ 35
+Mixes in pretraining loss
+@@ 36
+Scales the learning rate
+@@ 37
+β weights the KL penalty toward π<sup>SFT</sup>; γ is the pretraining-mix term.
+@@ 38
+Ouyang, Wu, Jiang, Almeida, Wainwright, Mishkin, Zhang, Agarwal, Slama, Ray, Schulman, Hilton, Kelton, Miller, Simens, Askell, Welinder, Christiano, Leike, Lowe. Training language models to follow instructions with human feedback. 2022. <a href="https://arxiv.org/abs/2203.02155">arXiv 2203.02155</a> · <a href="https://ar5iv.labs.arxiv.org/html/2203.02155">full text</a>
+@@ 39
+Christiano, Leike, Brown, Martic, Legg, Amodei. Deep Reinforcement Learning from Human Preferences. 2017. <a href="https://arxiv.org/abs/1706.03741">arXiv 1706.03741</a>
+@@ 40
+Rafailov et al. Direct Preference Optimization. 2023. <a href="https://arxiv.org/abs/2305.18290">arXiv 2305.18290</a>
+@@ 41
+Sharma et al. Towards Understanding Sycophancy in Language Models. 2023. <a href="https://arxiv.org/abs/2310.13548">arXiv 2310.13548</a>; Singhal et al. A Long Way to Go: Investigating Length Correlations in RLHF. 2023. <a href="https://arxiv.org/abs/2310.03716">arXiv 2310.03716</a>

@@ -1,0 +1,114 @@
+@@ 1
+<span class="eyebrow">2018 · Haarnoja et al. · ICML 2018</span>
+@@ 2
+SAC: Soft actor-critic, off-policy maximum-entropy RL
+@@ 3
+An off-policy actor-critic that is paid for entropy as well as reward: one hyperparameter set learned six MuJoCo tasks on which DDPG made no progress on three, and the December 2018 version taught a real quadruped to walk in about 2 hours.
+@@ 4
+Taught in <a href="#d8">Day 8</a> · Read time of the original: ~40 min
+@@ 5
+SAC trains a stochastic policy to maximise reward plus α times its own entropy, using two Q-critics (the smaller one sets the target), a replay buffer and, in the follow-up paper, an automatically tuned α, which gives off-policy sample efficiency with the seed-to-seed stability DDPG lacked.
+@@ 6
+A treasure hunter gets points for treasure <em>and</em> for trying new paths. The dial α says how much a new path is worth: if she wanders too much it turns down, if she always takes the same route it turns up. Two judges score her routes and she believes the stricter one, so she never gets over-confident.
+@@ 7
+On-policy methods like <a href="#p-ppo">PPO</a> are stable but discard their data after a few epochs, so every update costs fresh environment steps. Off-policy DDPG reuses a replay buffer but is brittle: in SAC's benchmark "DDPG fails to make any progress on Ant-v1, Humanoid-v1, and Humanoid (rllab)", three of six tasks, and a deterministic policy with a single critic "exhibits very high variability across seeds". <a class="src" href="https://ar5iv.labs.arxiv.org/html/1801.01290">Haarnoja 2018</a>
+@@ 8
+Put entropy <em>into the reward</em>, not just into the loss. The agent is paid for being random, with a <strong>temperature</strong> α that "determines the relative importance of the entropy term against the reward". <a class="src" href="https://ar5iv.labs.arxiv.org/html/1801.01290">Haarnoja 2018</a> Because entropy is part of the return, Q and V change too (the "soft" Bellman equation), so the critic itself prefers states where many actions remain good.
+@@ 9
+<strong>Objective.</strong> Maximise expected reward plus entropy, H(π(·|s)) = E[−log π(a|s)]. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1801.01290">Haarnoja 2018</a>
+@@ 10
+<strong>Critic update.</strong> Sample a replay batch, sample ã' from the current policy at s', and regress both critics onto a target built from the smaller target-critic minus the entropy term. Two Q-functions "significantly speed up training, especially on harder tasks". <a class="src" href="https://ar5iv.labs.arxiv.org/html/1801.01290">Haarnoja 2018</a>
+@@ 11
+y = r + γ(1−d) ( min<sub>j=1,2</sub> Q<sub>targ,j</sub>(s', ã') − α log π(ã'|s') ),  ã' ~ π(·|s')
+@@ 12
+<strong>Actor update.</strong> Write the action as a function of noise, ã = tanh(μ(s) + σ(s) ⊙ ξ), ξ ~ N(0, I), so the gradient flows from the critic into the policy; maximise E[ min<sub>j</sub> Q<sub>j</sub>(s, ã) − α log π(ã|s) ]. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1801.01290">Haarnoja 2018</a>
+@@ 13
+<strong>Automatic temperature</strong> (the 2018-12 paper). Constrain entropy to be at least H̄ = −dim(A) and descend on a dual loss. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.05905">Haarnoja 2018b</a>
+@@ 14
+J(α) = E<sub>a~π</sub>[ −α log π(a|s) − α H̄ ]
+@@ 15
+Check by hand: HalfCheetah has 6 action dimensions, so H̄ = −6. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.05905">Haarnoja 2018b</a> If current entropy is −4, ∂J/∂α = (−4) − (−6) = +2 and descent lowers α; at −8 the sign flips and α rises.
+@@ 16
+<strong>Housekeeping.</strong> Polyak targets with τ = 0.005, one gradient step per environment step, replay 10<sup>6</sup>, batch 256, two hidden layers of 256 ReLU units, Adam 3×10<sup>−4</sup>, γ = 0.99. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.05905">Haarnoja 2018b</a>
+@@ 17 attr
+SAC data flow: the actor samples actions into the environment, transitions go to a replay buffer, batches update two critics against Polyak-averaged target critics, the actor is updated through the critics, and the temperature alpha is updated from the entropy gap
+@@ 18
+Actor π_θ(a|s)
+@@ 19
+μ, log σ → tanh
+@@ 20
+Replay buffer
+@@ 21
+Critic Q_φ1
+@@ 22
+Critic Q_φ2
+@@ 23
+Targets
+@@ 24
+Polyak τ=0.005
+@@ 25
+Temperature α
+@@ 26
+target H̄ = −dim(A)
+@@ 27
+batch 256
+@@ 28
+∇ min_j Q_j(s,ã) − α log π
+@@ 29
+α in target
+@@ 30
+The actor acts, transitions land in replay, two critics learn against slow target copies, and the actor's gradient (dashed) comes back through the critics. α is a learned scalar feeding both the critic target and the actor loss.
+@@ 31 attr
+Six learning curves (Hopper, Walker2d, HalfCheetah, Ant, Humanoid-v1, Humanoid rllab) comparing SAC in yellow with DDPG, PPO, SQL and TD3 over training steps; SAC is near the top in every panel and the only method that learns the two Humanoid tasks
+@@ 32
+<a class="src" href="https://arxiv.org/abs/1801.01290">Figure 1, Haarnoja 2018</a> Training curves on six MuJoCo tasks, five seeds each. SAC (yellow) "performs consistently across all tasks"; DDPG is flat on Ant and both Humanoids.
+@@ 33
+The first paper trained "five different instances of each algorithm with different random seeds" on Hopper, Walker2d, HalfCheetah, Ant, Humanoid-v1 and Humanoid (rllab). <a class="src" href="https://ar5iv.labs.arxiv.org/html/1801.01290">Haarnoja 2018</a> Its one tuned knob was a per-task reward scale (5 for the first four, 20 for Humanoid-v1, 10 for Humanoid rllab); Figure 3 shows SAC "is particularly sensitive to the scaling of the reward signal". <a class="src" href="https://ar5iv.labs.arxiv.org/html/1801.01290">Haarnoja 2018</a> The December follow-up replaced that knob with the automatic temperature and dropped the separate state-value network after finding it "unnecessary". <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.05905">Haarnoja 2018b</a>
+@@ 34
+Then it left the simulator. A Minitaur quadruped "successfully learns to walk from 160k environment steps, or approximately 400 episodes", about 2 hours of real-world training, and the gait generalised to slopes, steps and obstacles it never saw; a three-finger hand learned to rotate a valve in about 3 hours from the joint angle and in 20 hours (300k steps) from 32×32 pixels. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.05905">Haarnoja 2018b</a>
+@@ 35
+SAC became the default for continuous control whenever samples are expensive: one gradient step per environment step means a robot is trained at the rate it moves, which is why it walked a real quadruped in 2 hours in 2018. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.05905">Haarnoja 2018b</a> Seven years later the same recipe, sped up as FastSAC and FastTD3, trained sim-to-real humanoid locomotion in "just 15 minutes with a single RTX 4090 GPU". <a class="src" href="https://arxiv.org/abs/2512.01996">Seo 2025</a> See <a href="#d8">Day 8</a> for when to pick SAC over PPO.
+@@ 36
+As published, SAC is continuous-action only. Its one-step-per-sample loop does not parallelise like PPO's rollout workers (Spinning Up notes it "does not support parallelization"), so with cheap simulators PPO often wins on wall-clock. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/sac.html">Achiam 2018</a> The twin-critic minimum, inherited from TD3, is a deliberate pessimistic bias. <a class="src" href="https://arxiv.org/abs/1802.09477">Fujimoto 2018</a> And the first version's reward-scale sensitivity is fixed only by the automatic α of the second paper. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1812.05905">Haarnoja 2018b</a>
+@@ 37
+Section 3.2 for Equation 1, Section 4.2 for the three updates and Algorithm 1, Figures 1–3, Appendix D for hyperparameters; skip the proofs in Appendix B. Then in arXiv 1812.05905 read only Section 5 (Equations 17–18) and Section 7 (the robots). About 40 minutes for both.
+@@ 38
+Q1. In SAC, what does the temperature α control?
+@@ 39
+The discount on future rewards
+@@ 40
+The step size of the actor's optimiser
+@@ 41
+How much entropy is worth relative to reward
+@@ 42
+How fast the target critics track the critics
+@@ 43
+α multiplies the entropy term in the objective; Polyak τ handles the target critics.
+@@ 44
+Q2. With automatic temperature, what is the entropy target for HalfCheetah, whose action has 6 dimensions?
+@@ 45
+ln 6
+@@ 46
+The target is −dim(A) = −6. Entropy above it lowers α; below it raises α.
+@@ 47
+Q3. How does SAC's entropy term differ from PPO's entropy bonus?
+@@ 48
+It does not: both add entropy to the policy loss as a regulariser
+@@ 49
+SAC puts entropy inside the reward, so Q and V themselves change
+@@ 50
+SAC adds Gaussian noise at test time instead
+@@ 51
+SAC uses entropy to replace the discount factor
+@@ 52
+SAC's return includes α H(π) at every step, giving the soft Bellman equation; PPO's c₂ term only regularises the policy update.
+@@ 53
+Haarnoja, Zhou, Abbeel, Levine. Soft Actor-Critic: Off-Policy Maximum Entropy Deep RL with a Stochastic Actor. ICML 2018. <a href="https://arxiv.org/abs/1801.01290">arXiv 1801.01290</a>
+@@ 54
+Haarnoja et al. Soft Actor-Critic Algorithms and Applications. 2018 (v2 Jan 2019). <a href="https://arxiv.org/abs/1812.05905">arXiv 1812.05905</a>
+@@ 55
+Fujimoto, van Hoof, Meger. Addressing Function Approximation Error in Actor-Critic Methods (TD3). ICML 2018. <a href="https://arxiv.org/abs/1802.09477">arXiv 1802.09477</a>
+@@ 56
+Achiam. Spinning Up: Soft Actor-Critic. OpenAI, 2018. <a href="https://spinningup.openai.com/en/latest/algorithms/sac.html">spinningup.openai.com</a>
+@@ 57
+Seo et al. Learning Sim-to-Real Humanoid Locomotion in 15 Minutes. 2025. <a href="https://arxiv.org/abs/2512.01996">arXiv 2512.01996</a>

@@ -1,0 +1,120 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+실제 return이 떨어질 수 없다는 증명이 딸린 policy update를 근사해 알고리즘으로 만들었습니다. 제약 없는 natural gradient가 서 있는 것밖에 배우지 못한 시뮬레이션에서 이 알고리즘은 헤엄치고, 뛰고, 걷는 법을 학습했습니다.
+@@ 4
+<a href="#d8">Day 8</a>에서 다룸 · 원문 읽는 시간: 약 2시간(appendix 포함 16쪽)
+@@ 5
+surrogate objective, 즉 이전 policy의 advantage에 새 policy와 이전 policy의 확률 비율로 가중치를 다시 준 값을 최대화합니다. 단, 새 policy와 이전 policy 사이의 평균 KL divergence가 δ = 0.01 아래에 머물러야 한다는 제약을 둡니다. 이론에 따르면 이렇게 하면 monotonic improvement가 보장됩니다. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 6
+자전거를 배울 때는 몸을 조금씩만 기울여요. 한 번에 너무 많이 기울이면 넘어지고, 넘어진 자리에서 다시 시작해야 해요. 그 자리는 처음 출발한 곳보다 더 나쁜 곳이에요. TRPO는 컴퓨터에게 주는 규칙이에요. "연습할 때마다, 하려던 행동을 정해진 작은 양보다 많이 바꾸지 마"라는 규칙이고, 그 양이 왜 안전한지 알려 주는 수학도 조금 딸려 있어요.
+@@ 7
+policy gradient는 국소적인 방향일 뿐입니다. step을 너무 크게 밟으면 policy가 바뀌고, policy가 방문하는 state가 바뀌고, 다음 batch의 데이터는 더 나쁜 policy에서 나옵니다. 이 고리는 한번 무너지면 회복하지 못할 수 있습니다. 나중에 PPO 논문이 이를 측정했습니다. MuJoCo task 일곱 개에서 제약 없는 surrogate는 random이 0이고 가장 좋은 run이 1인 척도로 −0.39점을 받았습니다. HalfCheetah에서 random보다 나쁜 결과로 끝났기 때문입니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> step size는 한 번 정해 두고 쓸 수 있는 하이퍼파라미터도 아닙니다. 같은 α가 어떤 파라미터에는 너무 크고 다른 파라미터에는 너무 작습니다. natural gradient는 기하 구조는 바로잡지만 step 길이는 정해 주지 못합니다. TRPO 자체 실험에서도 trust region 없는 natural gradient는 hopping도 walking도 만들어 내지 못했습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 8
+policy가 얼마나 바뀔 수 있는지에 한도를 둡니다. 이때 변화는 파라미터가 아니라 행동(action 분포 사이의 KL divergence)으로 잽니다. Theorem 1은 새 policy의 return에 대한 lower bound를 줍니다. surrogate의 개선분에서 penalty C · D<sub>KL</sub><sup>max</sup>(π, π̃)를 뺀 값이며, C = 4εγ/(1−γ)<sup>2</sup>이고 ε은 advantage 크기의 최댓값입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a> 매 step마다 이 bound를 최대화하면 실제 return은 줄어들 수 없습니다. 이론에서 나온 penalty 계수는 step을 매우 작게 만들기 때문에, 실용 알고리즘은 penalty를 <em>평균</em> KL에 대한 hard constraint로 바꾸고 그 반경을 δ로 둡니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 9
+현재 policy π<sub>θk</sub>로 trajectory를 모읍니다("single path" 방식입니다. "vine"은 방문한 state에서 추가 rollout을 가지 쳐 냅니다). advantage A를 추정합니다.
+@@ 10
+surrogate와 constraint를 세웁니다:
+@@ 11
+최대화  L(θ) = E<sub>s,a∼π<sub>θk</sub></sub>[ π<sub>θ</sub>(a|s) / π<sub>θk</sub>(a|s) · A(s,a) ]   제약 조건  D̄<sub>KL</sub>(θ<sub>k</sub> ‖ θ) ≤ δ
+@@ 12
+근사합니다: L ≈ g<sup>T</sup>(θ − θ<sub>k</sub>), D̄<sub>KL</sub> ≈ ½ (θ − θ<sub>k</sub>)<sup>T</sup> H (θ − θ<sub>k</sub>). 여기서 H는 Fisher information matrix입니다. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Achiam 2018</a>
+@@ 13
+H의 역행렬은 절대 구하지 않습니다. 데이터의 10%로 계산한 Fisher-vector product를 써서 conjugate gradient를 10번 반복해 Hx = g를 풉니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 14
+trust region의 가장자리까지 나아갑니다:
+@@ 15
+=
+@@ 16
+Backtracking line search: 측정한 KL이 δ 이하가 되고 surrogate가 실제로 개선될 때까지 step을 일정 비율로 줄입니다. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Achiam 2018</a>
+@@ 17
+계산을 확인해 봅시다. δ = 0.01이고 x<sup>T</sup>Hx = 4이면 x 방향의 step 크기는 sqrt(0.02/4) = sqrt(0.005) ≈ 0.0707입니다. 실제로 나온 KL이 0.013이라면 0.8 × 0.0707로, 그다음에는 0.64 × 0.0707로, KL ≤ 0.01이 될 때까지 backtrack합니다(위 공식으로 RL School이 직접 계산한 값).
+@@ 18 attr
+TRPO 파이프라인, 왼쪽에서 오른쪽으로: 이전 policy로 돌린 rollout에서 advantage와 policy gradient g를 얻습니다. conjugate gradient 상자가 Fisher vector product로 H x = g를 풉니다. step은 trust region 반경 delta에 맞춰 크기를 조정합니다. line search는 KL constraint가 만족되고 surrogate가 개선될 때까지 step을 줄입니다. 새 파라미터는 다시 rollout으로 돌아갑니다
+@@ 19
+=
+@@ 20
+=
+@@ 21
+=
+@@ 22
+(surrogate L의)
+@@ 23
+Hx = g 풀기
+@@ 24
+conjugate gradient, 10회
+@@ 25
+step 조정
+@@ 26
+=
+@@ 27
+=
+@@ 28
+=
+@@ 29
+θ<tspan baseline-shift="sub" font-size="10">k+1</tspan>은 KL ≤ δ = 0.01이고 L이 개선될 때만 채택, 아니면 줄여서 재시도
+@@ 30
+TRPO: 한 iteration, H를 만들지 않는 second-order step
+@@ 31
+H는 batch 10%의 Fisher-vector product로만 다룸
+@@ 32
+제약 대상은 파라미터 거리가 아니라 행동(action 분포의 KL)
+@@ 33
+Section 6의 실용 알고리즘입니다. 비용이 큰 부분은 conjugate gradient로 푸는 단계이며, PPO는 바로 이것을 없애려고 만들어졌습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 34
+MuJoCo의 locomotion: swimmer, hopper, walker이며 "모든 실험에서 δ = 0.01"을 썼습니다. Figure 4는 single-path TRPO와 vine TRPO를 natural gradient, CEM, CMA와 비교하며, 값은 "알고리즘마다 random initialization을 달리한 다섯 번의 run을 평균한" 것입니다. caption은 hopper와 walker에서 "−1점은 전진 속도가 전혀 없어도 얻을 수 있으며, 이는 걷지는 못하고 균형 잡고 서 있는 것만 학습한 policy를 뜻한다"고 경고하는데, 비교 대상들이 바로 그 자리에 머물렀습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a> 픽셀 입력 Atari: 게임 7개에 파라미터 33,500개의 convolutional policy를 썼습니다. TRPO는 "일부 게임에서만 기존 방법을 앞섰지만" "꾸준히 준수한 점수를 냈고", Table 1에서 Q*bert(vine)와 Enduro(single path)는 DQN을 이겼습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a>
+@@ 35 attr
+swimmer, hopper, walker의 학습 곡선: single-path TRPO, vine TRPO, natural gradient, CEM, CMA의 iteration에 따른 total reward를 다섯 번의 run으로 평균한 것. TRPO 곡선은 올라가고 나머지는 가만히 서 있을 때의 점수 근처에 머뭅니다
+@@ 36
+<a class="src" href="https://arxiv.org/abs/1502.05477">Figure 4, Schulman 2015</a> locomotion 학습 곡선으로, 각각 다섯 번의 run입니다. TRPO의 두 변형은 움직이는 법을 학습합니다. natural gradient, CEM, CMA는 hopper와 walker에서 "균형 잡고 서 있기" 점수인 −1 근처에서 정체합니다.
+@@ 37
+TRPO는 "step을 얼마나 크게?"라는 질문을 튜닝 문제에서 의미가 있는 제약 조건으로 바꾸었고, 파라미터가 수만 개인 신경망 policy에서도 작동했습니다. 직계 후손은 PPO(2017)로, PPO가 내건 목표는 "first-order optimization만 쓰면서 TRPO의 data efficiency와 안정적인 성능을 얻는 것"입니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> 행동 변화를 KL로 제한한다는 아이디어는 기준 모델에서 출발해 policy를 fine-tuning하는 곳마다 다시 등장합니다. InstructGPT의 RLHF는 언어 모델이 출발점 가까이에 머물도록 "token마다 SFT 모델로부터의 per-token KL penalty"를 더합니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> 이 제약을 무엇이 대체했는지는 <a href="#p-ppo">PPO 논문 리뷰</a>에서 다룹니다.
+@@ 38
+이론은 state 전체에 걸친 <em>최대</em> KL에 한도를 두지만, 알고리즘은 <em>평균</em>을 제약하며, 저자들도 이 점을 밝힙니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a> update마다 Fisher-vector product를 쓰는 conjugate gradient 풀이가 필요하고, 이 방법은 "noise가 들어가는 아키텍처(dropout 등)나 parameter sharing(policy와 value function 사이, 또는 auxiliary task와의 공유)이 있는 아키텍처와 호환되지 않는다"고 합니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> Atari에서는 저자들이 "시간 제약 때문에 오차 통계를 얻지 못했다"고 밝힙니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1502.05477">Schulman 2015</a> 재현성 문제는 나중에 발목을 잡았습니다. Henderson et al.은 HalfCheetah에서 똑같은 TRPO run 10개를 다섯 개씩 두 그룹으로 나누었는데, random seed만 달랐는데도 두 그룹이 유의하게 달랐습니다(p = 0.0016). <a class="src" href="https://arxiv.org/abs/1709.06560">Henderson 2018</a>
+@@ 39
+Section 1–2에서 표기법을 익힙니다(15분). Section 3에서 Theorem 1과 bound를 봅니다. 정리의 진술만 읽고, Appendix A의 증명은 처음에는 건너뜁니다(20분). Section 4에서 penalty가 constraint로 바뀌는 과정을, Section 6에서 실제로 구현할 알고리즘을 읽습니다(30분). Section 8.1은 Figure 4와 함께 봅니다(15분). 그다음 Spinning Up의 TRPO 페이지에서 conjugate gradient와 line search의 pseudocode를 확인합니다. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Achiam 2018</a> Fisher-vector product 기법을 구현해야 한다면 Appendix C에 있습니다.
+@@ 40
+Q1. 논문은 trust region 반경 δ로 어떤 값을 썼습니까?
+@@ 41
+모든 실험에서 0.01
+@@ 42
+task마다 튜닝했습니다
+@@ 43
+"모든 실험에서 δ = 0.01을 썼다." 0.2는 PPO의 clip ε이고, 0.95는 GAE의 λ입니다.
+@@ 44
+Q2. "TRPO는 Fisher matrix H의 역행렬을 구한다." 실제로는 무엇을 합니까?
+@@ 45
+H를 명시적으로 만든 뒤 LU decomposition으로 역행렬을 구합니다
+@@ 46
+H를 무시하고 일반 gradient를 씁니다
+@@ 47
+H를 만들지 않고, Hessian-vector product를 써서 conjugate gradient로 Hx = g를 풉니다
+@@ 48
+H를 단위행렬로 근사합니다
+@@ 49
+Fisher-vector product를 10% subsample에서 계산해 CG를 10번 반복합니다. 파라미터가 많은 네트워크에서는 H를 만드는 것 자체가 불가능합니다.
+@@ 50
+Q3. TRPO에서는 이론과 실제가 다릅니다. 어떻게 다릅니까?
+@@ 51
+이론은 clipped ratio를 쓰고, 알고리즘은 KL을 씁니다
+@@ 52
+이론은 state 전체에 걸친 최대 KL을 penalty로 제한하고, 알고리즘은 평균 KL을 hard radius로 제약합니다
+@@ 53
+이론은 discrete action을 요구합니다
+@@ 54
+차이가 없습니다
+@@ 55
+Theorem 1에서 나온 penalty 계수는 step을 아주 작게 만듭니다. 그래서 저자들은 이를 constraint로 바꾸고, state별 max도 sample로 추정할 수 있는 average로 바꿉니다.
+@@ 56
+Schulman, J., Levine, S., Moritz, P., Jordan, M. I. &amp; Abbeel, P. (2015). Trust Region Policy Optimization. ICML 2015. <a href="https://arxiv.org/abs/1502.05477">arXiv:1502.05477</a>; 전문 <a href="https://ar5iv.labs.arxiv.org/html/1502.05477">ar5iv</a>.
+@@ 57
+=
+@@ 58
+=
+@@ 59
+=
+@@ 60
+=

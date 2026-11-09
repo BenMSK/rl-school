@@ -1,0 +1,358 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 10</span>
+@@ 2
+Offline RL and generative policies
+@@ 3
+After today you can explain why learning from a fixed dataset breaks ordinary Q-learning, what conservatism (CQL, IQL) does about it, how Decision Transformer and diffusion or flow policies turn control into sequence modelling and generation, and when offline beats online.
+@@ 4
+About 90 min · Needs Day 9
+@@ 5
+Every method so far could try things. Offline RL cannot: it gets a log of someone else's behaviour and has to produce a better policy without a single new interaction. The Bellman max then asks about actions the log never contains, and a network's guesses for those actions are exactly the ones the max will pick. Every working offline method either refuses to trust unseen actions (CQL, IQL) or stops asking the question altogether and treats control as generating plausible, high-return trajectories (Decision Transformer, diffusion and flow policies).
+@@ 6
+1. The offline setting: a log, and no second chances
+@@ 7
+In <strong>offline RL</strong> (older name: batch RL) you are handed a fixed dataset D of transitions (s, a, r, s') that some <strong>behaviour policy</strong> π<sub>β</sub> produced, and you must output a policy without ever touching the environment during training. <a class="src" href="https://arxiv.org/abs/2005.01643">Levine 2020</a> D comes from robot fleets that logged years of teleoperation, hospital records of treatments and outcomes, click logs, an earlier agent's replay buffer, or gameplay video with actions, which is how Dreamer 4 learned Minecraft in <a href="#d9">Day 9</a> from 2,541 hours of recorded play. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a>
+@@ 8
+You accept the handicap because exploration is sometimes unsafe, expensive or impossible: nobody lets a learning agent try random treatments on patients, and a real robot collects in a week what a simulator produces in minutes. The hope is that the log already contains what a good policy needs, and that RL can extract it the way a Transformer extracts grammar from text. <a class="src" href="https://arxiv.org/abs/2005.01643">Levine 2020</a>
+@@ 9
+Imagine learning to cook only by watching other people's cooking videos. You never get to taste your own food until the exam. If the videos only ever show pasta and soup, you have no idea whether chocolate in the soup is a brilliant idea or a disaster. A careful student assumes "if nobody in the videos tried it, treat it as bad" and sticks to combining the best moves they actually saw. That careful student is offline RL.
+@@ 10
+2. Distribution shift and extrapolation error
+@@ 11
+Why not just run DQN on the dataset? Off-policy methods are supposed to learn from any data. The trouble is the target. Q-learning updates toward r + γ max<sub>a'</sub> Q(s', a'), and the max ranges over <em>all</em> actions, including ones the behaviour policy never took in s'. For those, Q(s', a') is not an estimate but a guess by a function approximator extrapolating beyond its data. Fujimoto, Meger and Precup named this <strong>extrapolation error</strong> in December 2018 and showed that DQN and DDPG on a fixed batch often get worse the longer they train. <a class="src" href="https://arxiv.org/abs/1812.02900">Fujimoto 2018</a> Online, the agent would try the over-valued action, fail, and correct. Offline, nothing corrects the guess; the max systematically picks the most over-estimated action and feeds the error into every state that leads there.
+@@ 12
+A tiny example you can check by hand. One state, five actions. The true values are Q = (4, 6, 5, 3, 2), so action 2 is best. The dataset contains actions 1–3 only (say 12, 20 and 8 samples), with rewards that are the true values plus a little noise. A fitted Q-network reproduces the seen actions roughly right, Q̂ ≈ (4.1, 5.9, 5.2, ?, ?), and fills in the two blanks with whatever its weights happen to produce, say Q̂(4) = 7.5 and Q̂(5) = 8.2. Greedy on Q̂ chooses action 5, whose true value is 2. Its <strong>regret</strong>, the gap between the best true value and the one you got, is 6 − 2 = 4. Behaviour cloning would have copied the most common action (action 1, regret 2). Anything that pushes the two blanks down lets the argmax land on action 2 and the regret drops to 0.
+@@ 13
+Try it: press "Fit Q" to fit a noisy estimator to the dataset. Watch which action the greedy policy picks, then raise α, the conservative penalty, and fit again.
+@@ 14
+Notice that with α = 0 the greedy action is usually 4 or 5: the estimator's blind guesses for unseen actions are noisy, and the max selects whichever guess landed high. Raising α pushes those guesses down (and nudges well-covered actions up), so the choice falls back onto action 2, the best action the data actually supports. Press "Fit Q" several times at each α: conservatism is about what happens on average over many possible fits.
+@@ 15
+3. Behaviour cloning versus offline RL
+@@ 16
+The simplest thing to do with a log is <strong>behaviour cloning</strong> (BC): supervised learning of a from s, ignoring rewards. It never prefers an action the data lacks, but it can only reproduce the behaviour policy, so mediocre operators yield a mediocre policy. Offline RL uses the rewards to do two things BC cannot: pick the <em>best</em> actions rather than the average when several appear in the same state, and <strong>stitch</strong> fragments of different trajectories, the first half of one route and the second half of another, into a path no demonstrator ever completed. <a class="src" href="https://arxiv.org/abs/2005.01643">Levine 2020</a> The AntMaze benchmarks test exactly this: an ant robot must reach a goal, but the dataset contains only aimless wandering. BC scores 0 on antmaze-medium-play; CQL reaches 61.2. <a class="src" href="https://arxiv.org/abs/2006.04779">Kumar 2020</a>
+@@ 17
+When the data is already expert, BC is hard to beat: hopper-medium-expert gives BC 111.9 and CQL 111.0. <a class="src" href="https://arxiv.org/abs/2006.04779">Kumar 2020</a> Look at the data first. Expert demonstrations call for imitation; mixed-quality logs call for RL.
+@@ 18
+4. CQL: a Q-function that under-estimates on purpose
+@@ 19
+<strong>Conservative Q-Learning</strong> (CQL, June 2020) keeps the ordinary Bellman regression and adds one penalty term designed so that the learned Q is a <em>lower bound</em> on the true value. The CQL(H) objective is
+@@ 20
+min<sub>Q</sub>  α · E<sub>s∼D</sub>[ log Σ<sub>a</sub> exp Q(s,a) − E<sub>a∼π̂<sub>β</sub></sub>[Q(s,a)] ]  +  ½ E<sub>(s,a,s')∼D</sub>[ (Q(s,a) − B̂<sup>π</sup>Q̂(s,a))² ]
+@@ 21
+Read the bracket as "soft-max of Q over all actions minus the average Q over the actions the data contains". It is never negative, and it is small only when no unseen action is valued above the seen ones. Minimising it pushes Q down wherever the soft-max is being driven by an unseen action and pushes Q up on dataset actions. The second term is the usual Bellman error. The trade-off knob is α: too small and extrapolation returns; too large and Q is flattened toward the data and the policy collapses to BC. <a class="src" href="https://arxiv.org/abs/2006.04779">Kumar 2020</a> In the widget above the penalty α·(1/5 − π̂<sub>β</sub>(a)) is this idea with a uniform policy in place of the soft-max.
+@@ 22
+The payoff shows on mixed-quality data. In CQL's Table 1 (D4RL normalised scores), walker2d-mixed scores 26.7 against the best prior method's 11.3, about 2.4×; hopper-mixed 48.6 against 25.3 (1.9×); walker2d-medium-expert 98.7 against 11.3; and antmaze-medium-play 61.2 where every baseline scores 0.0. On Atari with only 1% of a DQN replay buffer, Q*bert reached 14,012 versus 383.6 for QR-DQN, about 36×. The abstract summarises it as 2–5× higher final return on mixed datasets. <a class="src" href="https://arxiv.org/abs/2006.04779">Kumar 2020</a> The <a href="#p-cql">CQL review</a> walks through the proof sketch.
+@@ 23
+A restaurant critic who has only eaten the pasta and the soup refuses to rate the mystery dish above anything they actually tasted. They may miss a hidden gem, but they never send you to a dish nobody has tried. CQL is that critic; α is how stubborn they are.
+@@ 24
+5. IQL: never ask about unseen actions
+@@ 25
+<strong>Implicit Q-Learning</strong> (IQL, October 2021) takes the opposite route: instead of penalising unseen actions, it never evaluates them. It replaces the max over actions with a state-value network V(s) fitted only on actions in the data, using <strong>expectile regression</strong>:
+@@ 26
+With τ = 0.5 the expectile loss is plain squared error and V is the mean of Q over dataset actions. With τ above 0.5, errors where Q is above V are weighted τ and errors below are weighted 1 − τ, so V creeps up toward the best actions in the data without ever naming an action outside it. Check it on three samples Q = {2, 4, 9}: the mean is 5; the τ = 0.9 expectile v solves 0.9·(9 − v) = 0.1·((v − 2) + (v − 4)), which gives v ≈ 7.9. The policy is then extracted by <strong>advantage-weighted regression</strong>, L<sub>π</sub> = E[ exp(β(Q − V)) · log π(a|s) ], a BC loss that weights dataset actions by how much better than V they were (weights clipped at 100). The paper uses τ = 0.7, β = 3 on MuJoCo locomotion and τ = 0.9, β = 10 on AntMaze. <a class="src" href="https://arxiv.org/abs/2110.06169">Kostrikov 2021</a>
+@@ 27
+On the stitching-heavy AntMaze tasks IQL totals 378.0 against CQL's 303.6; on locomotion the two are level (692.4 against 698.5); overall 1070.4 against 1002.1. Because IQL's training signal only ever touches dataset actions, it is also unusually easy to continue training online afterwards. <a class="src" href="https://arxiv.org/abs/2110.06169">Kostrikov 2021</a>
+@@ 28
+6. D4RL and the normalised score
+@@ 29
+Offline results depend entirely on which dataset you were given, so <strong>D4RL</strong> (April 2020) published standard ones: Maze2D and AntMaze (umaze, medium, large; play and diverse), Gym-MuJoCo (hopper, halfcheetah, walker2d with random, medium, expert, medium-replay and medium-expert data), Adroit hand manipulation, FrankaKitchen, Flow traffic and CARLA driving. <a class="src" href="https://arxiv.org/abs/2004.07219">Fu 2020</a> Every number in Sections 4 and 5 is a <strong>normalised score</strong>:
+@@ 30
+score<sub>norm</sub> = 100 × (score − random) / (expert − random)
+@@ 31
+So 0 is a random policy, 100 is the expert that generated the expert data, and scores above 100 are possible. If random play returns −5 and the expert 100, a policy returning 47 gets 100 × 52 / 105 ≈ 49.5. <a class="src" href="https://arxiv.org/abs/2004.07219">Fu 2020</a> The medium-replay (CQL's "mixed") and medium-expert sets, which mix policies of different quality, are where methods separate.
+@@ 32
+7. Decision Transformer: control as autocomplete
+@@ 33
+In June 2021 two papers one day apart asked whether offline RL needs a value function at all. <strong>Decision Transformer</strong> (DT) writes each trajectory as a token stream with three tokens per timestep, the <strong>return-to-go</strong> R̂<sub>t</sub> = Σ<sub>t'≥t</sub> r<sub>t'</sub> (the reward still to come), the state s<sub>t</sub> and the action a<sub>t</sub>, and trains a causal GPT to predict each action from everything before it. Each token type has its own linear embedding (a CNN for images), a learned per-timestep embedding is added to all three tokens of a step, and the loss is mean squared error or cross-entropy on action tokens only. <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a> No Bellman update, no max over actions, no extrapolation error: the model only says which actions went with high returns in the data.
+@@ 34
+At test time you type the return you want: set R̂ high, feed the state, read out the action, act, subtract the reward received from the target, repeat. Ask for 90 and the model autocompletes a trajectory that looks like the 90-return trajectories it saw. <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a> The companion <strong>Trajectory Transformer</strong> models the whole trajectory (states, actions and rewards, discretised) and plans with beam search over high-reward continuations. <a class="src" href="https://arxiv.org/abs/2106.02039">Janner 2021</a>
+@@ 35
+On D4RL, DT averages 74.7 against CQL's 63.9 (without Reacher). On Atari, trained from 1% of a DQN replay buffer, DT beats CQL on Breakout (267.5 against 211.1) but loses heavily on Q*bert (15.4 against 104.2). Its clearest win is Key-to-Door, where picking up a key early only pays off at a door much later: with 10K trajectories DT succeeds 94.6% of the time against CQL's 13.3% (71.8% against 13.1% with 1K), because attention credits the key directly. Cutting the context to one timestep collapses Breakout from 267.5 to 73.9 and Pong from 106.1 to 2.5. <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a> The <a href="#p-dt">Decision Transformer review</a> has the full tables.
+@@ 36
+<strong>"Offline RL is just behaviour cloning."</strong> BC copies the average demonstrator and ignores rewards. Offline RL selects the best actions and stitches trajectories: CQL 61.2 on antmaze-medium-play, BC 0.
+@@ 37
+<strong>"Just run DQN on the dataset."</strong> Without a penalty or constraint, Q-values on unseen actions grow with nothing to correct them, and the policy chases them (BCQ, 2018).
+@@ 38
+<strong>"Decision Transformer learns a value function."</strong> It conditions on a desired return instead. That makes it sensitive to the target you type and weak at stitching sub-trajectories that never co-occurred, which is where CQL and IQL beat it on AntMaze.
+@@ 39
+<strong>"Diffusion policies are too slow for control."</strong> With 10 DDIM steps Diffusion Policy runs in about 0.1 s on an RTX 3080; π0 emits 50-step action chunks with 10 flow steps at up to 50 Hz.
+@@ 40
+8. Diffusion Policy and flow-matching policies
+@@ 41
+Imitation has its own failure. When demonstrators push a block around an obstacle, half go left and half go right; a Gaussian head trained by mean squared error learns the average, straight into the obstacle. <strong>Diffusion Policy</strong> (March 2023) represents π(a|o) as a conditional denoising process over an <em>action sequence</em>: start from Gaussian noise A<sup>K</sup> and apply K steps of
+@@ 42
+where ε<sub>θ</sub> is a network trained, exactly as in image diffusion, to predict the noise added to a ground-truth action sequence, and α, γ, σ follow the noise schedule. Because the output is a sample rather than a mean, the policy goes left on one run and right on the next, never straight. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a> The network sees the last T<sub>o</sub> = 2 observations, predicts T<sub>p</sub> = 16 actions, executes the first T<sub>a</sub> = 8 and re-plans, a receding horizon that keeps motion smooth and reactive. Training uses 100 DDPM steps; inference with DDIM at 10–16 steps takes about 0.1 s on an RTX 3080. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a>
+@@ 43
+Across 12 simulated tasks from 4 benchmarks (plus 3 bimanual) it beat the previous state of the art by 46.9% on average; on real Push-T it succeeded 95% of the time against 20% for an LSTM with a Gaussian-mixture head and 0% for implicit behaviour cloning (humans: 100%). <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a> The <a href="#p-diffusion-policy">Diffusion Policy review</a> has the per-task table.
+@@ 44
+Try it: press "Add noise" to draw a random action, then "Denoise step" repeatedly, or "Run K steps". The two shaded circles are the two demonstrated routes; the cross is where an MSE-trained policy would aim.
+@@ 45
+Notice that the dot wanders in its first steps and then commits to one of the two modes; different starting noise ends in different modes, roughly half each. The MSE cross sits between them, a point no demonstrator ever chose. Set K = 2 and press "20 samples": with so few steps, many runs stall between the modes, because each large step approximates a two-humped distribution with one Gaussian. By K = 10 almost every run commits.
+@@ 46
+<strong>Flow-matching policies</strong> replace noise prediction with a velocity field v<sub>θ</sub>(A<sup>τ</sup>, o, τ) and integrate an ordinary differential equation from noise to action. <strong>π0</strong> (October 2024) does this on a vision-language model: a 3B-parameter PaliGemma backbone reads images and an instruction, a roughly 300M-parameter "action expert" attends to it and outputs the velocity, and 10 Euler steps (step size 0.1) turn noise into a 50-step action chunk at up to 50 Hz. It was trained on more than 10,000 hours of data from 7 robot configurations across 68 tasks, laundry folding and table bussing among them. <a class="src" href="https://arxiv.org/abs/2410.24164">Black 2024</a>
+@@ 47
+Going deeper (optional): why multimodality kills the MSE head
+@@ 48
+Minimising E[(a − μ(o))²] over demonstrations makes μ(o) the conditional mean E[a|o]. If a is "left" or "right" with probability ½ each, the mean is the midpoint, which has probability zero under the demonstrations. A Gaussian-mixture head needs the number of modes fixed in advance and collapses in high dimensions; energy-based (implicit) policies represent any shape but are hard to train and sample. Diffusion and flow models represent arbitrary multimodal distributions with one network and a plain regression loss, which is why they took over robot imitation after 2023. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a>
+@@ 49
+9. RL fine-tuning of generative policies
+@@ 50
+Imitation gets a diffusion policy to the level of its demonstrators; to go further you want policy-gradient RL, and here a problem appears. PPO needs log π(a|s) for the action it took, but for a diffusion or flow policy the probability of the final action is a marginal over every possible denoising path, and nobody can compute it. <strong>DPPO</strong> (September 2024) sidesteps this with a <strong>two-layer MDP</strong>: inside each environment step t sits a chain of denoising states a<sup>K</sup> → a<sup>K−1</sup> → … → a<sup>0</sup>, and each denoising step is itself an "action" with a Gaussian likelihood you <em>can</em> write down. Reward arrives only when a<sup>0</sup> hits the environment; PPO runs on the denoising steps, and in practice only the last few are fine-tuned. <a class="src" href="https://arxiv.org/abs/2409.00588">Ren 2024</a> On Robomimic Transport from state it passed 90% success, the first RL method past 50%, and in a sim-to-real one-leg furniture assembly it reached 80% (16 of 20) where a Gaussian policy fine-tuned the same way scored 0%. <a class="src" href="https://arxiv.org/abs/2409.00588">Ren 2024</a>
+@@ 51
+Flow policies are harder still: their sampler is deterministic, so there is no per-step Gaussian to take a log of. <strong>πRL</strong> (October 2025) offers two fixes: <strong>Flow-Noise</strong> adds a small learnable noise network at each integration step, making the per-step likelihood exact; <strong>Flow-SDE</strong> converts the ODE into a stochastic differential equation with the same marginals. Either way, PPO on the denoising MDP lifted π0 on LIBERO from 57.6% to 97.6% (Flow-Noise) or 96.1% (Flow-SDE), and π0.5 from 77.1% to 98.3% or 97.9%; on 4,352 ManiSkill pick-and-place tasks π0 went from 38.4% to 77.8% and π0.5 from 40.1% to 89.7%. <a class="src" href="https://arxiv.org/abs/2510.25889">Chen 2025</a> The pattern mirrors <a href="#d9">Day 9</a> and the LLM world: pretrain a large generative model on logs, then let RL sharpen it.
+@@ 52
+10. When offline beats online
+@@ 53
+Offline wins when interaction is unsafe or expensive (healthcare, driving, physical robots), when a large log already exists (recommenders, robot fleets, game replays), and when the data comes from many mediocre operators whose good fragments can be stitched into something better than any one of them. <a class="src" href="https://arxiv.org/abs/2005.01643">Levine 2020</a> Online wins when a cheap, faithful simulator exists and the task needs behaviour the data does not contain: no amount of conservatism finds a trick nobody in the log ever tried. The 2024–2025 robot results point at the hybrid now standard: imitation or offline RL on logs for a competent generative policy, then a short online RL phase to fix its failure modes, as DPPO and πRL do. <a class="src" href="https://arxiv.org/abs/2510.25889">Chen 2025</a>
+@@ 54
+Core trick
+@@ 55
+Value function?
+@@ 56
+Key number
+@@ 57
+BC
+@@ 58
+supervised a ← s
+@@ 59
+no
+@@ 60
+baseline; 111.9 on hopper-medium-expert
+@@ 61
+BCQ
+@@ 62
+only choose actions near the data
+@@ 63
+yes
+@@ 64
+named extrapolation error
+@@ 65
+CQL
+@@ 66
+penalise Q on unseen actions
+@@ 67
+antmaze-medium-play 61.2 vs 0
+@@ 68
+IQL
+@@ 69
+upper-expectile V, in-data actions only
+@@ 70
+AntMaze 378.0 vs CQL 303.6
+@@ 71
+Decision Transformer
+@@ 72
+condition on return-to-go
+@@ 73
+Key-to-Door 94.6% vs 13.3%
+@@ 74
+Diffusion Policy
+@@ 75
+denoise action sequences
+@@ 76
+no (imitation)
+@@ 77
++46.9% average; Push-T 95%
+@@ 78
+flow matching on a VLM
+@@ 79
+&gt;10k h, 7 robots, 68 tasks
+@@ 80
+DPPO
+@@ 81
+PPO over denoising steps
+@@ 82
+yes (critic)
+@@ 83
+real assembly 80% vs 0%
+@@ 84
+πRL
+@@ 85
+Flow-Noise / Flow-SDE + PPO
+@@ 86
+LIBERO 57.6% → 97.6%
+@@ 87
+11. Architecture
+@@ 88
+Three diagrams, one per family. Boxes filled in the accent colour are trained; plain boxes are fixed data or fixed arithmetic.
+@@ 89 attr
+Offline RL loop: a fixed dataset feeds a Q network and, for IQL, a V network; a conservative loss shapes them; a policy is extracted; the environment box is greyed out with no arrow into training.
+@@ 90
+fixed dataset D
+@@ 91
+(s, a, r, s') from π_β
+@@ 92
+Q network
+@@ 93
+V network (IQL)
+@@ 94
+expectile τ
+@@ 95
+conservative loss
+@@ 96
+CQL: push ↓ unseen
+@@ 97
+IQL: in-data only
+@@ 98
+policy π
+@@ 99
+environment: never queried during training
+@@ 100
+1. Offline RL (CQL / IQL)
+@@ 101
+Offline value learning. Transitions flow from the fixed dataset into the Q network (and IQL's V network); the conservative term shapes them; a policy is extracted by argmax (CQL) or advantage-weighted regression (IQL). Nothing flows back from the environment.
+@@ 102 attr
+Decision Transformer: a stream of return-to-go, state and action tokens for three timesteps enters a causal Transformer; the output above each state token is the predicted action.
+@@ 103
+2. Decision Transformer
+@@ 104
+3 tokens per timestep · per-modality embedding + per-timestep embedding · return-to-go = reward still to come
+@@ 105
+causal Transformer (GPT)
+@@ 106
+each position attends only to earlier tokens
+@@ 107
+â₃ → act
+@@ 108
+Decision Transformer. The stream (R̂, s, a) repeats for K timesteps (3K tokens). The output above each state token is trained to match the action that followed; at test time the last one is executed, the received reward is subtracted from R̂, and the loop continues. The tokeniser and return-to-go arithmetic are fixed; embeddings and the Transformer are trained.
+@@ 109 attr
+Diffusion policy: observations enter a trained encoder; Gaussian noise enters a loop of K denoising steps run by a trained noise network conditioned on the encoder output; the output is an action chunk of 16 steps of which 8 are executed; the noise schedule and sampler are fixed.
+@@ 110
+3. Diffusion Policy
+@@ 111
+last T_o = 2
+@@ 112
+encoder
+@@ 113
+ResNet (trained)
+@@ 114
+noise A^K
+@@ 115
+N(0, I) · fixed
+@@ 116
+ε_θ(O_t, A^k, k)  noise net (trained)
+@@ 117
+× K steps: A^k → A^{k−1} · schedule α, γ, σ fixed
+@@ 118
+loop k = K…1
+@@ 119
+training only
+@@ 120
+add noise to data, regress ε
+@@ 121
+T_p = 16 acts
+@@ 122
+run T_a = 8
+@@ 123
+DPPO / πRL fine-tuning: policy gradient on the last few denoising steps; the environment rewards only A^0
+@@ 124
+Diffusion Policy. Observations are encoded once; a noise sample is refined K times by the noise network, each pass conditioned on the encoding; the result is a 16-step action chunk of which 8 are executed before re-planning. π0 swaps the encoder for a 3B VLM and the denoiser for a flow "action expert" with 10 Euler steps.
+@@ 125
+Read left to right. In the first diagram data flows one way, from the dataset into the networks, and the policy is a by-product of the learned values; the dashed environment box is the whole point. In the second nothing is a value: the Transformer is a language model whose vocabulary happens to be returns, states and actions. In the third the trained parts are the encoder and the noise network; the schedule, the sampling loop and the receding-horizon bookkeeping are fixed arithmetic, which is why the same trained network runs with 100 DDPM steps or 10 DDIM steps.
+@@ 126
+Offline training is a supervised-learning workload: no simulators, no actors, a dataset on disk and a GPU. Inference is where the clocks matter. Diffusion Policy predicts 16 actions per call and executes 8, so a 0.1 s DDIM call (10 steps, RTX 3080) controls a robot at 10 Hz. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a> π0 runs a 3.3B-parameter model amortised over 50-step chunks at up to 50 Hz. <a class="src" href="https://arxiv.org/abs/2410.24164">Black 2024</a> Decision Transformer's Atari runs used 1% of a DQN replay buffer, 500 thousand of 50 million transitions per game, and its cost grows with context length since each timestep adds 3 tokens. <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a> RL fine-tuning (DPPO, πRL) brings simulators and rollouts back, but starting from a competent policy needs far fewer of them than learning from scratch.
+@@ 127
+Q1. Why does running plain DQN on a fixed dataset tend to get worse the longer it trains?
+@@ 128
+The dataset is too small for the network to memorise
+@@ 129
+Off-policy methods cannot use data from another policy
+@@ 130
+The Bellman max picks the most over-estimated unseen action, and nothing ever corrects that guess
+@@ 131
+The learning rate must be lowered when there is no exploration
+@@ 132
+Answer 3. Fujimoto et al. (2018) called this extrapolation error: Q-values on actions outside the data are unconstrained guesses, the max selects the highest, and the error propagates. Online, trying the action would correct it; offline, nothing does.
+@@ 133
+Q2. In the CQL(H) objective, what does the penalty term α·[log Σ<sub>a</sub> exp Q(s,a) − E<sub>a∼π̂β</sub> Q(s,a)] do when minimised?
+@@ 134
+Pushes Q down on actions that dominate the soft-max but are not in the data, and up on dataset actions
+@@ 135
+Pushes all Q-values toward zero so the policy becomes random
+@@ 136
+Replaces the Bellman error entirely
+@@ 137
+Makes Q an upper bound on the true value
+@@ 138
+Answer 1. The bracket is "soft-max over all actions minus mean over seen actions"; it is non-negative and shrinks only when unseen actions are not valued above seen ones. The Bellman term stays. The result is a lower bound, not an upper bound.
+@@ 139
+Q3. IQL fits V(s) with an expectile loss. With τ = 0.9 and dataset Q-values {2, 4, 9} at one state, V ends up…
+@@ 140
+At exactly 5, the mean
+@@ 141
+At exactly 9, the maximum
+@@ 142
+Below 5, because low values are weighted more
+@@ 143
+About 7.9, between the mean and the maximum
+@@ 144
+Answer 4. Errors above V are weighted 0.9, errors below 0.1, so V moves toward the best in-data values without reaching the max: 0.9(9 − v) = 0.1((v − 2) + (v − 4)) gives v ≈ 7.9. τ = 0.5 would give the mean, 5.
+@@ 145
+Q4. Decision Transformer reached 94.6% on Key-to-Door with 10K trajectories, against CQL's 13.3%. What explains the gap?
+@@ 146
+DT learns a more accurate value function than CQL
+@@ 147
+A long context lets DT credit picking up the key directly to the later door reward, without propagating value step by step
+@@ 148
+DT was trained on 100× more data
+@@ 149
+CQL cannot handle discrete actions
+@@ 150
+Answer 2. DT has no value function at all; it conditions on return-to-go and attends across the whole trajectory, so long-range credit assignment is a single attention lookup. The context ablation (Breakout 267.5 → 73.9 at K = 1) shows the context is what matters.
+@@ 151
+Q5. Demonstrators avoid an obstacle by going left half the time and right half the time. A policy trained with a mean-squared-error head will…
+@@ 152
+Pick left or right at random, like the demonstrators
+@@ 153
+Always pick the more common side
+@@ 154
+Aim for the average of the two routes, straight at the obstacle
+@@ 155
+Refuse to move because the data is contradictory
+@@ 156
+Answer 3. MSE regression learns the conditional mean, which sits between the two modes at a point no demonstrator chose. Diffusion Policy samples from the full distribution instead, which is why it reached 95% on Push-T against 20% for an LSTM-GMM policy.
+@@ 157
+Q6. Why can you not fine-tune a diffusion policy by applying REINFORCE to the final action a<sup>0</sup>?
+@@ 158
+log π(a⁰|s) is a marginal over all denoising paths and is intractable; DPPO and πRL instead put the policy gradient on the individual denoising steps
+@@ 159
+REINFORCE only works for discrete actions
+@@ 160
+Diffusion policies have no parameters that affect the final action
+@@ 161
+The reward cannot be observed until all K steps are finished
+@@ 162
+Answer 1. Each denoising step has a Gaussian likelihood you can write down, so PPO runs on the "denoising MDP" nested inside the environment MDP. Flow policies need an extra trick (Flow-Noise or Flow-SDE) because their sampler is deterministic.
+@@ 163
+Offline RL learns from a fixed log with no interaction. The Bellman max then asks about actions the log lacks, and the network's guesses for them are exactly what the max selects: extrapolation error (BCQ, 2018).
+@@ 164
+CQL adds α·[log Σ exp Q − mean Q on data] so that Q lower-bounds the truth; it gives 2–5× higher returns on mixed data and 61.2 against 0 on antmaze-medium-play. IQL never queries unseen actions, fitting V as an upper expectile (τ = 0.7 or 0.9) and extracting the policy by advantage-weighted regression; AntMaze 378.0 against CQL 303.6.
+@@ 165
+D4RL normalised score = 100 × (score − random) / (expert − random); 0 is random, 100 is the expert.
+@@ 166
+Decision Transformer drops values entirely: three tokens per step (return-to-go, state, action), a causal GPT, type the return you want. Key-to-Door 94.6% against 13.3%, but it cannot stitch and depends on the target you ask for.
+@@ 167
+Diffusion and flow policies generate action chunks from noise, so they can represent multimodal demonstrations (Push-T 95%, +46.9% average; π0 on more than 10,000 hours). RL fine-tuning works by putting PPO on the denoising steps, not the final action: πRL took π0 from 57.6% to 97.6% on LIBERO.
+@@ 168
+<a href="https://arxiv.org/abs/2005.01643">Offline Reinforcement Learning: Tutorial, Review, and Perspectives on Open Problems</a> — Levine, Kumar, Tucker &amp; Fu, 2020. The definition of the setting, why it matters (healthcare, robotics), and the distribution-shift problem in full.
+@@ 169
+<a href="https://arxiv.org/abs/1812.02900">Off-Policy Deep Reinforcement Learning without Exploration</a> — Fujimoto, Meger &amp; Precup, ICML 2019 (arXiv Dec 2018). Names extrapolation error and introduces batch-constrained Q-learning (BCQ).
+@@ 170
+<a href="https://arxiv.org/abs/2006.04779">Conservative Q-Learning for Offline Reinforcement Learning</a> — Kumar, Zhou, Tucker &amp; Levine, NeurIPS 2020. The CQL(H) objective, the lower-bound argument, and Table 1 with the D4RL numbers quoted today.
+@@ 171
+<a href="https://arxiv.org/abs/2110.06169">Offline Reinforcement Learning with Implicit Q-Learning</a> — Kostrikov, Nair &amp; Levine, ICLR 2022 (arXiv Oct 2021). Expectile regression, advantage-weighted extraction, τ and β settings, AntMaze totals.
+@@ 172
+<a href="https://arxiv.org/abs/2004.07219">D4RL: Datasets for Deep Data-Driven Reinforcement Learning</a> — Fu, Kumar, Nachum, Tucker &amp; Levine, 2020. The benchmark suite and the normalised-score formula.
+@@ 173
+<a href="https://arxiv.org/abs/2106.01345">Decision Transformer: Reinforcement Learning via Sequence Modeling</a> — Chen et al., NeurIPS 2021. Token layout, evaluation loop, Atari and D4RL tables, Key-to-Door and context ablations.
+@@ 174
+<a href="https://arxiv.org/abs/2106.02039">Offline Reinforcement Learning as One Big Sequence Modeling Problem</a> — Janner, Li &amp; Levine, NeurIPS 2021. The Trajectory Transformer: model everything, plan with beam search.
+@@ 175
+<a href="https://arxiv.org/abs/2303.04137">Diffusion Policy: Visuomotor Policy Learning via Action Diffusion</a> — Chi et al., RSS 2023 (extended IJRR 2024). Eq. 4, the horizons T_o/T_p/T_a, the 46.9% average gain, Push-T 95%, Fig. 3 on multimodality.
+@@ 176
+<a href="https://arxiv.org/abs/2410.24164">π0: A Vision-Language-Action Flow Model for General Robot Control</a> — Black et al., Physical Intelligence, 2024. Flow matching on a PaliGemma backbone, more than 10,000 hours of data, 50-step action chunks.
+@@ 177
+<a href="https://arxiv.org/abs/2409.00588">Diffusion Policy Policy Optimization</a> — Ren et al., 2024. The two-layer denoising MDP, PPO over denoising steps, Transport and real furniture-assembly results.
+@@ 178
+<a href="https://arxiv.org/abs/2510.25889">πRL: Online RL Fine-tuning for Flow-based Vision-Language-Action Models</a> — Chen et al., Oct 2025. Flow-Noise and Flow-SDE, LIBERO and ManiSkill numbers.
+@@ 179
+<a href="https://arxiv.org/abs/2509.24527">Training Agents Inside of Scalable World Models</a> — Hafner, Yan &amp; Lillicrap, Sep 2025. Dreamer 4: the offline Minecraft result referenced from Day 9.

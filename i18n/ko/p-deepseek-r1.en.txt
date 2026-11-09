@@ -1,0 +1,92 @@
+@@ 1
+<span class="eyebrow">2025 · DeepSeek-AI · Nature 645, 633–638 (Sept 2025)</span>
+@@ 2
+DeepSeek-R1: incentivizing reasoning capability in LLMs via reinforcement learning
+@@ 3
+Pure RL with a rule-based 0/1 reward and no human reasoning traces took a base model's AIME 2024 score from 15.6% to 77.9%, and the released DeepSeek-R1 reached 79.8% on AIME 2024 and 97.3% on MATH-500. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a>
+@@ 4
+Taught in <a href="#d12">Day 12</a> · Read time of the original: ~45 min (v1); the Nature version moves most detail to appendices
+@@ 5
+Sample 16 answers per maths question, grade each with an answer key, push probability toward the above-average answers and away from the below-average ones, and the model teaches itself to write long chains of thought, check its work and say "wait" without ever being shown an example. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 6
+A class of 16 students all answer the same maths problem. There is no teacher grading style, only the answer key at the back of the book: right or wrong. Each student is compared with the class average. Beat the class, do more of that; fall below, do less. After thousands of problems the students start writing out their steps and double-checking, because that is what kept winning.
+@@ 7
+OpenAI's o1 (September 2024) showed that a model trained "with large-scale reinforcement learning to reason using chain of thought" jumped on maths and code, but published no recipe. <a class="src" href="https://arxiv.org/abs/2412.16720">OpenAI 2024</a> The open question was whether reasoning needs human-written reasoning traces for SFT, process reward models that grade each step, or search at inference time. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> RLHF-style PPO (<a href="#p-instructgpt">the InstructGPT review</a>) also kept a value model the size of the policy, which for a 671B-parameter base is a serious cost.
+@@ 8
+Two moves. First, <strong>verifiable rewards</strong>: for maths and code, a program can check the final answer, so no learned reward model is needed and there is nothing to game except the checker. Second, <strong>GRPO</strong> (Group Relative Policy Optimization, from DeepSeekMath, February 2024): replace PPO's value model with the mean and standard deviation of rewards inside a group of samples for the same question. <a class="src" href="https://arxiv.org/abs/2402.03300">Shao 2024</a> Apply both to the base model directly, with no SFT, and see what emerges. That model is <strong>DeepSeek-R1-Zero</strong>. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a>
+@@ 9
+<strong>Sample.</strong> For each question q, draw G = 16 outputs o<sub>1..G</sub> from the old policy. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 10
+<strong>Grade.</strong> Reward = accuracy (boxed answer matches, or code passes tests) + format (reasoning inside <code>&lt;think&gt;…&lt;/think&gt;</code>), equally weighted. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a>
+@@ 11
+<strong>Advantage and update</strong> (Eqs. 1–3):
+@@ 12
+J<sub>GRPO</sub>(θ) = E[ (1/G) Σ<sub>i=1..G</sub> ( min( ρ<sub>i</sub>A<sub>i</sub>, clip(ρ<sub>i</sub>, 1−ε, 1+ε)A<sub>i</sub> ) − β·D<sub>KL</sub>(π<sub>θ</sub> ‖ π<sub>ref</sub>) ) ]
+@@ 13
+ρ<sub>i</sub> = π<sub>θ</sub>(o<sub>i</sub>|q) / π<sub>old</sub>(o<sub>i</sub>|q) &nbsp;&nbsp; A<sub>i</sub> = ( r<sub>i</sub> − mean{r<sub>1</sub>..r<sub>G</sub>} ) / std{r<sub>1</sub>..r<sub>G</sub>}
+@@ 14
+D<sub>KL</sub> = π<sub>ref</sub>(o<sub>i</sub>|q)/π<sub>θ</sub>(o<sub>i</sub>|q) − log( π<sub>ref</sub>(o<sub>i</sub>|q)/π<sub>θ</sub>(o<sub>i</sub>|q) ) − 1
+@@ 15
+The clipped ratio is PPO's (<a href="#p-ppo">the PPO review</a>). The new part is A<sub>i</sub>: the <strong>group-relative advantage</strong> needs no critic. R1-Zero used β = 0.001; in practice the ratio is applied per token and averaged with a 1/|o<sub>i</sub>| per response. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> Worked example, rewards [2, 1, 1, 0]: mean 1.0, population std 0.7071, advantages [+1.414, 0, 0, −1.414]; the two middle answers get no gradient.
+@@ 16
+<strong>From R1-Zero to R1.</strong> R1-Zero's traces were hard to read and mixed languages, so the released model adds four stages: a cold-start SFT on thousands of human-polished long reasoning examples; reasoning RL with an extra language-consistency reward; rejection sampling and SFT on about 800k samples (about 600k reasoning, 200k not); and a final RL stage for helpfulness and harmlessness using reward models. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 17 attr
+Multi-stage pipeline from DeepSeek-V3-Base through R1-Zero, cold-start SFT, reasoning RL, rejection sampling SFT and a final RL stage to DeepSeek-R1, with intermediate checkpoints Dev1 to Dev3
+@@ 18
+<a class="src" href="https://arxiv.org/abs/2501.12948">Figure 2, DeepSeek 2025</a> The multi-stage pipeline. R1-Zero (pure RL) is used to generate the cold-start data; the released R1 alternates SFT and RL twice. Dev1–Dev3 are intermediate checkpoints.
+@@ 19
+R1-Zero's AIME 2024 pass@1 rose from 15.6% to 77.9% over RL, and to 86.7% with majority voting; the v1 preprint reported 71.0% under its evaluation setup. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a> <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> Response length grew steadily during training: the model learned to think for longer, and an intermediate checkpoint wrote "Wait, wait. Wait. That's an aha moment I can flag here" before re-deriving a solution. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> DeepSeek-R1: AIME 2024 79.8, MATH-500 97.3, Codeforces rating 2029 (96.3rd percentile), SWE-bench Verified 49.2, GPQA Diamond 71.5. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a> Distilling R1's 800k samples into Qwen-32B by SFT alone gave AIME 72.6, while running R1-Zero-style RL directly on Qwen-32B gave 47.0. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 20 attr
+Left: AIME 2024 accuracy of DeepSeek-R1-Zero over RL training steps against the average human participant; right: average response length on the training set growing over steps
+@@ 21
+<a class="src" href="https://arxiv.org/abs/2501.12948">Figure 1, DeepSeek 2025</a> (a) AIME accuracy of R1-Zero during RL, with the average human AIME participant as a line. (b) Average response length over the same steps: longer thinking emerged, it was not prescribed.
+@@ 22
+R1 (January 2025) was the first open recipe and open weights for an o1-class reasoner, and GRPO with verifiable rewards became the default for the 2025 "RLVR" wave: DAPO (March 2025, <a href="#p-dapo">review</a>), Dr. GRPO, GSPO and ScaleRL (October 2025, <a href="#p-scalerl">review</a>) are all edits to the objective above. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a> <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> Its distillation result set the pattern for small models: RL makes the teacher, SFT makes the students.
+@@ 23
+The authors list weak tool use and structured output, overthinking on simple questions, language mixing outside Chinese and English, sensitivity to few-shot prompts, limited software-engineering gains, and the difficulty of building reliable rewards for tasks such as writing. In the discussion they report that process reward models and MCTS both failed at scale: steps are hard to define and label, PRMs get hacked, and the token search space explodes. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a> Two months later, <strong>Dr. GRPO</strong> ("GRPO Done Right") argued the objective itself is biased: the 1/|o<sub>i</sub>| length normalisation gives long wrong answers a smaller per-token penalty, so responses drift longer; and dividing by the group std over-weights questions that are nearly all right or all wrong. Removing both terms reached 43.3% AIME 2024 with a 7B base in about a day on 8 A100s. The same paper found "aha"-style self-reflection already in DeepSeek-V3-Base before any RL. <a class="src" href="https://arxiv.org/abs/2503.20783">Liu 2025</a> Whether RLVR adds ability or only sharpens it is still contested: at k = 1024 samples the base model solved 13.3% of AIME24 problems the RL model never did, and 0.0% the other way. <a class="src" href="https://arxiv.org/abs/2504.13837">Yue 2025</a>
+@@ 24
+Read the v1 preprint, not the Nature version: Section 2.1 (GRPO), 2.2 (rewards), 2.3 with Figures 2–3 and Table 3 (the aha moment), then Section 2.3 of the R1 pipeline and Tables 4–5. Finish with Section 4 (distillation vs RL, and the unsuccessful attempts). Skip the safety and evaluation appendices. About 40 minutes.
+@@ 25
+Q1. What replaces PPO's value model in GRPO?
+@@ 26
+A smaller value model
+@@ 27
+The mean and std of rewards within a group of samples for the same question
+@@ 28
+A process reward model
+@@ 29
+Monte Carlo tree search
+@@ 30
+A<sub>i</sub> = (r<sub>i</sub> − mean)/std over the G = 16 samples; no critic.
+@@ 31
+Q2. With rewards [2, 1, 1, 0], which answers get zero gradient?
+@@ 32
+The answer scoring 2
+@@ 33
+The answer scoring 0
+@@ 34
+None of them
+@@ 35
+The two answers scoring 1
+@@ 36
+They equal the group mean, so A<sub>i</sub> = 0, even though one is correct and the other is not.
+@@ 37
+Q3. For a 32B model, which gave the higher AIME 2024 score?
+@@ 38
+SFT on 800k samples distilled from R1 (72.6)
+@@ 39
+R1-Zero-style RL run directly on it (47.0)
+@@ 40
+Both scored the same
+@@ 41
+Neither; both were below the base model
+@@ 42
+Distillation from a larger model beat large-scale RL on the smaller model.
+@@ 43
+DeepSeek-AI (Guo et al.). DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning. Nature 645, 633–638 (2025). <a href="https://arxiv.org/abs/2501.12948">arXiv 2501.12948</a> · <a href="https://arxiv.org/html/2501.12948v1">v1 full text</a>
+@@ 44
+Shao et al. DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models (introduces GRPO). 2024. <a href="https://arxiv.org/abs/2402.03300">arXiv 2402.03300</a>
+@@ 45
+Liu et al. Understanding R1-Zero-Like Training: A Critical Perspective (Dr. GRPO). 2025. <a href="https://arxiv.org/abs/2503.20783">arXiv 2503.20783</a>
+@@ 46
+Yue et al. Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model? 2025. <a href="https://arxiv.org/abs/2504.13837">arXiv 2504.13837</a>

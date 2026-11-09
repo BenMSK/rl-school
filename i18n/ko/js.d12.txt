@@ -1,0 +1,264 @@
+@@ rlhf
+"comparisons"
+==
+"비교 데이터"
+@@ rlhf
+"RLHF models; highlighted: "
+==
+"RLHF 모델. 강조된 것: "
+@@ rlhf
+"Collect comparisons"
+==
+"비교 데이터 수집"
+@@ rlhf
+"33k prompts, K=4–9 ranked"
+==
+"33k prompt, K=4–9 순위"
+@@ rlhf
+"Labelers rank K = 4–9 sampled answers per prompt. A ranking of K yields C(K,2) pairs: K = 4 → 6 pairs, K = 9 → 36 pairs. Each pair is (x, y<sub>w</sub>, y<sub>l</sub>)."
+==
+"labeler가 prompt마다 sampling한 답 K = 4–9개의 순위를 매깁니다. K개의 순위에서는 C(K,2)개의 쌍이 나옵니다. K = 4 → 6쌍, K = 9 → 36쌍. 각 쌍은 (x, y<sub>w</sub>, y<sub>l</sub>)입니다."
+@@ rlhf
+"Train reward model"
+==
+"reward model 학습"
+@@ rlhf
+"pairs → BT loss"
+==
+"쌍 → BT loss"
+@@ rlhf
+"6B, trained once"
+==
+"6B, 한 번만 학습"
+@@ rlhf
+"One pair: r(y<sub>w</sub>) = "
+==
+"쌍 하나: r(y<sub>w</sub>) = "
+@@ rlhf
+".<br>Backwards (r(y<sub>w</sub>) = "
+==
+".<br>순서가 뒤집히면 (r(y<sub>w</sub>) = "
+@@ rlhf
+". Then the RM is frozen."
+==
+". 그 뒤 RM은 고정됩니다."
+@@ rlhf
+"Sample from policy"
+==
+"policy에서 sampling"
+@@ rlhf
+"trainable, from SFT"
+==
+"학습, SFT에서 시작"
+@@ rlhf
+"For a batch of 31k RL prompts, the policy generates one response per prompt, token by token (this is the rollout, ≈ 80% of wall-clock in practice). Nothing is scored yet."
+==
+"RL prompt 31k개의 batch에 대해 policy가 prompt마다 응답 하나를 token 단위로 생성합니다(이것이 rollout이며, 실제로는 wall-clock 시간의 ≈ 80%를 차지합니다). 아직 아무것도 채점하지 않습니다."
+@@ rlhf
+"Score + KL penalty"
+==
+"채점 + KL penalty"
+@@ rlhf
+"response → r(x,y)"
+==
+"응답→r(x,y)"
+@@ rlhf
+"per-token log π / π_SFT"
+==
+"token별 KL"
+@@ rlhf
+"frozen SFT copy"
+==
+"고정된 SFT 사본"
+@@ rlhf
+"frozen"
+==
+"고정"
+@@ rlhf
+"Illustrative numbers: RM gives r(x,y) = "
+==
+"예시 숫자: RM이 마지막 token에서 주는 값은 r(x,y) = "
+@@ rlhf
+" at the last token. Summed over tokens, log π(y|x) − log π<sub>SFT</sub>(y|x) = "
+==
+"입니다. token 전체에 대해 합하면 log π(y|x) − log π<sub>SFT</sub>(y|x) = "
+@@ rlhf
+"; with β = "
+==
+"이고, β = "
+@@ rlhf
+" the penalty is "
+==
+"이면 penalty는 "
+@@ rlhf
+", so the shaped return is "
+==
+"이므로 shaped return은 "
+@@ rlhf
+". A policy that drifts further from the SFT model pays more."
+==
+"입니다. policy가 SFT 모델에서 멀어질수록 penalty도 커집니다."
+@@ rlhf
+"trainable critic"
+==
+"학습되는 critic"
+@@ rlhf
+"The value model predicts the return at each token; GAE turns the terminal reward, the per-token KL and those values into per-token advantages A<sub>t</sub>. PPO's clipped ratio (Day 8) updates the policy; a squared error updates the value model. Both now hold optimizer state: four models, two trained."
+==
+"value model이 token마다 return을 예측하고, GAE가 terminal reward, token별 KL, 그 value들을 token별 advantage A<sub>t</sub>로 바꿉니다. PPO의 clipped ratio(Day 8)로 policy를 update하고, squared error로 value model을 update합니다. 이제 둘 다 optimizer state를 가집니다. 모델은 넷, 학습되는 것은 둘입니다."
+@@ rlhf
+"Repeat"
+==
+"반복"
+@@ rlhf
+"new weights → sampler"
+==
+"새 가중치 → sampler"
+@@ rlhf
+"Ship the new weights to the sampler and go back to step 3 with the next prompt batch. The RM and the reference never change; only the policy and critic move. The 1.3B model trained this way was preferred to the 175B GPT-3."
+==
+"새 가중치를 sampler로 보내고, 다음 prompt batch를 가지고 3단계로 돌아갑니다. RM과 reference는 끝까지 바뀌지 않고, policy와 critic만 움직입니다. 이렇게 학습한 1.3B 모델이 175B GPT-3보다 선호되었습니다."
+@@ rlhf
+"One RLHF cycle"
+==
+"RLHF 한 사이클"
+@@ rlhf
+"Six steps of InstructGPT-style RLHF. Highlighted boxes are the models doing work at that step; the numbers are the worked examples from the text."
+==
+"InstructGPT 방식 RLHF의 여섯 단계입니다. 강조된 상자는 그 단계에서 일하는 모델이고, 숫자는 본문의 계산 예시입니다."
+@@ grpo
+"correct "
+==
+"정답 "
+@@ grpo
+"<think> tags "
+==
+"<think> 태그 "
+@@ grpo
+"samples in the group"
+==
+"그룹 안의 sample 수"
+@@ grpo
+"group baseline"
+==
+"그룹 baseline"
+@@ grpo
+(pop?"population":"sample")+" std"
+==
+(pop?"모집단":"표본")+" std"
+@@ grpo
+"divides GRPO's A"
+==
+"GRPO의 A를 나누는 값"
+@@ grpo
+"Every advantage is 0: the whole group scored the same, so this prompt gives no gradient at all. DAPO's dynamic sampling drops such prompts and samples another; ScaleRL calls it zero-variance filtering."
+==
+"모든 advantage가 0입니다. 그룹 전체가 같은 점수를 받았으므로 이 prompt에서는 gradient가 전혀 나오지 않습니다. DAPO의 dynamic sampling은 이런 prompt를 버리고 다른 것을 sampling합니다. ScaleRL은 이를 zero-variance filtering이라고 부릅니다."
+@@ grpo
+"Positive bars push that answer's tokens up, negative bars push them down. An answer exactly at the mean gets no gradient, right or wrong. Dr. GRPO keeps the sign and spacing but does not rescale by std, so easy and hard prompts carry weights proportional to their raw reward gaps."
+==
+"양수 막대는 그 답의 token 확률을 올리고, 음수 막대는 내립니다. 정확히 평균에 있는 답은 맞든 틀리든 gradient를 받지 않습니다. Dr. GRPO는 부호와 간격은 유지하지만 std로 다시 스케일하지 않으므로, 쉬운 prompt와 어려운 prompt가 raw reward 차이에 비례하는 가중치를 갖습니다."
+@@ grpo
+"GRPO advantages for one prompt"
+==
+"prompt 하나에 대한 GRPO advantage"
+@@ grpo
+"Prompt: \"What is 17 × 23?\" (truth 391). Reward = correct (0/1) + format (0/1). Toggle each sample, change G, and compare GRPO's (r − mean)/std with Dr. GRPO's r − mean."
+==
+"Prompt: \"17 × 23은 얼마인가요?\" (정답 391). Reward = 정답 (0/1) + 형식 (0/1). sample마다 켜고 끄고, G를 바꾸면서 GRPO의 (r − mean)/std와 Dr. GRPO의 r − mean을 비교해 보세요."
+@@ grpo
+"population (note's example)"
+==
+"모집단 (본문 예시)"
+@@ grpo
+"sample (TRL's torch.std)"
+==
+"표본 (TRL의 torch.std)"
+@@ grpo
+"All correct"
+==
+"모두 정답"
+@@ agentrl
+"Book me the cheapest direct flight SFO→JFK on 3 Nov."
+==
+"11월 3일 SFO→JFK 직항 중 가장 싼 항공편을 예약해 줘."
+@@ agentrl
+"Need flights first, then filter by direct and price."
+==
+"먼저 항공편을 검색하고, 직항 여부와 가격으로 걸러야 한다."
+@@ agentrl
+"Direct ones: UA12 $212, B61 $199. Cheapest direct is B61."
+==
+"직항은 UA12 $212, B61 $199. 가장 싼 직항은 B61."
+@@ agentrl
+"Booked. Confirm to the user with the PNR."
+==
+"예약 완료. PNR과 함께 user에게 확인해 준다."
+@@ agentrl
+"Booked B6 1, direct SFO→JFK on 3 Nov for $199. Confirmation Q7X2."
+==
+"11월 3일 SFO→JFK 직항 B6 1편을 $199에 예약했습니다. 예약 번호 Q7X2."
+@@ agentrl
+"tool result (masked)"
+==
+"tool 결과 (mask됨)"
+@@ agentrl
+"user (masked)"
+==
+"user (mask됨)"
+@@ agentrl
+"goal state matched: "+(r?"yes":"no")
+==
+"goal state 일치: "+(r?"예":"아니오")
+@@ agentrl
+"revealed at the end"
+==
+"마지막에 공개"
+@@ agentrl
+"group mean, 2 of 4 succeeded"
+==
+"그룹 평균, 4개 중 2개 성공"
+@@ agentrl
+"shared by all turns"
+==
+"모든 turn이 공유"
+@@ agentrl
+" (final)"
+==
+" (최종)"
+@@ agentrl
+"A tool-use episode as an RL problem"
+==
+"RL 문제로 본 tool-use episode"
+@@ agentrl
+"Six policy turns, two tool calls, one reward at the end. Step through, then choose how the single reward is spread back over the turns."
+==
+"policy turn 여섯 번, tool call 두 번, 마지막에 reward 하나. 한 step씩 넘겨 본 뒤, 하나뿐인 reward를 turn들에 어떻게 나눠 줄지 골라 보세요."
+@@ agentrl
+"Step"
+==
+"한 step"
+@@ agentrl
+"1 (goal met)"
+==
+"1 (목표 달성)"
+@@ agentrl
+"0 (goal missed)"
+==
+"0 (목표 실패)"
+@@ agentrl
+"uniform over turns (GRPO)"
+==
+"모든 turn에 균등 (GRPO)"
+@@ agentrl
+"last turn only"
+==
+"마지막 turn만"
+@@ agentrl
+"turn-aware discounted (γ = 0.8)"
+==
+"turn별 discount (γ = 0.8)"
+@@ agentrl
+"Advantage per turn = (r − baseline) × weight. Uniform: weight 1 everywhere. Last turn only: weight 1 on the final answer, 0 elsewhere. Discounted: weight γ^(6−t), so turn 1 gets 0.8⁵ = 0.328 of the credit and the final turn gets all of it. Masked rows never receive an advantage."
+==
+"turn별 advantage = (r − baseline) × 가중치. 균등: 모든 turn의 가중치가 1. 마지막 turn만: 최종 답의 가중치가 1, 나머지는 0. Discount: 가중치가 γ^(6−t)이므로 turn 1은 credit의 0.8⁵ = 0.328만큼을 받고 마지막 turn은 전부를 받습니다. mask된 줄은 advantage를 받지 않습니다."

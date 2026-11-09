@@ -1,0 +1,80 @@
+@@ dp
+"4 by 4 gridworld with state values and greedy-policy arrows"
+==
+"state value와 greedy policy 화살표가 표시된 4×4 gridworld"
+@@ dp
+"Max change Δ"
+==
+"최대 변화 Δ"
+@@ dp
+"Greedy policy changed"
+==
+"Greedy policy 변화"
+@@ dp
+"in the last sweep"
+==
+"직전 sweep 기준"
+@@ dp
+"no"
+==
+"없음"
+@@ dp
+"yes"
+==
+"있음"
+@@ dp
+"The 4×4 gridworld sweeper"
+==
+"4×4 gridworld sweep 실행기"
+@@ dp
+"Reward −1 per move, γ = 1, two-array sweeps from V = 0. Triangles show the greedy policy with respect to the current V; ties draw several."
+==
+"한 번 움직일 때마다 reward −1, γ = 1이고, V = 0에서 시작해 배열 두 개로 sweep합니다. 삼각형은 현재 V에 대한 greedy policy를 나타내며, 동률이면 여러 개가 그려집니다."
+@@ dp
+"Mode"
+==
+"모드"
+@@ dp
+"One sweep"
+==
+"Sweep 한 번"
+@@ dp
+"Run to convergence"
+==
+"수렴할 때까지 실행"
+@@ gpi
+"Press Evaluate to compute V for the policy (stay, stay)."
+==
+"Evaluate를 눌러 policy (stay, stay)의 V를 계산하세요."
+@@ gpi
+"Evaluated in "+sweeps+" sweeps (θ = 10⁻⁶). Now compare q(s, stay) with q(s, go) in each state."
+==
+"sweep "+sweeps+"번으로 evaluation을 마쳤습니다 (θ = 10⁻⁶). 이제 각 state에서 q(s, stay)와 q(s, go)를 비교해 보세요."
+@@ gpi
+"Improvement #"+imps+": nothing changed. Policy stable after "+imps+" improvements, so it is optimal."
+==
+"Improvement #"+imps+": 바뀐 것이 없습니다. "+imps+"번의 improvement 뒤에 policy가 안정되었으므로 optimal입니다."
+@@ gpi
+". V is now out of date: evaluate again."
+==
+". 이제 V가 낡았습니다. 다시 Evaluate를 누르세요."
+@@ gpi
+"policy stable"
+==
+"policy 안정됨"
+@@ gpi
+"policy may still change"
+==
+"policy가 아직 바뀔 수 있음"
+@@ gpi
+"q(s, go) = 0 + 0.9·V(other)"
+==
+"q(s, go) = 0 + 0.9·V(다른 state)"
+@@ gpi
+"Policy iteration on a two-state MDP"
+==
+"2-state MDP에서 해 보는 policy iteration"
+@@ gpi
+"State 1: stay pays 1, go pays 0 and moves to state 2. State 2: stay pays 2, go pays 0 and moves to state 1. γ = 0.9. Evaluate, then improve, until the policy stops changing."
+==
+"State 1: stay는 1을 받고, go는 0을 받고 state 2로 이동합니다. State 2: stay는 2를 받고, go는 0을 받고 state 1로 이동합니다. γ = 0.9. policy가 더 바뀌지 않을 때까지 Evaluate와 Improve를 번갈아 누르세요."

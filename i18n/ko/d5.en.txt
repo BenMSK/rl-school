@@ -1,0 +1,278 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 5</span>
+@@ 2
+Learning from experience: Monte Carlo and TD
+@@ 3
+After today you can compute Monte Carlo and TD(0) targets by hand, explain bootstrapping and the bias/variance trade-off between them, and read a TD(λ) update with eligibility traces.
+@@ 4
+About 90 min · Needs Day 4
+@@ 5
+Yesterday's updates averaged over every possible next state using the model. Today you throw the model away and use what actually happened instead. Monte Carlo waits until the episode ends and uses the real return; temporal-difference learning updates after one step using the reward plus its own guess about the next state. Both are policy evaluation without p(s′, r | s, a), and the choice between "wait for the truth" and "learn a guess from a guess" is the central trade-off of the rest of the course.
+@@ 6
+1. Dropping the model: sample returns
+@@ 7
+Every DP update on <a href="#d4">Day 4</a> had the shape Σ<sub>s′,r</sub> p(s′, r | s, a)[r + γ V(s′)]: an average over all outcomes, weighted by the model. Without p you cannot form that sum. What you can do is <em>act</em>: put the agent in state s, follow the policy, record what happens. Each run is one sample of the quantity the sum was computing; average enough of them and you have the model's number without the model.
+@@ 8
+This is the switch from an expected update to a <strong>sample update</strong>: one next state, drawn by the environment, instead of all next states weighted by probability. The cost is noise; one sample can be far from the average. The gain is that you need only episodes of experience, real or simulated, which exist for problems where the full transition table never will. These methods "do not require a model of the environment". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 9
+Recall from <a href="#d3">Day 3</a> that the <strong>return</strong> G<sub>t</sub> = R<sub>t+1</sub> + γR<sub>t+2</sub> + γ²R<sub>t+3</sub> + … is the discounted sum of rewards after time t, and that v<sub>π</sub>(s) = E[G<sub>t</sub> | S<sub>t</sub> = s]. An expectation can be estimated by averaging. That observation gives you the first algorithm.
+@@ 10
+2. Monte Carlo prediction
+@@ 11
+<strong>Monte Carlo (MC) prediction</strong> estimates v<sub>π</sub>(s) as the average of the returns observed after visits to s. Run an episode under π to the end, compute G<sub>t</sub> for each step by working backwards from the final reward, and add each visited state's return to its list. <strong>First-visit MC</strong> uses only the return following the first visit to s in each episode; <strong>every-visit MC</strong> uses all of them. Both converge to v<sub>π</sub>(s) as visits grow; first-visit gives independent, unbiased samples whose standard error falls as 1/√n. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The name comes from the Los Alamos physicists of the 1940s, and first-visit MC itself dates to that decade. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 12
+Instead of lists, most implementations use a running update with a fixed step size α, as today's widgets do: <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 13
+Read it as "move the estimate a fraction α of the way toward the target". The <strong>target</strong> is what you are trying to equal; for MC it is the actual return G<sub>t</sub>. Every prediction method in RL has this shape and differs only in its target:
+@@ 14
+Target for V(S<sub>t</sub>)
+@@ 15
+Samples?
+@@ 16
+Bootstraps?
+@@ 17
+Needs
+@@ 18
+DP (Day 4)
+@@ 19
+No: full expectation
+@@ 20
+Yes: uses V(s′)
+@@ 21
+The model
+@@ 22
+Monte Carlo
+@@ 23
+G<sub>t</sub>, the actual return
+@@ 24
+Yes: one trajectory
+@@ 25
+No: only real rewards
+@@ 26
+The end of the episode
+@@ 27
+TD(0)
+@@ 28
+Yes: one transition
+@@ 29
+Yes: uses V(S<sub>t+1</sub>)
+@@ 30
+One step
+@@ 31
+In the book's words: "The MC target is an estimate because the expected value is not known; a sample return is used. The DP target is an estimate because v<sub>π</sub>(S<sub>t+1</sub>) is not known and the current estimate is used. The TD target is an estimate for both reasons." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 32
+3. TD(0) and the TD error
+@@ 33
+Monte Carlo cannot update anything until the episode ends, which is a problem for long episodes and fatal for tasks that never end. <strong>Temporal-difference learning</strong> replaces the part of the return you have not seen yet with your current estimate of it. After one step you know R<sub>t+1</sub> and S<sub>t+1</sub>, and your table says V(S<sub>t+1</sub>) is roughly what the rest of the return will be, so: <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 34
+This is <strong>TD(0)</strong>, and the bracket is the <strong>TD error</strong> δ<sub>t</sub> = R<sub>t+1</sub> + γV(S<sub>t+1</sub>) − V(S<sub>t</sub>): what you now think the state was worth (one reward plus the value of where you landed) minus what you thought a moment ago. Positive δ is a pleasant surprise and V(S<sub>t</sub>) goes up. Using your own estimate V(S<sub>t+1</sub>) inside the target is <strong>bootstrapping</strong>; TD methods "learn a guess from a guess". DP bootstraps too; MC does not. TD combines "the sampling of Monte Carlo with the bootstrapping of DP". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 35
+Now the trade-off. The MC target G<sub>t</sub> is <strong>unbiased</strong>: its expectation is exactly v<sub>π</sub>(S<sub>t</sub>). But it sums many random rewards, so it has <strong>high variance</strong>. The TD target has <strong>low variance</strong>, one random reward and one random next state, but it is <strong>biased</strong> as long as V(S<sub>t+1</sub>) is wrong, which it is until learning has finished. In practice TD "has usually been found to converge faster than constant-α MC methods on stochastic tasks", and it converges to v<sub>π</sub> for small enough constant α; Dayan proved convergence with probability 1 in 1992. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Richard Sutton introduced TD(0), TD(λ) and the name in a 1988 paper whose abstract describes assigning credit "by means of the difference between temporally successive predictions". <a class="src" href="http://incompleteideas.net/papers/sutton-88-with-erratum.pdf">Sutton 1988</a>
+@@ 36
+You are guessing how long the drive to grandma's will take. The Monte Carlo way: wait until you arrive, look at the clock, then fix your guess for next time. The TD way: at every landmark, compare "time so far plus how long I usually need from here" with your starting guess, and fix it right away. TD can be fooled if "how long from here" is wrong, but it practises at every landmark instead of once per trip.
+@@ 37
+4. The random walk
+@@ 38
+The book's test problem is a <strong>five-state random walk</strong>: states A to E in a row, every episode starts at C, each step goes left or right with probability ½, and the episode ends when you step off either end. The only reward is +1 for stepping off the right; γ = 1. Since v(s) is the probability of exiting right, the true values are 1/6, 2/6, 3/6, 4/6, 5/6 for A to E, and every estimate starts at 0.5. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 39
+Work one TD step by hand. Between non-terminal states every reward is 0 and every V is 0.5, so δ = 0 + 0.5 − 0.5 = 0 and nothing changes. The first episode moves exactly one number: if it exits on the left from A, δ = 0 + 0 − 0.5 = −0.5 and with α = 0.1, V(A) ← 0.5 + 0.1 × (−0.5) = 0.45; if it exits on the right, V(E) becomes 0.55. The book's left-hand plot shows exactly this: after one episode only V(A) has moved. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> MC on the same episode moves every state visited, all toward the same final return of 0 or 1.
+@@ 40
+The book then races the two methods on root-mean-square error across the five states, averaged over 100 runs, for TD with α ∈ {0.05, 0.10, 0.15} and MC with α ∈ {0.01, 0.02, 0.03, 0.04}. It publishes curves, not numbers, and concludes that "the TD method was consistently better than the MC method on this task". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Our replication (100 runs, same setup, seeded) gives the numbers below. The starting error you can check: the squared gaps from 0.5 are 1/9, 1/36, 0, 1/36, 1/9, mean 1/18, and √(1/18) = 0.236.
+@@ 41
+Method, α
+@@ 42
+RMS at episode 0
+@@ 43
+Episode 25
+@@ 44
+Episode 100
+@@ 45
+TD(0), α = 0.05
+@@ 46
+TD(0), α = 0.10
+@@ 47
+MC, α = 0.02
+@@ 48
+MC, α = 0.04
+@@ 49
+Two shapes to notice. TD with α = 0.10 drops faster but then creeps up, because a large constant step size keeps the estimates jittering around the truth (the book's Exercise 6.5). MC is still far from converged at 100 episodes, because each update is noisier and the small α needed to tame the noise makes learning slow. These are replication numbers, not the book's; your own single seeded run below will differ in detail.
+@@ 50
+Try it: choose "Both", press "Run 10" a few times, then "Run 100". Watch the RMS curve and the bars of V against the true values.
+@@ 51
+Notice that TD's curve is below MC's almost everywhere, that a single run is bumpier than the 100-run averages in the table, and that after a few hundred episodes both sit near the true staircase 0.17, 0.33, 0.50, 0.67, 0.83 without landing on it, because the step size is constant.
+@@ 52
+5. You are the predictor: batch updating and certainty equivalence
+@@ 53
+TD and MC do not just differ in speed; on the same finite data they converge to different answers. The clean way to see this is <strong>batch updating</strong>: keep a fixed set of episodes, present them over and over, and apply the updates until the values stop moving. Batch MC converges to the values that minimise the mean squared error against the observed returns, the sample averages. Batch TD(0) converges to the <strong>certainty-equivalence estimate</strong>: build the maximum-likelihood model of the Markov process from the data (count transitions, average rewards), then compute the exactly correct values for that model as if it were certainly right. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 54
+The book's puzzle makes it concrete. You observe eight episodes of an unknown Markov process with states A and B: once A, 0, B, 0; six times B, 1; once B, 0. Everyone agrees V(B) = 6/8 = 3/4. For V(A) there are two defensible answers. Batch MC says 0: the only return ever observed after A was 0, zero error on the training data. Batch TD(0) says 3/4: every time you were in A you moved to B with reward 0, so A is worth whatever B is worth. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 55
+Which is right? On the data you have, MC. On the next episode, probably TD: if the process is Markov, what happened after B tells you about A too, and MC threw that away. Batch TD stayed below batch MC in the book's Figure 6.2 for this reason. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Sutton's 1988 paper already contained this batch-optimality result. <a class="src" href="http://incompleteideas.net/papers/sutton-88-with-erratum.pdf">Sutton 1988</a>
+@@ 56
+<strong>"TD is just MC done faster."</strong> On finite data they converge to different values: the sample average for MC, the certainty-equivalence estimate for TD; 0 versus 3/4 in the puzzle above.
+@@ 57
+<strong>"Bootstrapping means unbiased."</strong> The opposite. The TD target leans on the current V, so it is biased until V is right; what it buys is lower variance.
+@@ 58
+<strong>"MC needs a model."</strong> It needs episodes, not p(s′, r | s, a). Not needing the model is the point of both methods.
+@@ 59
+<strong>"First-visit and every-visit MC are the same."</strong> Same limit, different finite-sample behaviour; every-visit extends more naturally to function approximation and traces.
+@@ 60
+6. n-step returns and the λ-return
+@@ 61
+TD(0) looks one step ahead and bootstraps; MC looks to the end and never does. Between them sits the <strong>n-step return</strong>: n real rewards, then the estimate of whatever follows. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 62
+n = 1 is TD(0); n = ∞ (run to the end of the episode) is MC. Each intermediate n trades a little bias for a little variance; the worst-case error of the expected n-step return is at most γ<sup>n</sup> times the worst-case error of V, so longer look-ahead is less fooled by a wrong V. The book's experiment on a 19-state random walk with rewards −1 and +1 at the ends, measuring RMS error over the first 10 episodes for n from 1 to 512, finds that "methods with an intermediate value of n worked best", around n = 4 to 8. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 63
+Rather than pick one n, average over all of them. The <strong>λ-return</strong> weights the n-step returns geometrically: <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 64
+The weights (1 − λ), (1 − λ)λ, (1 − λ)λ², … sum to 1; in an episodic task the weight that would fall after the end, λ<sup>T−t−1</sup>, goes to the full return. At λ = 0 only the first term survives: TD(0). At λ = 1 only the final return has weight: MC. Watkins introduced the λ-return in his 1989 thesis. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> This is the <strong>forward view</strong>: computing G<sup>λ</sup> for time t means looking forward at everything that happens afterwards, so waiting for the episode to end, the very thing TD was meant to avoid.
+@@ 65
+7. Eligibility traces: the backward view
+@@ 66
+The <strong>backward view</strong> gets the same effect incrementally. Keep for every state an <strong>eligibility trace</strong> z(s), bumped by 1 when the state is visited and decayed by γλ every step; then on each step compute the ordinary TD error and apply it to <em>every</em> state in proportion to its trace. In the book's semi-gradient notation, with weights w and trace vector z: <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 67
+In the tabular case ∇v̂ is a one-hot vector, so the first line says "decay every trace by γλ, then add 1 to the current state's trace", and the last says "update every state's value by α δ<sub>t</sub> times its trace". This is <strong>TD(λ)</strong>. The book's image is of the agent "riding along the stream of states, computing TD errors, and shouting them back to the previously visited states", the shout fading by γλ per step. At λ = 0 only the current state hears it: TD(0). At λ = 1 with γ = 1 the traces never decay, each state receives every later TD error, and the sum is the MC error: this is TD(1), MC done online and usable on continuing tasks. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The idea came into RL through Klopf in 1972; the term "eligibility trace" was first used by Sutton and Barto in 1981. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 68
+Try it: the widget runs one ten-step episode over A to E with V = 0 everywhere, so every TD error is 0 until the final step, when exiting right gives δ = 1. Move λ and γ and watch which states get credit.
+@@ 69
+Notice that at λ = 0 only E, the last state, learns anything, exactly as TD(0) would. At λ = 1 with γ = 1 each state's trace equals its visit count, so the update is the every-visit MC update. In between, recent and frequently visited states get most of the credit and the first state gets almost none.
+@@ 70
+Eligibility traces are footprints in wet sand that fade. When something surprising happens you look back along the beach: the freshest prints belong to the states most responsible, and they get most of the blame or credit. λ sets how fast the prints fade, from "only the last step matters" (λ = 0) to "every print stays sharp" (λ = 1).
+@@ 71
+Going deeper (optional): forward and backward views are the same thing
+@@ 72
+The forward view defines a target, the λ-return, that needs the future. The backward view is a mechanism that runs step by step and never waits. Sutton and Barto show that TD(λ) approximates the offline λ-return algorithm: summed over an episode, the trace updates come to nearly the same total change as moving each state toward its λ-return, and at λ = 0 both are exactly TD(0). Not two algorithms, but the theory and the implementation of one target. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 73
+8. Monte Carlo control, in one paragraph
+@@ 74
+Everything above is prediction. To improve the policy you plug the estimate into yesterday's GPI loop, with one change: being greedy with respect to V needs the model for the one-step look-ahead, so model-free methods estimate <strong>action values</strong> q<sub>π</sub>(s, a) instead, and the greedy action is just argmax<sub>a</sub> Q(s, a). <strong>Monte Carlo ES</strong> (exploring starts) does this: every episode begins at a random state–action pair, every pair having nonzero probability so that all actions keep getting tried; after each episode Q(S<sub>t</sub>, A<sub>t</sub>) moves toward the observed return and π(S<sub>t</sub>) is set to argmax<sub>a</sub> Q(S<sub>t</sub>, a). Monte Carlo ES "cannot converge to any suboptimal policy", though a full convergence proof is still open; it first appeared in the 1998 first edition. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> <a href="#d6">Day 6</a> does the same thing with TD targets, which is where SARSA and Q-learning come from.
+@@ 75 attr
+Two data flows for learning a value table from experience. Monte Carlo: the environment emits a whole episode into an episode buffer; at the end the return G is computed backwards and written into the value table for each visited state. TD(0): the environment emits one transition (S, R, S prime); the TD error delta is computed from R and two table entries and the table is updated immediately. Below, an eligibility-trace strip over states A to E shows fading bars over recently visited states.
+@@ 76
+MONTE CARLO
+@@ 77
+episode buffer
+@@ 78
+whole trajectory, T steps
+@@ 79
+at the end
+@@ 80
+return G<tspan baseline-shift="sub" font-size="10">t</tspan>
+@@ 81
+backwards from R<tspan baseline-shift="sub" font-size="9">T</tspan>
+@@ 82
+table V(s)
+@@ 83
++α(G − V), each s
+@@ 84
+one transition
+@@ 85
+every step
+@@ 86
+TD error δ
+@@ 87
++αδ at S<tspan baseline-shift="sub" font-size="9">t</tspan> only
+@@ 88
+reads V(S′): bootstrapping
+@@ 89
+TD(λ): eligibility-trace strip, applied as +αδ·z(s) to every state
+@@ 90
+E (now)
+@@ 91
+z(s): +1 when visited, ×γλ every step; the shout δ reaches each state in proportion to its bar
+@@ 92
+Top: Monte Carlo must store a whole episode, then compute returns backwards and update every visited state once. Middle: TD(0) consumes one transition at a time, reads the table to form its target (the dashed loop is the bootstrap), and updates one cell. Bottom: TD(λ) keeps a fading trace per state and spreads each δ across all of them.
+@@ 93
+Read each row left to right. In the Monte Carlo row the environment streams states, actions and rewards into an episode buffer, and nothing touches the value table until the terminal state arrives; then returns are computed backwards (G<sub>T−1</sub> = R<sub>T</sub>, G<sub>T−2</sub> = R<sub>T−1</sub> + γG<sub>T−1</sub>, …) and each visited state's cell is nudged toward its return. Memory grows with episode length; learning happens in bursts. In the TD(0) row there is no buffer: one transition arrives, δ is formed from the reward and two table reads (the dashed line is the bootstrap), one cell is written. Memory is constant and learning happens every step, which is what makes it usable on tasks that never end.
+@@ 94
+The bottom strip is what TD(λ) adds: a second table the size of V with one trace per state. Each step decays the strip by γλ, adds 1 to the current state, and writes αδ·z(s) into every cell with a nonzero trace, so a surprise at E reaches back to C and B without storing the episode. With a neural network, z has one entry per weight and the same three lines apply, which is why the book writes them with ∇v̂ and w.
+@@ 95
+On the random walk this is trivial: five floats for V, five for z, and the widget runs 100 episodes of both methods in well under a millisecond. The difference bites at scale. MC's episode buffer is the ancestor of rollout storage in policy-gradient methods (Week 2); TD's one-transition update is the ancestor of the replay-memory sample in DQN (<a href="#d6">Day 6</a>), where one stored (s, a, r, s′) is enough to form a target. The lineage tells you what sits in memory and when the learner runs.
+@@ 96
+Q1. In the random walk with all values initialised to 0.5 and α = 0.1, the first episode exits on the left. After TD(0) processes it, which values have changed?
+@@ 97
+All five, each lowered toward 0
+@@ 98
+Only C, the start state, lowered to 0.45
+@@ 99
+Only A, lowered to 0.45
+@@ 100
+None, because the reward was 0
+@@ 101
+Answer 3. Between non-terminal states every TD error is 0 + 0.5 − 0.5 = 0. The exit from A gives δ = 0 + 0 − 0.5 = −0.5 and V(A) ← 0.5 + 0.1 × (−0.5) = 0.45. Monte Carlo would have lowered every visited state instead.
+@@ 102
+Q2. Why is the TD target called "an estimate for both reasons"?
+@@ 103
+It uses one sampled transition instead of the full expectation, and it uses the current estimate V(S<sub>t+1</sub>) instead of the true v<sub>π</sub>
+@@ 104
+It depends on both α and γ
+@@ 105
+It averages the MC and DP targets
+@@ 106
+It is computed twice, once forwards and once backwards
+@@ 107
+Answer 1. MC samples but does not bootstrap; DP bootstraps but does not sample; TD does both, which is what makes it model-free and online at the same time.
+@@ 108
+Q3. Eight batch episodes: A,0,B,0 once; B,1 six times; B,0 once. What do batch MC and batch TD(0) say about V(A)?
+@@ 109
+Both say 3/4
+@@ 110
+Both say 0
+@@ 111
+MC says 3/4, TD says 0
+@@ 112
+MC says 0, TD says 3/4
+@@ 113
+Answer 4. MC averages the one return observed after A, which was 0. TD builds the maximum-likelihood model (A always goes to B with reward 0) and gives A the value of B, 6/8 = 3/4. That is the certainty-equivalence estimate.
+@@ 114
+Q4. "Bootstrapping makes the estimate unbiased." What is wrong with this?
+@@ 115
+Nothing; bootstrapping removes the bias that MC has
+@@ 116
+Bootstrapping introduces bias (the target leans on the current, wrong V) in exchange for lower variance
+@@ 117
+Bootstrapping affects variance only, never bias
+@@ 118
+Bootstrapping only applies to Monte Carlo
+@@ 119
+Answer 2. The MC target G<sub>t</sub> is the unbiased one. TD's target R + γV(S′) is biased while V is wrong, but it sums one reward instead of many, so its variance is lower. DP and TD bootstrap; MC does not.
+@@ 120
+Q5. In TD(λ) with accumulating traces on a table, what happens to the trace of a state on a step where it is not visited?
+@@ 121
+It is reset to 0
+@@ 122
+It stays the same
+@@ 123
+It is multiplied by γλ
+@@ 124
+It increases by 1
+@@ 125
+Answer 3. z<sub>t</sub> = γλ z<sub>t−1</sub> + ∇v̂, and ∇v̂ is one-hot on the visited state only. So unvisited states decay by γλ and the visited state decays and then gains 1. With λ = 1 and γ = 1 nothing decays and the trace counts visits.
+@@ 126
+Q6. On the 19-state random walk, which n gave the lowest RMS error over the first 10 episodes?
+@@ 127
+n = 1, since TD(0) was best on the 5-state walk
+@@ 128
+An intermediate n, around 4 to 8
+@@ 129
+n = 512, since more real rewards means less bias
+@@ 130
+All n performed the same at the best α
+@@ 131
+Answer 2. Figure 7.2 shows the error curves for n from 1 to 512; both extremes are worse than the middle. Longer look-ahead reduces bias from a wrong V but adds variance from more random rewards.
+@@ 132
+Monte Carlo and TD replace DP's expected update over the model with a sample update from experience; they need episodes or transitions, not p(s′, r | s, a).
+@@ 133
+Every prediction method is "move V toward a target". MC's target is the real return G<sub>t</sub> (unbiased, high variance, needs the episode to end); TD(0)'s target is R<sub>t+1</sub> + γV(S<sub>t+1</sub>) (biased, low variance, one step). The bracket is the TD error δ.
+@@ 134
+Bootstrapping means using your own estimate inside the target: "a guess from a guess". DP and TD do it; MC does not. On the five-state random walk (true values 1/6 … 5/6) TD was consistently better than MC.
+@@ 135
+On finite data MC and TD converge to different answers: the sample average versus the certainty-equivalence estimate. The predictor puzzle gives V(A) = 0 for MC and 3/4 for TD.
+@@ 136
+n-step returns and the λ-return interpolate between TD(0) and MC; eligibility traces (decay by γλ, +1 on visit, update every state by αδz) compute the λ-return incrementally. λ = 0 is TD(0); λ = 1, γ = 1 is MC.
+@@ 137
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd edition, Chapters 5, 6, 7 and 12</a> — Sutton &amp; Barto, MIT Press, 2018 (2020 PDF). §5.1 Monte Carlo prediction and §5.3 Monte Carlo ES; §6.1–6.3 TD(0), Example 6.2 (the random walk, p.125), Example 6.4 ("You are the Predictor") and certainty equivalence; §7.1 n-step TD and Example 7.1; §12.1–12.2 the λ-return and TD(λ) with eligibility traces; bibliographical remarks on p.116–117, 139 and 328 for the dates.
+@@ 138
+<a href="http://incompleteideas.net/papers/sutton-88-with-erratum.pdf">Learning to Predict by the Methods of Temporal Differences</a> — Sutton, Machine Learning 3:9–44, 1988. The paper that introduced TD(0), TD(λ) and the random-walk example, and proved the batch-optimality result. Short and readable.
+@@ 139
+<a href="http://incompleteideas.net/book/the-book-2nd.html">Book landing page</a> — Sutton &amp; Barto. Links to the free PDF, code, and errata.

@@ -1,0 +1,84 @@
+@@ ppo
+"Clipped PPO objective versus probability ratio; the unclipped line r times A is dashed, the band 1 minus epsilon to 1 plus epsilon is shaded, a marker sits at the chosen ratio."
+==
+"Probability ratio에 따른 PPO clipped objective. clip 전의 직선 r 곱하기 A는 점선이고, 1 빼기 epsilon부터 1 더하기 epsilon까지의 구간은 음영이며, 선택한 ratio 위치에 표시점이 있습니다."
+@@ ppo
+"L^CLIP term"
+==
+"L^CLIP 항"
+@@ ppo
+"unclipped r·A"
+==
+"clip 전 r·A"
+@@ ppo
+"band [1−ε, 1+ε]"
+==
+"구간 [1−ε, 1+ε]"
+@@ ppo
+"r · A (unclipped)"
+==
+"r · A (clip 전)"
+@@ ppo
+"L^CLIP = min of the two"
+==
+"L^CLIP = 둘 중 최솟값"
+@@ ppo
+"gradient w.r.t. r"
+==
+"r에 대한 gradient"
+@@ ppo
+"zero"
+==
+"0"
+@@ ppo
+"A = 0: nothing to learn"
+==
+"A = 0: 배울 것이 없음"
+@@ ppo
+"clipped flat: no incentive to go further"
+==
+"clip되어 평평함: 더 나아갈 유인이 없음"
+@@ ppo
+"outside the band but the move hurts, so the unclipped term is active"
+==
+"구간 밖이지만 해로운 방향이라 clip 전 항이 작동함"
+@@ ppo
+"inside the band: ordinary policy gradient"
+==
+"구간 안: 보통의 policy gradient"
+@@ ppo
+"The PPO clipped objective, one sample"
+==
+"PPO의 clipped objective, sample 하나"
+@@ ppo
+"For one (state, action) with advantage A, the plot is min(r·A, clip(r, 1−ε, 1+ε)·A) as a function of the probability ratio r = π_θ(a|s) / π_old(a|s). Move the marker and watch where the slope vanishes."
+==
+"advantage가 A인 (state, action) 하나에 대해, 그래프는 min(r·A, clip(r, 1−ε, 1+ε)·A)를 probability ratio r = π_θ(a|s) / π_old(a|s)의 함수로 그린 것입니다. 표시점을 움직이며 기울기가 사라지는 곳을 살펴보세요."
+@@ sac
+"Top: the two-peak reward Q over a one-dimensional action. Bottom: the maximum-entropy policy density proportional to exp(Q over alpha) for the chosen temperature."
+==
+"위: 1차원 action에 대한 봉우리 두 개짜리 reward Q. 아래: 선택한 temperature에서 exp(Q 나누기 alpha)에 비례하는 maximum-entropy policy의 밀도."
+@@ sac
+"max for [−1, 1] is ln 2 = 0.693"
+==
+"[−1, 1]에서 최댓값은 ln 2 = 0.693"
+@@ sac
+"mass on the right peak"
+==
+"오른쪽 봉우리의 확률 질량"
+@@ sac
+"peak density"
+==
+"최대 밀도"
+@@ sac
+"uniform would be 0.50"
+==
+"균등분포라면 0.50"
+@@ sac
+"Maximum-entropy policy at one state"
+==
+"한 state에서의 maximum-entropy policy"
+@@ sac
+"A 1-D action in [−1, 1] with a two-peak Q. The soft-optimal policy is π(a) ∝ exp(Q(a)/α). Low α puts everything on the best peak; high α keeps both options alive."
+==
+"[−1, 1] 범위의 1차원 action과 봉우리가 둘인 Q입니다. Soft-optimal policy는 π(a) ∝ exp(Q(a)/α)입니다. α가 낮으면 가장 좋은 봉우리에 전부 몰리고, α가 높으면 두 선택지가 모두 살아남습니다."

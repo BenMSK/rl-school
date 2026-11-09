@@ -1,0 +1,296 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 7</span>
+@@ 2
+Policy gradient와 actor–critic
+@@ 3
+오늘 레슨을 마치면 log-derivative trick으로 REINFORCE update를 유도할 수 있고, baseline이 bias를 더하지 않으면서 분산을 줄이는 이유를 설명할 수 있습니다. GAE 공식을 읽고 λ를 정할 수 있으며, 2016년에 A3C와 A2C가 무엇을 바꿨는지도 말할 수 있습니다.
+@@ 4
+약 90분 · Day 6 필요
+@@ 5
+action마다 value를 학습해 greedy하게 행동하는 대신, policy에 자체 파라미터를 주고 return의 기댓값을 직접 끌어올릴 수 있습니다. policy gradient theorem에 따르면 올라가는 방향은 "실제로 취한 action을, 결과가 좋았던 만큼 더 자주 나오게 하라"입니다. 그 뒤에 나오는 baseline, advantage, critic, GAE, 병렬 worker는 모두 "얼마나 좋았는가"를 noise는 더 적게, 기다림은 더 짧게 측정하기 위한 것입니다.
+@@ 6
+1. policy를 직접 학습하는 이유
+@@ 7
+tabular Q-learning부터 <a href="#d6">Day 6</a>의 DQN까지, 지금까지의 방법은 모두 <strong>action value</strong>(행동 가치) Q(s,a)를 학습한 다음 arg max를 골라 행동했습니다. action이 몇 개 안 되고 이산적일 때는 이 방식이 통합니다. 하지만 흔히 만나는 두 가지 상황에서는 통하지 않습니다.
+@@ 8
+<strong>연속 action.</strong> 로봇 팔은 관절 토크 일곱 개를 고르는데, 각각이 실수입니다. max를 취할 유한한 목록이 없고, step마다 신경망을 입력에 대해 최대화하는 일은 그 자체로 하나의 최적화 문제입니다. <strong>parameterised policy</strong>(파라미터화된 정책) π(a|s,θ)는 이 문제를 비켜 갑니다. 신경망이 action 분포를 직접 출력하기 때문입니다. 표준적인 선택은 평균 μ(s,θ)와 표준편차 σ(s,θ)를 신경망이 출력하는 Gaussian이고, 이때 밀도는 π(a|s,θ) = 1/(σ√(2π)) · exp(−(a − μ)²/(2σ²))입니다. σ는 그 로그를 출력하게 해서 양수로 유지합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 9
+<strong>어떤 deterministic policy보다도 나은 stochastic policy.</strong> Sutton과 Barto의 short-corridor 예제가 이 점을 보여 줍니다. 작은 gridworld에 terminal이 아닌 state가 세 개 있는데, agent는 이 셋을 구별하지 못하고, 가운데 state에서는 "left"와 "right"가 뒤바뀌어 있습니다. 어떤 ε-greedy policy도 잘해야 episode당 약 −44점을 얻지만, "right"를 약 0.59의 확률로 고르는 policy는 약 −11.6점을 얻습니다. value에 arg max를 붙이는 방법으로는 "59%의 경우에 right로 간다"를 표현할 수 없습니다. softmax policy는 표현할 수 있고, gradient ascent가 그 policy를 찾아냅니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 10
+세 번째 이유는 덜 눈에 띕니다. θ를 조금 바꾸면 action 확률도 조금만 바뀝니다. Q-table에서는 두 value가 아주 조금만 바뀌어도 arg max가 뒤집혀 policy가 완전히 달라질 수 있습니다. 이런 매끄러움 덕분에 policy gradient의 수렴 이론이 더 깔끔하고, 이것이 <a href="#d8">Day 8</a>로 이어지는 실마리입니다.
+@@ 11
+그러면 목적 함수를 정의합시다. <strong>J(θ)</strong>는 파라미터가 θ인 policy의 return 기댓값이고, update는 평범한 gradient ascent, 즉 θ ← θ + α ∇J(θ)입니다. 남은 질문은 하나, sample로부터 ∇J(θ)를 어떻게 추정하느냐입니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 12
+2. policy gradient theorem과 log-derivative trick
+@@ 13
+어려운 점은 J(θ)가 θ에 두 번 의존한다는 것입니다. policy가 action을 고르고, 그 action이 어떤 state를 방문할지 결정합니다. state 분포를 거쳐 미분하는 일은 불가능해 보입니다. environment의 dynamics를 모르기 때문입니다. <strong>policy gradient theorem</strong>은 그럴 필요가 전혀 없다고 말합니다. on-policy state 분포가 μ(s)인 policy π(a|s,θ)에 대해 다음이 성립합니다.
+@@ 14
+쉬운 말로 하면, 각 state에 얼마나 자주 있는가에, 거기서 각 action이 얼마나 좋은가를 곱하고, 그 action을 더 자주 나오게 하는 방향을 곱한 것입니다. μ(s)를 θ로 미분한 항은 나타나지 않습니다. episodic 경우에는 비례 상수가 평균 episode 길이이고, continuing 경우에는 정확히 1입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 15
+같은 결과의 trajectory 버전은 코드로 옮기기가 더 쉽고, 항등식 하나에 기대고 있습니다. 바로 <strong>log-derivative trick</strong>입니다. 어떤 확률 P(τ|θ)에 대해서도 ∇P = P · ∇log P가 성립합니다. J를 trajectory τ에 대한 기댓값으로 쓰고, gradient를 기댓값 안으로 옮긴 뒤 이 trick을 적용하면, sampling할 수 있는 기댓값으로 되돌아옵니다.
+@@ 16
+=
+@@ 17
+이제 log P(τ|θ)를 전개합니다. 이것은 log ρ₀(s₀), 모든 step의 log π(a<sub>t</sub>|s<sub>t</sub>), 모든 step의 log P(s<sub>t+1</sub>|s<sub>t</sub>,a<sub>t</sub>)를 더한 것입니다. θ가 들어 있는 것은 policy 항뿐이므로, 시작 state 항과 transition 항은 ∇<sub>θ</sub>를 취하면 사라집니다. 이것이 이 trick이 주는 이득입니다. environment를 모델링할 필요가 전혀 없고, 자기 신경망만 미분하면 됩니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 18
+=
+@@ 19
+이 식을 지시문으로 읽어 봅시다. policy를 실행한 다음, 취한 action 하나하나의 log-probability를 trajectory 전체의 return에 비례하는 만큼 조금 올립니다. 좋은 episode는 자기 action을 모두 위로 밀고, 나쁜 episode(return이 음수)는 모두 아래로 밉니다. trajectory의 batch D로 구한 sample 추정값은 그냥 평균입니다: ĝ = (1/|D|) Σ<sub>τ</sub> Σ<sub>t</sub> ∇log π(a<sub>t</sub>|s<sub>t</sub>) R(τ). <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 20
+가중치가 붙은 maximum likelihood 문제를 떠올려 봅시다. 지도학습은 모든 예제에 대해 "log p(label | input)을 키워라"라고 하고, 가중치는 1입니다. policy gradient도 경험한 모든 (state, action) 쌍에 대해 같은 말을 하지만, 가중치가 return입니다. 가중치는 음수가 될 수 있는데, 지도학습에는 없는 일입니다. 게다가 "데이터셋"은 지금 update하는 바로 그 모델이 만든 것이라, θ가 바뀌는 순간 낡은 것이 됩니다. 이 두 가지 차이가 RL이 더 어려운 이유의 전부입니다.
+@@ 21
+3. REINFORCE, 그리고 직접 확인할 수 있는 softmax update
+@@ 22
+<strong>REINFORCE</strong>는 위 공식에 각 time step 이후의 return을 넣으면 나오는 알고리즘입니다. Ronald Williams가 1992년 <em>Machine Learning</em>에 발표했고, 이번 주와 다음 주에 나오는 모든 방법의 조상입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Sutton과 Barto가 상자에 정리한 방식대로 쓰면, step별 update는 다음과 같습니다.
+@@ 23
+=
+@@ 24
+여기서 G<sub>t</sub>는 step t부터 episode 끝까지의 discounted return입니다. ln π의 gradient는 ∇π/π와 같습니다. 이 나눗셈을 Sutton과 Barto는 이렇게 설명합니다. ∇π는 A<sub>t</sub>를 다시 고를 확률을 파라미터 공간에서 가장 크게 높이는 방향이고, π(A<sub>t</sub>|S<sub>t</sub>)로 나누면 이미 자주 나오는 action이 단지 update를 더 자주 받는다는 이유만으로 이기는 일을 막을 수 있습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 원 논문은 <a href="#p-reinforce">REINFORCE 논문 리뷰</a>에서 다룹니다.
+@@ 25
+<strong>softmax 한 step 직접 계산하기.</strong> action이 두 개이고 logit 두 개에 softmax를 취한다고 합시다. logit은 둘 다 0이므로 π(right) = 0.5입니다. softmax에서 log π(a)를 logit으로 미분한 gradient는 onehot(a) − π입니다. "right"를 골랐고 episode의 return이 G = +10이었으며, α = 0.01입니다.
+@@ 26
+=
+@@ 27
+update: logits ← [0, 0] + 0.01 × 10 × [0.5, −0.5] = [0.05, −0.05].
+@@ 28
+새 π(right) = σ(0.05 − (−0.05)) = σ(0.1) ≈ 0.525. 마땅히 그래야 하듯 "right"가 나올 확률이 올라갔습니다.
+@@ 29
+이번에는 같은 episode인데, 이 state에서 보통 얻는 return이 12라는 것을 알고 있어서 G − 12 = −2를 가중치로 쓴다고 합시다. 그러면 logits ← [−0.01, 0.01], π(right) ≈ 0.495가 됩니다. 같은 +10이 이제는 "right"에 불리한 증거입니다. 기대에 못 미쳤기 때문입니다. 이것이 baseline 아이디어의 축소판이고, 다음 절의 주제입니다.
+@@ 30
+다트 게임을 하면서 던진 것을 하나하나 다 기억해 둔다고 해 봐요. 게임에서 이기면 다음번에는 그때 던진 방식을 전부 조금 더 따라 하고, 지면 조금 덜 따라 해요. 이게 REINFORCE예요. 효과는 있지만 느려요. 못 던지고도 운이 좋아 이길 때가 있고, 잘 던지고도 질 때가 있거든요. 다음 절에 나오는 해결책은 "내가 이겼나?"라고 묻는 대신 "평소의 나보다 잘했나?"라고 묻는 거예요.
+@@ 31
+4. 높은 분산, 그리고 이를 고치는 baseline
+@@ 32
+REINFORCE는 <strong>Monte Carlo</strong> 방법입니다. 실제 return이 나올 때까지 기다립니다. return은 무작위인 reward 여러 개의 합이고, 같은 return이 episode의 모든 action에, 아무 상관 없는 action에까지 똑같이 돌아갑니다. GAE 논문은 그 결과를 정확하게 짚습니다. return 전체를 쓰면 value function이 얼마나 좋은지와 상관없이 추정량에 bias가 없지만, "항들을 합한 것이라서 분산이 높다"는 것입니다. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> 분산이 높으면 평균이 옳은 방향을 가리킬 때까지 많은 episode가 필요합니다.
+@@ 33
+bias 비용이 전혀 없는 해결책이 두 가지 있습니다. 첫째는 <strong>reward-to-go</strong>입니다. 시각 t의 action이 t 이전의 reward를 만들었을 리 없으므로, episode 전체의 return 대신 R̂<sub>t</sub> = Σ<sub>t'≥t</sub> r<sub>t'</sub>를 가중치로 씁니다. 그래도 기댓값은 바뀌지 않습니다. 어떤 분포에서든 E<sub>x∼P<sub>θ</sub></sub>[∇log P<sub>θ</sub>(x)] = 0이므로("expected grad-log-prob" lemma), 빼 버린 항들의 평균이 0이기 때문입니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 34
+둘째는 <strong>baseline</strong>(기준선)입니다. state의 함수 b(s)라면 무엇이든 가중치에서 뺄 수 있습니다. Sutton과 Barto의 한 줄 증명은 이렇습니다. Σ<sub>a</sub> b(s) ∇π(a|s,θ) = b(s) ∇ Σ<sub>a</sub> π(a|s,θ) = b(s) ∇1 = 0. 따라서 baseline은 "update의 기댓값은 그대로 두지만, 분산에는 큰 영향을 줄 수 있습니다". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 보통은 b(s) = V(s), 즉 state value를 고르고, 두 번째 신경망을 관측된 return에 mean-squared-error loss로 회귀시켜 학습합니다. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/vpg.html">Achiam 2018</a>
+@@ 35
+=
+@@ 36
+왜 이렇게 효과가 클까요? 두 action의 return이 모두 [90, 110] 범위 어딘가에 떨어진다고 상상해 봅시다. baseline이 없으면 update마다 크기가 약 100인 밀기가 무작위 방향으로 가해집니다. 신호(두 action 사이의 5점 차이)는 100점짜리 오프셋에 묻혀 버립니다. b = 100이면 밀기는 ±10이 되고 더 나은 action 쪽을 향합니다.
+@@ 37
+직접 해 보기: 아래 위젯에는 평균적으로 100, 105, 95를 지급하는 arm 세 개가 있고, 각각 ±10의 noise가 붙으며, policy는 균등한 softmax입니다. "batch sampling"을 누른 다음 baseline을 켜고 꺼 보고 N을 바꿔 보세요.
+@@ 38
+눈여겨볼 점: 두 추정값의 목표는 (0, +1.67, −1.67)로 같지만, baseline이 없는 쪽은 noise에 파묻힙니다. seed가 고정된 N = 20 batch에서는 분산이 약 230배 더 크고, N = 200에서도 arm 하나의 부호를 여전히 틀립니다. 반면 baseline을 쓴 쪽은 참값에서 0.1 이내에 들어옵니다. 학습된 baseline은 0에서 시작해 누를 때마다 좋아집니다. 다음 절에서 critic이 online으로 하게 될 일이 바로 이것입니다.
+@@ 39
+<strong>"baseline은 gradient를 baseline의 견해 쪽으로 치우치게 한다."</strong> 그렇지 않습니다. b가 action이 아니라 state에만 의존하는 한 update의 기댓값은 똑같습니다. 달라지는 것은 퍼진 정도뿐입니다.
+@@ 40
+<strong>"policy gradient는 좋은 action에 대한 지도학습이다."</strong> 가중치가 음수일 수 있고, 데이터는 지금 바꾸고 있는 policy가 만든 것이라서 batch는 그것을 만든 파라미터에 대해서만 유효합니다. 지도학습에는 두 성질 모두 없습니다.
+@@ 41
+<strong>"분산은 낮을수록 언제나 좋다."</strong> reward-to-go와 state baseline은 공짜입니다. 5절부터 7절까지의 방법은 분산을 줄이는 대신 bias를 받아들이며, 이 trade-off는 튜닝해야 합니다.
+@@ 42
+5. advantage와 actor–critic
+@@ 43
+V(s)를 baseline으로 쓰면 가중치는 G<sub>t</sub> − V(s<sub>t</sub>)가 됩니다. sampling된 return을 그 action이 주어졌을 때의 기댓값으로 바꾸면 Q(s,a) − V(s)가 되는데, 여기에는 이름이 있습니다. 바로 <strong>advantage</strong>(이점) A<sup>π</sup>(s,a)입니다. advantage는 "이 state에서 바로 이 action이 policy의 평균보다 얼마나 더 좋은가?"에 답합니다. 일반적인 policy gradient는 E[Σ<sub>t</sub> ∇log π(a<sub>t</sub>|s<sub>t</sub>) Φ<sub>t</sub>]이고, Φ<sub>t</sub>로는 R(τ), R̂<sub>t</sub>, R̂<sub>t</sub> − b(s<sub>t</sub>), Q<sup>π</sup>(s<sub>t</sub>,a<sub>t</sub>), A<sup>π</sup>(s<sub>t</sub>,a<sub>t</sub>) 중 어느 것을 써도 됩니다. 기댓값은 모두 같고, 정확한 것들 가운데서는 advantage의 분산이 가장 낮습니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 44
+A를 정확히 관측할 수는 없지만, 이미 가지고 있는 value 신경망으로 추정할 수 있습니다. Sutton과 Barto의 말을 빌리면, policy와 value function을 둘 다 학습하는 방법은 "흔히 actor–critic 방법이라고 부르는데, 여기서 'actor'는 학습된 policy를, 'critic'은 학습된 value function을 가리킵니다". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 가장 단순한 버전인 <strong>one-step actor–critic</strong>은 TD error를 advantage 추정값으로 씁니다.
+@@ 45
+=
+@@ 46
+같은 숫자 δ<sub>t</sub>가 두 신경망을 모두 학습시킵니다. actor에게는 "기대보다 좋았다, 또는 나빴다"를 알려 주고, critic에게는 <a href="#d6">Day 6</a>의 bootstrapped target에서 만난 semi-gradient TD(0) error입니다. δ<sub>t</sub>는 한 step만 지나면 구할 수 있으므로 update는 완전히 online입니다. 더는 episode가 끝나기를 기다리지 않아도 되고, 그래서 continuing task도 다룰 수 있습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 그 대가는 bias입니다. V가 틀리면 δ<sub>t</sub>도 일정한 방향으로 틀립니다. 반면 Monte Carlo return은 noise가 많지만 정직합니다.
+@@ 47
+critic은 아무것도 고르지 않습니다. actor가 한 일에 점수를 매길 뿐입니다. 한 수 둘 때마다 "기대보다 좋았어" 또는 "기대보다 나빴어"라고 외치는 코치처럼 들린다면, 바로 그 그림이 맞습니다.
+@@ 48
+6. A3C와 A2C: CPU가 만든 전환점
+@@ 49
+2016년 2월 DeepMind의 Mnih와 동료들이 <strong>A3C</strong>, 즉 Asynchronous Advantage Actor-Critic을 발표했습니다. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> 알고리즘 측면의 내용은 소박합니다. advantage에 k-step bootstrapping을 쓰는 actor–critic으로, A(s<sub>t</sub>,a<sub>t</sub>) = Σ<sub>i=0</sub><sup>k−1</sup> γ<sup>i</sup> r<sub>t+i</sub> + γ<sup>k</sup> V(s<sub>t+k</sub>) − V(s<sub>t</sub>)이고 k는 최대 t<sub>max</sub> = 5입니다. 여기에 <strong>entropy bonus</strong> β H(π(·|s))를 β = 0.01로 policy의 목적 함수에 더했는데, 논문은 이것이 "suboptimal한 deterministic policy로 너무 일찍 수렴하는 것을 막아 exploration을 개선했다"고 말합니다. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a>
+@@ 50
+분야를 바꾼 것은 시스템 측면의 내용입니다. DQN은 연속된 sample 사이의 상관관계를 끊기 위해 replay buffer가 필요했고, 이 때문에 off-policy 학습을 할 수밖에 없었습니다. A3C는 그 대신 GPU 없이 multi-core CPU 한 대에서 actor-learner thread 16개를 돌렸고, thread마다 environment 복사본을 따로 두었습니다. 각 thread는 최대 5step 동안 행동하고, gradient를 local에서 계산한 뒤, 공유 파라미터에 밀어 넣습니다. 이때 shared RMSProp(decay 0.99)을 쓰고 lock은 걸지 않는데, Hogwild! 방식입니다. 서로 다른 thread가 같은 순간에 서로 다른 state를 탐색하므로, replay 없이도 gradient 흐름의 상관관계가 사라집니다. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a>
+@@ 51
+방법 (Atari 게임 57개, human starts)
+@@ 52
+학습 시간
+@@ 53
+평균
+@@ 54
+중앙값
+@@ 55
+GPU로 8일
+@@ 56
+=
+@@ 57
+=
+@@ 58
+=
+@@ 59
+CPU 16코어로 1일
+@@ 60
+CPU 16코어로 4일
+@@ 61
+=
+@@ 62
+점수는 human-normalised 값이고, 논문의 Table 1에서 가져왔습니다. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> CPU에서의 하루가 평균 기준으로 Dueling Double DQN의 GPU 8일과 맞먹었고, 4일이면 평균 기준으로 모든 DQN 변형을 앞섰습니다. thread를 1개에서 16개로 늘리자 A3C는 약 12.5배 빨라졌습니다. one-step Q-learning의 24.1배보다는 작지만 충분한 수치입니다. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> 같은 방법으로 TORCS 주행 agent, MuJoCo의 continuous control 제어기, LSTM을 쓴 3D 미로 agent도 학습시켰습니다. 그림은 <a href="#p-a3c">A3C 논문 리뷰</a>에서 하나씩 살펴봅니다.
+@@ 63
+<strong>A2C</strong>는 같은 update의 동기식 버전입니다. environment N개가 발맞춰 한 step씩 진행하고, 거기서 나온 N × T개의 sample을 batch 하나로 쌓아 gradient를 한 번 계산해 적용한 다음, 모두가 다시 진행합니다. 별개의 알고리즘이 있는 것은 아닙니다. PPO 논문은 이것을 그냥 "advantage actor critic"이라고 부르며 비교 대상 baseline으로 사용합니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> 동기식 batch 처리는 가장 느린 environment를 기다리느라 시간을 조금 낭비하지만, GPU를 다시 쓸모 있게 만들고 결과가 deterministic합니다. 그래서 요즘 구현은 거의 모두 A2C 형태입니다.
+@@ 64
+7. GAE: TD와 Monte Carlo를 잇는 다이얼 하나
+@@ 65
+5절에서는 one-step TD error를 advantage로 썼습니다(분산은 낮지만 V가 틀린 만큼 bias가 생깁니다). 4절에서는 return 전체에서 V를 뺀 값을 썼습니다(bias는 없지만 분산이 높습니다). A3C의 k-step 추정량은 고정된 k로 그 사이에 자리합니다. Schulman과 동료들이 2015년에 발표하고 ICLR 2016에서 소개한 <strong>Generalized Advantage Estimation</strong>은 이렇게 한 지점에서 딱 끊는 대신 모든 k-step 추정량을 지수적으로 가중 평균합니다. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> TD residual을 δ<sub>t</sub> = r<sub>t</sub> + γV(s<sub>t+1</sub>) − V(s<sub>t</sub>)로 정의하면 다음과 같습니다.
+@@ 66
+=
+@@ 67
+양 끝점을 보면 이 다이얼을 읽을 수 있습니다. λ = 0이면 합이 δ<sub>t</sub>로 줄어듭니다. 이것은 one-step TD error이고, 논문은 "분산이 훨씬 낮다"고 하지만 V가 정확하지 않으면 bias가 있습니다. λ = 1이면 discount된 residual의 telescoping sum이 Σ<sub>l</sub> γ<sup>l</sup> r<sub>t+l</sub> − V(s<sub>t</sub>)와 같아집니다. discounted return에서 baseline을 뺀 값으로, bias는 없지만 noise가 많습니다. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> 중간의 λ는 bias와 분산 사이를 조절하는 다이얼입니다. 그리고 <strong>λ는 discount가 아닙니다</strong>. γ는 어떤 return을 최적화할지를 정하고, λ는 그 return의 advantage를 어떻게 추정할지만 바꿉니다.
+@@ 68
+<strong>세 step을 손으로 확인하기.</strong> γ = 0.99, λ = 0.95이면 γλ = 0.9405입니다. residual이 δ = [1.0, 0.5, −0.2]라고 합시다. 그러면 Â<sub>0</sub> = 1.0 + 0.9405 × 0.5 + 0.9405² × (−0.2) = 1.0 + 0.470 − 0.177 ≈ 1.293입니다. λ = 0이면 답은 1.0이고, λ = 1이면 1.0 + 0.99 × 0.5 + 0.9801 × (−0.2) ≈ 1.299입니다.
+@@ 69
+직접 해 보기: 아래 위젯에는 reward가 고정된 10-step trajectory와 그럭저럭 쓸 만한 critic이 있습니다. λ를 움직이면서 Â<sub>0</sub>이 one-step TD error에서 Monte Carlo 값으로 옮겨 가는 것을 지켜보고, 그다음 γ를 낮춰 보세요.
+@@ 70
+눈여겨볼 점: γ = 0.99일 때 Â<sub>0</sub>은 λ = 0에서 0.084(critic은 step 0이 기대한 만큼 좋았다고 본 것입니다), λ = 0.95에서 2.16, λ = 1에서 3.13입니다(trajectory는 critic의 V(s₀) = 1.5가 약속한 것보다 훨씬 많이 벌었습니다). step 5의 큰 음수 δ와 step 6~8의 큰 양수 δ는 λ가 뒤쪽 residual을 들여보내 줘야 비로소 Â<sub>0</sub>에 닿습니다. 차트 아래에 표시되는 가중치 (γλ)<sup>l</sup>이 메커니즘의 전부입니다.
+@@ 71
+실제로는 논문의 실험에서 [0.9, 0.99] 범위의 중간값 λ가 대체로 가장 좋았습니다. Cart-pole은 γ = 0.99에서 λ가 [0.92, 0.98]일 때 가장 빨리 학습했고, 3D 이족 보행 로봇은 γ가 [0.99, 0.995], λ가 [0.96, 0.99]일 때 좋았으며, 사족 보행 로봇은 γ = 0.995, λ = 0.96에서 가장 좋았습니다. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> γ = 0.99, λ = 0.95 조합은 <a href="#d8">Day 8</a>의 PPO가 물려받은 기본값이 되었습니다. PPO는 이 합을 truncated 형태로 써서, T-step rollout segment가 끝나는 곳에서 합을 멈춥니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 72
+더 깊이 (선택): λ = 1 끝점이 정확히 Monte Carlo에서 V를 뺀 값인 이유
+@@ 73
+Σ<sub>l</sub> γ<sup>l</sup> δ<sub>t+l</sub> = Σ<sub>l</sub> γ<sup>l</sup> r<sub>t+l</sub> + Σ<sub>l</sub> γ<sup>l+1</sup> V(s<sub>t+l+1</sub>) − Σ<sub>l</sub> γ<sup>l</sup> V(s<sub>t+l</sub>)로 풀어 써 봅시다. V가 들어간 두 합은 한 항만큼 밀린 같은 급수이므로, 맨 앞의 V(s<sub>t</sub>)만 빼고 모두 상쇄되어 discounted return에서 V(s<sub>t</sub>)를 뺀 값이 남습니다. V에 어떤 오차가 있어도 떨어져 나가므로 λ = 1에는 bias가 없습니다. λ &lt; 1이면 상쇄가 완전하지 않고, 남는 부분은 V의 정확도에 따라 달라집니다. GAE 논문은 V가 정확히 true value function이라면 어떤 λ에서도 bias가 없음을 보입니다. 따라서 치르는 bias는 정확히 critic의 오차이고, 그것이 γλ로 discount된 것입니다. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a>
+@@ 74 attr
+왼쪽 패널: actor–critic 신경망. observation 상자가 shared trunk로 들어가고, trunk는 pi를 내는 policy head와 V를 내는 value head로 갈라집니다. environment는 reward와 다음 state를 돌려줍니다. TD error delta는 reward와 두 value 추정값으로 계산되어 policy loss와 value loss 양쪽으로 흘러가고, 두 loss의 gradient는 공유 파라미터로 되돌아갑니다. 오른쪽 패널: A3C. 맨 위에는 공유 메모리에 있는 global 파라미터 상자가 있고, 그 아래에 worker 상자 네 개(열여섯 개라고 표시)가 있으며 각자 environment 복사본을 가집니다. 위로 가는 화살표는 gradient를, 아래로 가는 화살표는 파라미터 sync를 나릅니다.
+@@ 75
+Actor–critic: head 둘, trunk 하나
+@@ 76
+=
+@@ 77
+=
+@@ 78
+=
+@@ 79
+=
+@@ 80
+=
+@@ 81
+=
+@@ 82
+=
+@@ 83
+=
+@@ 84
+=
+@@ 85
+A3C: worker 16개, 공유 θ
+@@ 86
+=
+@@ 87
+=
+@@ 88
+=
+@@ 89
+자체 env 사본
+@@ 90
+=
+@@ 91
+=
+@@ 92
+=
+@@ 93
+=
+@@ 94
+각자: ≤ 5step 행동, k-step A, local grad
+@@ 95
+replay buffer 없음: worker 다양성이 대신함
+@@ 96
+CPU 1개, thread 16개, GPU 0개
+@@ 97
+왼쪽: actor–critic의 데이터 흐름. trunk 하나에 head 둘이고, TD error δ가 유일한 학습 신호로서 두 loss에 모두 들어갑니다. 오른쪽: A3C는 이 신경망을 비동기 CPU worker 16개로 감싸며, worker들은 파라미터만 공유하고 다른 것은 아무것도 공유하지 않습니다.
+@@ 98
+왼쪽 패널을 위에서 아래로 읽어 봅시다. observation이 <strong>shared trunk</strong>로 들어갑니다(A3C의 Atari trunk는 filter 16개짜리 8×8 stride-4 convolution, filter 32개짜리 4×4 stride-2 convolution, unit 256개짜리 fully connected layer입니다). trunk는 <strong>policy head</strong>(action에 대한 softmax, Gaussian이면 μ와 log σ)와 <strong>value head</strong>(스칼라 하나)로 갈라집니다. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> sampling된 action은 environment로 가고, reward와 다음 state가 돌아와 value 추정값 두 개와 함께 δ를 만듭니다. actor loss −δ log π(a|s)는 그 action을 위나 아래로 밀고, critic loss δ²는 V를 bootstrapped target 쪽으로 당깁니다. 두 gradient가 같은 trunk 파라미터에 도달하므로, value 과제도 policy가 쓰는 feature를 함께 빚습니다. entropy 항이 있다면 policy head에 붙습니다.
+@@ 99
+오른쪽 패널은 이 신경망을 감싸는 시스템입니다. global 파라미터 벡터가 공유 메모리에 있습니다. 각 worker는 이를 복사하고, 자기만의 environment에서 최대 t<sub>max</sub> = 5step 동안 행동한 뒤, k-step advantage와 gradient를 local에서 계산하고, 누구도 기다리지 않고 global 파라미터에 더합니다. worker들은 서로에 비해 항상 조금씩 뒤처져 있고, A3C는 그냥 이를 감수합니다. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> A2C는 비동기 대신 barrier와 단일 batch update를 쓰며, 이것이 <a href="#d8">Day 8</a>의 PPO가 유지하는 형태입니다.
+@@ 100
+A3C의 대표 실험은 GPU를 전혀 쓰지 않고 multi-core CPU 한 대에서 actor-learner thread 16개를 돌렸으며, γ = 0.99, decay 0.99의 shared RMSProp을 사용했습니다. 게임 57개로 이루어진 Atari 벤치마크에서 이 설정으로 하루 학습한 결과가 human-normalised 평균 기준으로 Dueling Double DQN의 GPU 8일과 맞먹었고(344.1% 대 343.8%), thread 16개 설정은 thread 하나보다 약 12.5배 빨랐습니다. 크기를 정해야 할 replay memory가 없습니다. 신경망 외의 상태는 각 worker가 지금 다루는 5-step segment뿐입니다. MuJoCo 과제에서는 24시간 안에, 보통은 몇 시간 만에 좋은 해를 얻었다고 논문은 보고합니다. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a>
+@@ 101
+Q1. REINFORCE에서 update는 왜 ∇π(A<sub>t</sub>|S<sub>t</sub>)를 π(A<sub>t</sub>|S<sub>t</sub>)로 나눈 값, 즉 ∇ ln π에 비례할까요?
+@@ 102
+step size를 1 미만으로 유지하기 위해서
+@@ 103
+environment의 transition 확률을 모르기 때문에
+@@ 104
+이미 자주 선택되는 action이 단지 update를 더 자주 받는다는 이유만으로 이기지 않게 하려고
+@@ 105
+로그를 취하면 return이 양수가 되기 때문에
+@@ 106
+정답 3. 자주 선택되는 action은 더 많은 update에 등장합니다. 그 확률로 나누면 이것이 보정되어 update의 기댓값이 실제 gradient와 같아집니다. transition 확률이 사라지는 것은 다른 이유(θ에 의존하지 않음) 때문입니다.
+@@ 107
+Q2. policy gradient에서 state에 의존하는 baseline b(s)를 return에서 뺍니다. gradient의 기댓값은 어떻게 될까요?
+@@ 108
+아무 변화도 없고, 분산만 바뀐다
+@@ 109
+b(s)만큼 줄어든다
+@@ 110
+baseline이 좋아하는 action 쪽으로 bias가 생긴다
+@@ 111
+b(s) = V(s)일 때는 언제나 0이 된다
+@@ 112
+정답 1. Σ<sub>a</sub> b(s) ∇π(a|s) = b(s) ∇1 = 0이므로 기댓값은 변하지 않습니다. 위젯의 "분산 비율" 타일이 남는 효과를 보여 줍니다.
+@@ 113
+Q3. action이 두 개인 softmax 예제에서 agent는 π(right) = 0.5인 상태에서 "right"를 골라 G = +10을 얻었고, baseline b = 12와 α = 0.01을 썼습니다. π(right)는 어떻게 되었을까요?
+@@ 114
+약 0.525로 올랐다
+@@ 115
+baseline이 update를 상쇄하므로 정확히 0.5에 머물렀다
+@@ 116
+약 0.55로 올랐다
+@@ 117
+약 0.495로 내렸다
+@@ 118
+정답 4. G − b = −2이므로 logit은 [−0.01, 0.01]로 움직이고 π(right) = σ(−0.02) ≈ 0.495가 됩니다. 기대에 못 미친 return은 그 action에 불리한 증거가 됩니다. baseline이 없을 때는 같은 episode에서 0.525가 나왔습니다.
+@@ 119
+Q4. actor–critic 방법에서 critic은 무엇을 할까요?
+@@ 120
+value가 가장 높은 action을 고른다
+@@ 121
+state에 점수를 매겨, action이 기대보다 좋았는지 나빴는지를 actor가 알 수 있게 한다
+@@ 122
+replay를 위해 과거 transition을 저장한다
+@@ 123
+entropy coefficient를 정한다
+@@ 124
+정답 2. critic은 V(s)를 학습해 TD error δ를 제공할 뿐, action은 절대 고르지 않습니다. value의 arg max를 고르는 것은 Day 6의 DQN이 한 일이지 actor–critic이 하는 일이 아닙니다.
+@@ 125
+Q5. GAE에서 λ = 0으로 두면 Â<sub>t</sub>는 무엇일까요?
+@@ 126
+discounted return 전체에서 V(s<sub>t</sub>)를 뺀 값
+@@ 127
+모든 항에 λ가 곱해지므로 0
+@@ 128
+one-step TD error r<sub>t</sub> + γV(s<sub>t+1</sub>) − V(s<sub>t</sub>)
+@@ 129
+discount하지 않은 reward의 합
+@@ 130
+정답 3. l = 0 항만 살아남아((γλ)⁰ = 1) δ<sub>t</sub>가 남습니다. 분산은 낮지만 critic의 오차만큼 bias가 있습니다. λ = 1이면 Monte Carlo return에서 V를 뺀 값이 됩니다.
+@@ 131
+Q6. A3C 논문의 Table 1에 따르면, 게임 57개에 대한 human-normalised 평균에서 CPU thread 16개로 하루 학습한 A3C는 GPU로 8일 학습한 Dueling Double DQN과 비교해 어땠을까요?
+@@ 132
+A3C가 크게 뒤졌다. 약 120% 대 344%
+@@ 133
+사실상 동률이었다. 344.1% 대 343.8%
+@@ 134
+A3C가 거의 두 배 앞섰다. 623% 대 344%
+@@ 135
+논문은 둘을 비교하지 않았다
+@@ 136
+정답 2. 하루 학습한 feed-forward A3C의 평균은 344.1%였고 Dueling Double DQN은 343.8%였습니다. 623.0%는 4일 학습한 LSTM 버전의 수치이고, 121.9%는 원래 DQN의 수치입니다.
+@@ 137
+policy gradient 방법은 π(a|s,θ)를 파라미터화하고 J(θ)를 직접 끌어올립니다. 그래서 연속 action을 다룰 수 있고 최적해가 stochastic일 수도 있는데, value에 arg max를 붙이는 방식으로는 이를 표현할 수 없습니다.
+@@ 138
+log-derivative trick은 ∇J를 E[Σ<sub>t</sub> ∇log π(a<sub>t</sub>|s<sub>t</sub>) · (얼마나 좋았는가)]로 바꿉니다. environment의 dynamics는 θ에 의존하지 않으므로 떨어져 나갑니다. REINFORCE(Williams 1992)는 sampling된 return을 "얼마나 좋았는가"로 씁니다.
+@@ 139
+reward-to-go와 state에만 의존하는 baseline b(s)는 gradient의 기댓값을 그대로 둔 채 분산을 줄이며, 그 폭이 몇 자릿수에 이르는 경우도 많습니다. 자연스러운 baseline은 학습된 V(s)입니다.
+@@ 140
+actor–critic은 TD error δ = r + γV(s') − V(s)를 online advantage 추정값으로 씁니다. bias를 조금 받아들이는 대신 분산이 훨씬 줄고 기다릴 필요도 없습니다. A3C(2016)는 이를 CPU thread 16개에서 돌려 DQN의 GPU 8일을 하루 만에 따라잡았고, A2C는 그 동기식 쌍둥이입니다.
+@@ 141
+GAE의 λ는 one-step TD error(λ = 0)와 Monte Carlo에서 V를 뺀 값(λ = 1) 사이를 조절하는 다이얼입니다. γ = 0.99, λ = 0.95가 PPO가 물려받은 기본값입니다. λ는 discount가 아닙니다.
+@@ 142
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd ed., Chapter 13: Policy Gradient Methods</a> — Sutton &amp; Barto, MIT Press, 2018. policy gradient theorem, short-corridor 예제, REINFORCE와 one-step actor–critic 상자, Gaussian policy.
+@@ 143
+<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Intro to Policy Optimization</a> — Achiam, OpenAI Spinning Up, 2018. log-derivative trick, reward-to-go, baseline 항등식을 글로 가장 깔끔하게 유도한 자료.
+@@ 144
+<a href="https://spinningup.openai.com/en/latest/algorithms/vpg.html">Vanilla Policy Gradient</a> — OpenAI Spinning Up, 2018. 학습으로 맞춘 value baseline을 쓰는 advantage-weighted gradient의 pseudocode.
+@@ 145
+<a href="https://link.springer.com/article/10.1007/BF00992696">Simple statistical gradient-following algorithms for connectionist reinforcement learning</a> — Williams, Machine Learning 8(3–4):229–256, 1992. REINFORCE 논문.
+@@ 146
+<a href="https://arxiv.org/abs/1602.01783">Asynchronous Methods for Deep Reinforcement Learning</a> — Mnih et al., DeepMind, ICML 2016. A3C: CPU thread 16개, t<sub>max</sub> = 5, entropy β = 0.01. 위에서 인용한 수치는 Table 1과 Table 2에 있습니다.
+@@ 147
+<a href="https://arxiv.org/abs/1506.02438">High-Dimensional Continuous Control Using Generalized Advantage Estimation</a> — Schulman, Moritz, Levine, Jordan &amp; Abbeel, ICLR 2016. Equation 16–18과 Section 7의 λ 범위.
+@@ 148
+<a href="https://arxiv.org/abs/1707.06347">Proximal Policy Optimization Algorithms</a> — Schulman et al., OpenAI, 2017. truncated GAE(eq. 11)와 A2C를 baseline으로 쓴 부분. Day 8에서 전체를 읽습니다.

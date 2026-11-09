@@ -1,0 +1,210 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 4</span>
+@@ 2
+Dynamic programming: policy and value iteration
+@@ 3
+After today you can run policy evaluation, policy iteration and value iteration to convergence by hand on a small grid, and explain generalised policy iteration, the picture every later algorithm fits into.
+@@ 4
+About 90 min · Needs Day 3
+@@ 5
+If you know the complete rulebook of an environment, you never have to act in it: you can compute the best policy with arithmetic. Dynamic programming turns the Bellman equations of <a href="#d3">Day 3</a> into assignment statements and sweeps them over a table of states until the numbers stop moving. Every learning algorithm in this course is a way of running the same two-step dance, evaluate then improve, when the rulebook is missing.
+@@ 6
+1. What DP assumes: a known model
+@@ 7
+<strong>Dynamic programming (DP)</strong> is, in Sutton and Barto's words, "a collection of algorithms that can be used to compute optimal policies given a perfect model of the environment as a Markov decision process". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The key phrase is <em>perfect model</em>: for every state s and action a you know p(s′, r | s, a), the probability of landing in s′ with reward r. Richard Bellman coined the name in 1957, and his recursion is the Bellman equation you met yesterday. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 8
+With the model in hand, DP never samples anything. Each update is an <strong>expected update</strong>: it replaces the value of one state with an average over <em>all</em> possible next states, weighted by their probabilities. Tomorrow's methods instead look at one actual next state drawn by the environment. The sum over s′ and r is the thing you cannot write down without the model, and that single fact separates planning (today) from learning (<a href="#d5">Day 5</a> onward).
+@@ 9
+Two more assumptions: the state and action sets are finite, and either γ &lt; 1 or every episode is guaranteed to end. The 4×4 grid below satisfies the second, which is why it works with γ = 1.
+@@ 10
+<strong>"DP is a learning algorithm."</strong> It is planning. There is no interaction and no data; the probabilities p(s′, r | s, a) are given in full. Remove them and nothing in today's lesson can run.
+@@ 11
+<strong>"Policy evaluation and value iteration compute the same thing."</strong> Policy evaluation computes v<sub>π</sub>, the value of the policy you handed it, however bad. Value iteration computes v<sub>*</sub>, the value of the best policy. The 4×4 grid gives −22 for the corner under the random policy and −3 under the optimal one.
+@@ 12
+<strong>"Policy iteration must finish evaluating before it may improve."</strong> No. Truncating evaluation to one sweep gives value iteration, and it still converges.
+@@ 13
+2. Iterative policy evaluation
+@@ 14
+Policy evaluation answers "how good is this policy?" by computing v<sub>π</sub>(s) for every state. The Bellman expectation equation says v<sub>π</sub> is the unique fixed point of a certain average. <strong>Iterative policy evaluation</strong> simply uses that equation as an assignment, starting from any guess v<sub>0</sub> (usually all zeros): <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 15
+One pass of this assignment over every state is a <strong>sweep</strong>. As k grows, v<sub>k</sub> converges to v<sub>π</sub>; you stop when the biggest change in any state, Δ = max<sub>s</sub> |v<sub>k+1</sub>(s) − v<sub>k</sub>(s)|, falls below a small threshold θ. You can keep two arrays (all new values from old ones) or update <strong>in place</strong> (each state uses its neighbours' freshest values). Both converge; in place is usually faster. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 16
+The textbook example you can check by hand is the <strong>4×4 gridworld</strong>: 14 non-terminal squares and one terminal state drawn in two corners (top-left and bottom-right). Four actions, up/down/left/right, move deterministically; bumping a wall leaves you where you are. Every move costs −1, there is no discount, and the policy being evaluated is the <strong>equiprobable random policy</strong>, each action with probability 0.25. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 17
+Sweep 1: every non-terminal square has four moves, each giving −1 + v<sub>0</sub>(next) = −1, so the average is −1. Sweep 2, for the square next to a terminal corner: one move enters the terminal (−1 + 0), the other three land on squares worth −1 (−2 each), so the new value is (−1 − 2 − 2 − 2)/4 = −1.75, printed as −1.7 in the book; every other square gets −2. The table is the book's Figure 4.1 with two-array sweeps:
+@@ 18
+Row 1
+@@ 19
+Row 2
+@@ 20
+Row 3
+@@ 21
+Row 4
+@@ 22
+The final numbers have a meaning: with reward −1 per step and no discount, v<sub>π</sub>(s) is minus the expected number of steps a random walker needs to reach the exit. From the far corner that is 22 steps. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 23
+Try it: pick "Policy evaluation (random policy)", press "One sweep" three times and compare the grid with the rows k = 1, 2, 3 above. Then press "Run to convergence".
+@@ 24
+Notice that the arrows, which show the greedy policy with respect to the current values, stop changing after the third sweep, while the values keep falling for over 170 sweeps before Δ drops under 10<sup>−4</sup>. The policy was finished long before the evaluation was.
+@@ 25
+3. Policy improvement: be greedy with respect to V
+@@ 26
+Once you know v<sub>π</sub>, ask at each state: is there an action better than what π does? The one-step look-ahead value of taking action a and then following π is q<sub>π</sub>(s, a) = Σ<sub>s′,r</sub> p(s′,r|s,a)[r + γ v<sub>π</sub>(s′)]. If q<sub>π</sub>(s, a) &gt; v<sub>π</sub>(s) for some a, switching to a in state s is a strict improvement. Doing this everywhere at once gives the <strong>greedy policy</strong>: <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 27
+π′(s) = argmax<sub>a</sub> Σ<sub>s′,r</sub> p(s′,r|s,a) [ r + γ v<sub>π</sub>(s′) ]
+@@ 28
+The <strong>policy improvement theorem</strong> guarantees this is safe. In words: if acting by π′ for one step and then following π is never worse than following π, then following π′ forever is never worse than π in every state, and strictly better wherever the one-step comparison was strict. The greedy policy satisfies the premise by construction, because it picks the best one-step action at every state. The only time greedy fails to improve is when π was already optimal, in which case the Bellman optimality equation holds and nothing changes. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 29
+Look back at the table: at k = 3 the corner square's neighbours are worth −2.4 and −2.9, so greedy says "move toward the −2.4 square", which is toward the exit. That is already the optimal policy, even though −2.4 is nowhere near the true −14.
+@@ 30
+Think of a chess coach who grades your current plan honestly (evaluation) and then says "at this position, the move you usually make scores 6, but this other move scores 8, switch" (improvement). The theorem says following all the coach's switches at once cannot make you worse, because each switch was judged against your own old plan.
+@@ 31
+4. Policy iteration: evaluate, improve, repeat
+@@ 32
+<strong>Policy iteration</strong> alternates the two steps until the policy stops changing:
+@@ 33
+Each evaluation (E) is run to convergence, warm-started from the previous value function, and each improvement (I) is one greedy step. A finite MDP has finitely many deterministic policies, and every improvement is strict until the optimum, so the loop terminates in a finite number of rounds, and in practice "surprisingly few". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Bellman (1957) and Howard (1960) are credited with the method. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 34
+<strong>Jack's car rental</strong> is the book's worked example. Jack runs two rental locations; a rental earns $10, moving a car between locations overnight costs $2, requests and returns arrive as Poisson draws with means 3 and 4 (requests) and 3 and 2 (returns), each lot holds at most 20 cars and at most 5 can be moved per night, with γ = 0.9. The state is (cars at location 1, cars at location 2), so 21 × 21 = 441 states, and the action is the net number of cars moved, −5 to +5. Starting from "never move any cars", policy iteration reaches the optimal policy after just 4 improvement steps. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 35
+Try it: the two-state MDP below pays 1 per step for staying in state 1, 2 per step for staying in state 2, and 0 for switching, with γ = 0.9. Press "Evaluate", then "Improve", and repeat until the counter says the policy is stable. Work out the first round on paper first: under "stay everywhere", V(1) = 1/(1 − 0.9) = 10 and V(2) = 20.
+@@ 36
+Notice that the first improvement switches state 1 to "go" (0 + 0.9 × 20 = 18 beats 1 + 0.9 × 10 = 10), re-evaluation then lifts V(1) to 18, and the second improvement changes nothing. Two improvements, done; there were only 4 deterministic policies to choose from.
+@@ 37
+5. Value iteration: one sweep is enough
+@@ 38
+Full policy evaluation inside every round is wasteful; the gridworld showed the greedy policy was fixed after three sweeps. <strong>Value iteration</strong> truncates evaluation to a single sweep and folds the improvement into it, by using the Bellman <em>optimality</em> equation as the assignment: <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 39
+v<sub>k+1</sub>(s) = max<sub>a</sub> Σ<sub>s′,r</sub> p(s′,r|s,a) [ r + γ v<sub>k</sub>(s′) ]
+@@ 40
+Compare it with the evaluation update in section 2: the only difference is that max<sub>a</sub> replaces Σ<sub>a</sub> π(a|s). One sweep of value iteration is one <strong>Bellman optimality backup</strong> per state. It converges to v<sub>*</sub>, and the optimal policy is read off at the end as the greedy policy with respect to the final V. Puterman and Shin (1978) framed this as the extreme case of "modified policy iteration", with any number of evaluation sweeps between improvements. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 41
+On the 4×4 grid, value iteration is fast: sweep 1 gives −1 everywhere, sweep 2 gives −1 next to the exits and −2 elsewhere, sweep 3 gives the exact optimal values (−1, −2, −3 by distance), and sweep 4 changes nothing. Switch the widget above to "Value iteration" and watch Δ hit 0 on the fourth press.
+@@ 42
+The <strong>gambler's problem</strong> is the book's value-iteration example. A gambler with capital s between 1 and 99 dollars bets a stake a ≤ min(s, 100 − s) on a coin that comes up heads with probability p<sub>h</sub> = 0.4; heads wins the stake, tails loses it; the only reward is +1 for reaching $100, so v(s) is the probability of eventually winning. Value iteration sweeps 1, 2, 3 and 32 are plotted converging to the final curve, and the final policy is spiky: bet everything at $50 (and at $25 and $75), bet small elsewhere. The optimal policy is not unique because argmax has ties, and Exercise 4.8 asks why $50 bets all while $51 does not. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 43
+You have a map of a maze and want to label every square with "how many steps to the exit". Start by writing 0 on the exit. Then go round the maze once and write on each square "1 + the smallest number next door". The first time round, only the squares beside the exit get the right answer. Each extra time round, the right answers spread one square further. When a full round changes nothing, every label is correct, and the way out from any square is just "walk to the smaller neighbour". That is value iteration.
+@@ 44
+6. Generalised policy iteration
+@@ 45
+Step back from the specific algorithms. Policy iteration runs evaluation to the end before improving. Value iteration improves after one sweep. You could also evaluate for three sweeps, or update some states and not others, or interleave in any order. Sutton and Barto call the whole family <strong>generalised policy iteration (GPI)</strong>: "the general idea of letting policy-evaluation and policy-improvement processes interact, independent of the granularity". Then they add the sentence this course is built around: "Almost all reinforcement learning methods are well described as GPI." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 46
+The two processes pull in different directions. Evaluation drives V toward v<sub>π</sub>, making the values consistent with the current policy. Improvement drives π toward greedy(V), making the policy consistent with the current values. Each change undoes the other's consistency: a new policy makes the old values wrong, and new values make the old policy non-greedy. The book's picture is two non-parallel lines in a plane, "V = v<sub>π</sub>" and "π = greedy(V)"; each step jumps all the way to one line, and the zig-zag path converges to their intersection, which is the only point where both are satisfied: v<sub>*</sub> and π<sub>*</sub>. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 47
+Keep this frame for the rest of the course. Tomorrow's Monte Carlo and TD methods are GPI with evaluation done by sampling. SARSA and Q-learning (<a href="#d6">Day 6</a>) are GPI with Q-tables and one transition per update. Policy gradient methods are GPI where "improve" is a gradient step instead of an argmax. DP comes first because here both halves are exact, so you can see the dance without noise.
+@@ 48
+Going deeper (optional): how fast does it converge?
+@@ 49
+Each expected update is a contraction: with discount γ, one synchronous sweep shrinks the worst-case error max<sub>s</sub> |v<sub>k</sub>(s) − v<sub>π</sub>(s)| by at least a factor γ, so the error after k sweeps is at most γ<sup>k</sup> times the initial error. With γ = 0.9 you need about 44 sweeps to cut the error by 100; with γ = 0.99, about 460. The undiscounted gridworld has no γ to lean on; it still converges because every policy reaches the terminal state with probability 1, which is the "guaranteed termination" condition from section 1. That is why the widget needs 173 sweeps for Δ to fall below 10<sup>−4</sup> under the random policy, against 4 for value iteration.
+@@ 50
+7. Asynchronous DP and the curse of dimensionality
+@@ 51
+Everything so far sweeps the whole state table in order. <strong>Asynchronous DP</strong> drops that: in-place algorithms "update the values of states in any order whatsoever", using whatever neighbour values happen to be available, and still converge as long as every state keeps being updated infinitely often. You may reorder, but you may not permanently skip a state. The motivating number is backgammon, which has over 10<sup>20</sup> states; at a million state updates per second, one full sweep would take over a thousand years. Asynchronous updates let you spend computation on the states an agent actually visits, which is the first hint of how DP becomes learning. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Bertsekas introduced these "distributed" methods in 1982–83 with multiprocessor machines in mind. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 52
+The deeper limit is Bellman's <strong>curse of dimensionality</strong>: the number of states grows exponentially with the number of state variables. A robot with 10 joints, each discretised to 100 positions, has 100<sup>10</sup> = 10<sup>20</sup> states before you add velocities. Sutton and Barto defend DP here: the curse is a property of the problem, not of the method. DP runs in time polynomial in the number of states n and actions k, while there are k<sup>n</sup> deterministic policies, so DP is "exponentially faster than any direct search in policy space". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 53
+Still, two things kill DP in practice: no model (you rarely have p(s′, r | s, a) for a real robot or an unknown opponent) and no table (10<sup>20</sup> cells do not fit in memory). <a href="#d5">Day 5</a> removes the first by replacing expected updates with sampled ones; Week 2 removes the second by replacing the table with a neural network. Both keep the GPI loop.
+@@ 54 attr
+Generalised policy iteration loop. A model table p(s prime, r given s, a) feeds two processes. Evaluation reads the policy table and the model and writes the value table V. Improvement reads V and the model and writes the policy table. A sweep pointer moves along the 16 cells of the value table. Everything is a table in memory.
+@@ 55
+model table p(s′, r | s, a)
+@@ 56
+given, never changes · |S|·|A| rows
+@@ 57
+policy table π(s)
+@@ 58
+one action (or 4 probs) per state
+@@ 59
+value table V(s)
+@@ 60
+one number per state
+@@ 61
+evaluation (E)
+@@ 62
+improvement (I)
+@@ 63
+greedy(V)
+@@ 64
+one sweep = visit every cell of the value table once
+@@ 65
+The GPI loop. Evaluation reads π and the model and writes V; improvement reads V and the model and writes π. Policy iteration runs E to convergence before each I; value iteration runs one sweep of E fused with I. Nothing here is a neural network: three tables in memory and a loop.
+@@ 66
+Read it top to bottom. The model table is the input: for the 4×4 grid, 14 states × 4 actions rows, each naming one next state and the reward −1. Evaluation takes the policy table and the model and overwrites the value table one cell at a time along the sweep pointer at the bottom; a full pass is a sweep, and Δ is the biggest change seen during it. Improvement takes the value table and the model, computes the one-step look-ahead for each action, and overwrites the policy table with the argmax. The only question DP algorithms answer differently is how many E sweeps to run before the next I.
+@@ 67
+Everything is a table: 16 floats and 16 action labels for the gridworld, 441 of each for Jack's car rental, 99 for the gambler. Cost per sweep is |S| × |A| × (number of possible next states), cheap on these toys and impossible on backgammon.
+@@ 68
+Nothing in today's lesson needs a GPU, a network, or a simulator: a sweep of the 4×4 grid is 14 × 4 = 56 multiply-adds, and the widget runs several hundred sweeps to convergence in a few milliseconds of JavaScript. Jack's problem is heavier only because each (state, action) pair averages over Poisson draws for requests and returns at two locations, so one sweep touches 441 states × 11 actions × a few hundred outcome combinations. The book reports that even that converges in 4 improvement rounds. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The wall-clock problem starts when the table itself does not fit in memory, not when the sweeps get slow.
+@@ 69
+Q1. In the 4×4 gridworld under the random policy, what is the value of the square diagonally adjacent to a terminal corner after the second sweep (k = 2), computed exactly?
+@@ 70
+Answer 2. One of its four moves enters the terminal state (−1 + 0), the other three land on squares worth −1 (−1 + −1 = −2 each); the average is (−1 − 2 − 2 − 2)/4 = −1.75, which the book prints as −1.7. The squares not adjacent to the exit all get −2.0 at k = 2.
+@@ 71
+Q2. What is the only difference between the iterative policy evaluation update and the value iteration update?
+@@ 72
+Value iteration uses a discount factor and policy evaluation does not
+@@ 73
+Value iteration samples one next state instead of averaging over all of them
+@@ 74
+Value iteration takes max over actions where policy evaluation averages over the policy's action probabilities
+@@ 75
+Value iteration updates in place while policy evaluation uses two arrays
+@@ 76
+Answer 3. Replace Σ<sub>a</sub> π(a|s) with max<sub>a</sub> and you have turned the Bellman expectation backup into the Bellman optimality backup. Both are expected updates over the full model; the in-place versus two-array choice is available to both.
+@@ 77
+Q3. After how many evaluation sweeps is the greedy policy on the 4×4 gridworld already optimal, and when do the values converge?
+@@ 78
+Optimal after 3 sweeps; values converge only as k → ∞
+@@ 79
+Optimal after 10 sweeps; values converge at the same time
+@@ 80
+Optimal only once the values have converged to −14, −20, −22
+@@ 81
+Optimal after 1 sweep; values converge after 3
+@@ 82
+Answer 1. The greedy arrows stop changing at k = 3 while the values keep moving toward −14 … −22 for well over a hundred sweeps. The gap is exactly what motivates value iteration: you do not need accurate values to find the best actions.
+@@ 83
+Q4. "Asynchronous DP lets you leave out the states you do not care about." What is wrong with this?
+@@ 84
+Nothing; that is the definition of asynchronous DP
+@@ 85
+Asynchronous DP requires updating states in a fixed order
+@@ 86
+Asynchronous DP only works with two arrays, not in place
+@@ 87
+You may reorder or delay updates, but convergence needs every state to keep being updated infinitely often
+@@ 88
+Answer 4. The freedom is in the order and timing, not in permanently skipping states. The practical version is to update the states the agent actually visits, which still visits everything in the long run.
+@@ 89
+Q5. Jack's car rental has 441 states and 11 actions. Starting from "never move a car", how many improvement steps did policy iteration need to reach the optimal policy?
+@@ 90
+441, one per state
+@@ 91
+About 1,000
+@@ 92
+Answer 2. Figure 4.2 shows π<sub>0</sub> through π<sub>4</sub>, with π<sub>4</sub> optimal. Policy iteration "often converges in surprisingly few iterations" because each improvement is a strict improvement over a finite set of policies.
+@@ 93
+Q6. Which statement about the curse of dimensionality matches Sutton and Barto's view?
+@@ 94
+It is a flaw specific to DP that other methods avoid
+@@ 95
+It means DP is slower than searching over all deterministic policies
+@@ 96
+It is a property of large problems; DP is polynomial in |S| and |A| while there are |A|<sup>|S|</sup> deterministic policies
+@@ 97
+It only applies when γ = 1
+@@ 98
+Answer 3. The state count grows exponentially with the number of state variables whatever method you use. Given that count, DP is "exponentially faster than any direct search in policy space". The real practical limits are the missing model and the table that will not fit in memory.
+@@ 99
+DP needs a perfect model p(s′, r | s, a) and a finite table of states; every update is an expected update over all next states, never a sample.
+@@ 100
+Iterative policy evaluation turns the Bellman expectation equation into an assignment and sweeps it until Δ &lt; θ. On the 4×4 grid: −1 everywhere at k = 1, −1.75 beside the exit at k = 2, and −14/−20/−22 in the limit.
+@@ 101
+Policy improvement is "act greedily with respect to V"; the improvement theorem says the result is never worse and strictly better unless π was already optimal. On the grid the greedy policy is optimal from k = 3.
+@@ 102
+Policy iteration evaluates to convergence then improves (Jack's car rental: 4 rounds). Value iteration improves after one sweep by replacing Σ<sub>a</sub> π(a|s) with max<sub>a</sub> (the gambler bets everything at $50).
+@@ 103
+Generalised policy iteration, evaluation and improvement interacting at any granularity, describes almost every RL method. Asynchronous updates and the curse of dimensionality point to tomorrow: drop the model, sample instead.
+@@ 104
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd edition, Chapter 4</a> — Sutton &amp; Barto, MIT Press, 2018 (2020 PDF). Everything in today's lesson: §4.1 policy evaluation and Example 4.1 (the gridworld table, p.76–77), §4.2 the improvement theorem, §4.3 policy iteration and Example 4.2 (Jack's car rental), §4.4 value iteration and Example 4.3 (the gambler), §4.5 asynchronous DP, §4.6 GPI, §4.7 the curse of dimensionality, and the bibliographical remarks on p.89–90 for the dates.
+@@ 105
+<a href="http://incompleteideas.net/book/the-book-2nd.html">Book landing page</a> — Sutton &amp; Barto. Links to the free PDF, code, and errata.

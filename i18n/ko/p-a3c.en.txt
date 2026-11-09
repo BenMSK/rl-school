@@ -1,0 +1,128 @@
+@@ 1
+<span class="eyebrow">2016 · Mnih et al. · ICML 2016 (arXiv 1602.01783)</span>
+@@ 2
+A3C: Asynchronous advantage actor–critic
+@@ 3
+Sixteen CPU threads, no GPU and no replay memory: an actor–critic that beat the Atari state of the art in half the training time of the GPU-trained DQN family.
+@@ 4
+Taught in <a href="#d7">Day 7</a> · Read time of the original: ~60 min
+@@ 5
+Run many copies of an actor–critic agent in parallel threads, each in its own environment, and let them push gradients into one shared network without waiting for each other; the diversity across threads replaces DQN's replay memory, and the result "succeeds on a wide variety of continuous motor control problems as well as on a new task of navigating random 3D mazes". <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a>
+@@ 6
+Sixteen kids play the same video game on sixteen screens. Each one has a copy of a shared notebook of tips. Every few moves a kid writes what they learned into the one shared notebook, then copies the newest notebook back. Nobody waits for anybody. Because the kids are in different parts of the game at any moment, the notebook never gets stuck on one situation.
+@@ 7
+DQN stabilised deep Q-learning with a replay memory and a target network, but at a cost: a million stored frames, an off-policy algorithm (replay cannot be used with on-policy actor–critics), and days of GPU time: 8 days on a GPU for DQN, 4 days on 100 machines for the distributed Gorila. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a> Policy-gradient methods (<a href="#p-reinforce">the REINFORCE review</a>) could handle continuous actions but, trained online from one agent, saw the same correlated, non-stationary data that broke naive deep Q-learning.
+@@ 8
+Decorrelate the data in <em>space</em> instead of in <em>time</em>. Instead of one agent remembering old transitions, run 16 actor–learners at once; at any instant they are in different states of different episodes, so the updates arriving at the shared parameters are already a mixed sample. The paper builds four asynchronous algorithms this way (one-step Q, one-step Sarsa, n-step Q, and advantage actor–critic); the actor–critic one, <strong>A3C</strong>, performs best. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a>
+@@ 9
+A global network holds policy parameters θ and value parameters θ<sub>v</sub>; the two heads share every non-output layer: conv 16 filters 8×8 stride 4, conv 32 filters 4×4 stride 2, 256 fully connected units, then a softmax over actions and a scalar V. The LSTM variant adds 256 LSTM cells. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a>
+@@ 10
+Each of 16 threads copies the global parameters, then acts in its own environment for up to t<sub>max</sub> = 5 steps or until the episode ends. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a>
+@@ 11
+It forms k-step bootstrapped returns and advantages, k ≤ 5:
+@@ 12
+Policy gradient ∇<sub>θ</sub> log π(a<sub>t</sub>|s<sub>t</sub>) · A(s<sub>t</sub>,a<sub>t</sub>) plus an entropy term β ∇<sub>θ</sub> H(π(s<sub>t</sub>)), β = 0.01, which "improved exploration by discouraging premature convergence to suboptimal deterministic policies"; value gradient from (R − V)<sup>2</sup>. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a>
+@@ 13
+The thread applies its gradients to the global parameters asynchronously, lock-free in the Hogwild! style, through a shared RMSProp (decay 0.99), then re-syncs and continues. γ = 0.99. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a>
+@@ 14 attr
+A3C architecture: a central global network with shared parameters theta and theta v; around it four of sixteen worker threads, each with its own environment copy and local network; arrows from each worker to the centre carry gradients, arrows from the centre to each worker carry parameters; no replay memory
+@@ 15
+global network θ, θ<tspan baseline-shift="sub" font-size="10">v</tspan>
+@@ 16
+shared RMSProp, no locks
+@@ 17
+one CPU, 16 threads, no GPU
+@@ 18
+worker 1 · local net
+@@ 19
+own env · 5 steps
+@@ 20
+worker 2 · local net
+@@ 21
+worker 3 · local net
+@@ 22
+worker 16 · local net
+@@ 23
+gradients in (every ≤5 steps, asynchronous)
+@@ 24
+parameters out (sync after each push)
+@@ 25
+… 12 more workers · no replay memory: diversity across threads replaces it
+@@ 26
+A3C as a hub. Workers never wait for each other; each pushes a k-step actor–critic gradient and pulls fresh parameters. The policy and value heads share one trunk. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a>
+@@ 27
+Table 1 reports human-normalised mean and median over 57 Atari games with human starts. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a>
+@@ 28
+Training time
+@@ 29
+Mean
+@@ 30
+Median
+@@ 31
+8 days on GPU
+@@ 32
+Gorila
+@@ 33
+4 days, 100 machines
+@@ 34
+Dueling D-DQN
+@@ 35
+Prioritized DQN
+@@ 36
+A3C, FF
+@@ 37
+1 day on CPU
+@@ 38
+4 days on CPU
+@@ 39
+A3C, LSTM
+@@ 40
+After one CPU-day A3C's mean (344.1%) matched Dueling Double DQN's eight GPU-days (343.8%). Table 2 gives the speed-up from 1 to 16 threads averaged over seven games: 24.1× for one-step Q, 12.5× for A3C, so the asynchronous updates were not just parallel but, for the Q-methods, super-linear. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a>
+@@ 41 attr
+Learning curves on five Atari games: score against training hours for DQN on one GPU and for the four asynchronous methods on 16 CPU cores, with the asynchronous actor-critic learning fastest
+@@ 42
+<a class="src" href="https://arxiv.org/abs/1602.01783">Figure 1, Mnih 2016</a> Learning speed on five Atari games. "DQN was trained on a single Nvidia K40 GPU while the asynchronous methods were trained using 16 CPU cores." The x-axis is wall-clock hours, which is the paper's point.
+@@ 43
+A3C made deep RL affordable: a multi-core desktop instead of a GPU cluster. Its k-step advantage estimator is the λ = 1 end of the GAE family, and the PPO paper notes its own advantage estimator reduces to A3C's when λ = 1. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> The synchronous, batched twin, <strong>A2C</strong>, became the standard policy-gradient baseline; PPO's Atari comparison is against A2C and ACER, and the entropy weight 0.01 carried straight over. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> The paper also showed the same code learning TORCS driving, MuJoCo continuous control and a 3D maze with an LSTM policy, the first broad demonstration that one on-policy deep method spans discrete and continuous control. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a>
+@@ 44
+Means flatter medians: after one day A3C's median was 68.2%, below Double DQN's 110.9%, because a few games with huge normalised scores dominate the mean. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a> The comparison is in wall-clock time, not frames: on-policy data is used once and thrown away, so A3C is sample-hungry. The 2017 PPO paper found that A2C "won" only 1 of 49 Atari games against PPO's 30 on average reward over training. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> And asynchrony itself makes runs hard to reproduce; Henderson et al. (2018) showed deep policy-gradient results shifting significantly from random seeds alone. <a class="src" href="https://arxiv.org/abs/1709.06560">Henderson 2018</a>
+@@ 45
+Section 4 (the asynchronous framework and the four algorithms, 15 min), then Section 5.1 with Figure 1 and Table 1 (10 min), Section 5.5 for Table 2's thread scaling (10 min). Skim 5.2–5.4 for TORCS, MuJoCo and Labyrinth. Section 8 has the network and hyperparameters (t<sub>max</sub>, β, RMSProp). Skip Section 9 unless you need the continuous-control details.
+@@ 46
+Q1. How many threads did A3C use, and on what hardware?
+@@ 47
+100 machines
+@@ 48
+16 threads on a single multi-core CPU, no GPU
+@@ 49
+One thread on a K40 GPU
+@@ 50
+8 GPUs
+@@ 51
+"Each experiment used 16 actor-learner threads running on a single machine and no GPUs." Gorila was the 100-machine system; the K40 was DQN's.
+@@ 52
+Q2. "A3C needs a replay memory to decorrelate its data." Why is this wrong?
+@@ 53
+It uses a very small replay memory of 5 steps
+@@ 54
+It decorrelates by shuffling frames within an episode
+@@ 55
+It does not decorrelate at all
+@@ 56
+Parallel threads in different states supply decorrelated updates, so no memory is needed; this also allows on-policy actor–critic
+@@ 57
+Replay requires off-policy learning. A3C replaces it with diversity across 16 concurrent environments, which is what makes an on-policy method viable.
+@@ 58
+Q3. After one CPU-day, A3C FF's mean score was 344.1%. Its median was:
+@@ 59
+68.2%, below Double DQN's median
+@@ 60
+Table 1: 344.1% mean, 68.2% median after 1 day. The 116.6% median needed 4 days. Always read both numbers.
+@@ 61
+Mnih, V. et al. (2016). Asynchronous Methods for Deep Reinforcement Learning. ICML 2016. <a href="https://arxiv.org/abs/1602.01783">arXiv:1602.01783</a>; full text <a href="https://ar5iv.labs.arxiv.org/html/1602.01783">ar5iv</a>.
+@@ 62
+Mnih, V. et al. (2015). Human-level control through deep reinforcement learning. <em>Nature</em> 518:529–533. <a href="https://www.nature.com/articles/nature14236">nature.com</a>.
+@@ 63
+Schulman, J. et al. (2017). Proximal Policy Optimization Algorithms. <a href="https://arxiv.org/abs/1707.06347">arXiv:1707.06347</a>.
+@@ 64
+Henderson, P. et al. (2018). Deep Reinforcement Learning that Matters. AAAI 2018. <a href="https://arxiv.org/abs/1709.06560">arXiv:1709.06560</a>.

@@ -1,0 +1,296 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 7</span>
+@@ 2
+Policy gradients and actor–critic
+@@ 3
+After today you can derive the REINFORCE update from the log-derivative trick, explain why a baseline cuts variance without adding bias, read the GAE formula and set λ, and say what A3C and A2C changed in 2016.
+@@ 4
+About 90 min · Needs Day 6
+@@ 5
+Instead of learning a value for every action and acting greedily, you can give the policy its own parameters and climb the expected return directly. The policy gradient theorem says the climbing direction is "make the actions you took more likely, in proportion to how well things turned out". Everything after that, baselines, advantages, critics, GAE, parallel workers, is about measuring "how well" with less noise and less waiting.
+@@ 6
+1. Why learn the policy directly
+@@ 7
+Every method so far, from tabular Q-learning to DQN on <a href="#d6">Day 6</a>, learned an <strong>action value</strong> Q(s,a) and then acted by taking the arg max. That works when actions are few and discrete. It breaks in two common situations.
+@@ 8
+<strong>Continuous actions.</strong> A robot arm chooses seven joint torques, each a real number. There is no finite list to take the max over, and maximising a neural network over its input at every step is an optimisation problem in itself. A <strong>parameterised policy</strong> π(a|s,θ) sidesteps this: the network outputs the action distribution directly. The standard choice is a Gaussian whose mean μ(s,θ) and standard deviation σ(s,θ) are network outputs, so the density is π(a|s,θ) = 1/(σ√(2π)) · exp(−(a − μ)²/(2σ²)); σ is kept positive by outputting its logarithm. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 9
+<strong>Stochastic policies that are better than any deterministic one.</strong> Sutton and Barto's short-corridor example makes the point. A tiny gridworld has three non-terminal states, but the agent cannot tell them apart, and in the middle state "left" and "right" are swapped. Any ε-greedy policy scores about −44 per episode at best, while a policy that chooses "right" with probability about 0.59 scores about −11.6. No value-plus-arg-max method can express "go right 59% of the time"; a softmax policy can, and gradient ascent finds it. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 10
+There is a third, quieter reason. Changing θ by a small amount changes the action probabilities by a small amount. With a Q-table, a tiny change in two values can flip the arg max and change the policy completely. Smoothness is what makes the convergence story for policy gradients cleaner, and it is the thread that leads to <a href="#d8">Day 8</a>.
+@@ 11
+So define the objective: <strong>J(θ)</strong> is the expected return of the policy with parameters θ, and the update is plain gradient ascent, θ ← θ + α ∇J(θ). The whole question is how to estimate ∇J(θ) from samples. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 12
+2. The policy gradient theorem and the log-derivative trick
+@@ 13
+The difficulty: J(θ) depends on θ twice. The policy picks actions, and the actions decide which states you visit. Differentiating through the state distribution looks hopeless, because you do not know the environment's dynamics. The <strong>policy gradient theorem</strong> says you never need to. For a policy π(a|s,θ) with on-policy state distribution μ(s),
+@@ 14
+Plain words: how often you are in each state, times how good each action is there, times how to make that action more likely. The derivative of μ(s) with respect to θ does not appear. In the episodic case the constant of proportionality is the average episode length; in the continuing case it is exactly 1. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 15
+The trajectory version of the same result is easier to turn into code, and it rests on one identity, the <strong>log-derivative trick</strong>: for any probability P(τ|θ), ∇P = P · ∇log P. Write J as an expectation over trajectories τ, move the gradient inside, apply the trick, and you are back to an expectation that you can sample:
+@@ 16
+∇J(θ) = E<sub>τ∼π<sub>θ</sub></sub>[ ∇<sub>θ</sub> log P(τ|θ) · R(τ) ]
+@@ 17
+Now expand log P(τ|θ). It is the sum of log ρ₀(s₀), log π(a<sub>t</sub>|s<sub>t</sub>) for every step, and log P(s<sub>t+1</sub>|s<sub>t</sub>,a<sub>t</sub>) for every step. Only the policy terms contain θ, so the start-state and transition terms vanish under ∇<sub>θ</sub>. That is the trick's payoff: you never model the environment, you only differentiate your own network. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 18
+∇J(θ) = E<sub>τ</sub>[ Σ<sub>t</sub> ∇<sub>θ</sub> log π<sub>θ</sub>(a<sub>t</sub>|s<sub>t</sub>) · R(τ) ]
+@@ 19
+Read it as an instruction: run the policy, then for every action you took, nudge its log-probability up, scaled by the return of the whole trajectory. Good episodes push all of their actions up; bad episodes (negative return) push all of theirs down. A sample estimate from a batch D of trajectories is just the average: ĝ = (1/|D|) Σ<sub>τ</sub> Σ<sub>t</sub> ∇log π(a<sub>t</sub>|s<sub>t</sub>) R(τ). <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 20
+Think of a weighted maximum-likelihood problem. Supervised learning says "increase log p(label | input)" for every example, weight 1. The policy gradient says the same for every (state, action) pair you experienced, but the weight is the return. Weights can be negative, which supervised learning never has, and the "dataset" was generated by the very model you are updating, so it goes stale the moment θ changes. Those two differences are the whole of RL's extra difficulty.
+@@ 21
+3. REINFORCE, with a softmax update you can check
+@@ 22
+<strong>REINFORCE</strong> is the algorithm you get by using the formula above with the return from each time step onward. Ronald Williams published it in 1992 in <em>Machine Learning</em>; it is the ancestor of every method in this week and the next. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The per-step update, written the way Sutton and Barto box it, is
+@@ 23
+θ ← θ + α γ<sup>t</sup> G<sub>t</sub> ∇ ln π(A<sub>t</sub>|S<sub>t</sub>,θ)
+@@ 24
+where G<sub>t</sub> is the discounted return from step t to the end of the episode. The gradient of ln π equals ∇π/π. Sutton and Barto explain the division: ∇π is the direction in parameter space that most increases the probability of repeating A<sub>t</sub>, and dividing by π(A<sub>t</sub>|S<sub>t</sub>) stops actions that are already frequent from winning merely because they get updated more often. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> See the <a href="#p-reinforce">REINFORCE review</a> for the original paper.
+@@ 25
+<strong>A worked softmax step.</strong> Take two actions with a softmax over two logits, both 0, so π(right) = 0.5. For a softmax, the gradient of log π(a) with respect to the logits is onehot(a) − π. You take "right" and the episode returns G = +10; α = 0.01.
+@@ 26
+∇<sub>logits</sub> log π(right) = [1 − 0.5, 0 − 0.5] = [0.5, −0.5].
+@@ 27
+Update: logits ← [0, 0] + 0.01 × 10 × [0.5, −0.5] = [0.05, −0.05].
+@@ 28
+New π(right) = σ(0.05 − (−0.05)) = σ(0.1) ≈ 0.525. "Right" got more likely, as it should.
+@@ 29
+Now the same episode, but suppose you knew that a typical return from this state is 12, and you use G − 12 = −2 as the weight instead: logits ← [−0.01, 0.01], π(right) ≈ 0.495. The same +10 is now evidence against "right", because it was below expectation. That is the baseline idea in miniature, and it is the subject of the next section.
+@@ 30
+You play a game of darts and remember every throw. If you win the game, you try to repeat all of those throws a little more next time; if you lose, a little less. That is REINFORCE. It works, but slowly, because sometimes you win with bad throws (luck) and lose with good ones. The fix in the next section is to stop asking "did I win?" and start asking "did I do better than I usually do?"
+@@ 31
+4. High variance, and the baselines that fix it
+@@ 32
+REINFORCE is a <strong>Monte Carlo</strong> method: it waits for the real return. The return is a sum of many random rewards, and the same return is credited to every action in the episode, including the irrelevant ones. The GAE paper states the consequence precisely: with the full return the estimator is unbiased regardless of how good your value function is, "but it has high variance due to the sum of terms". <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> High variance means you need many episodes before the average points the right way.
+@@ 33
+Two fixes cost nothing in bias. The first is <strong>reward-to-go</strong>: an action at time t cannot have caused rewards before t, so weight it by R̂<sub>t</sub> = Σ<sub>t'≥t</sub> r<sub>t'</sub> instead of the whole-episode return. The expectation is unchanged because E<sub>x∼P<sub>θ</sub></sub>[∇log P<sub>θ</sub>(x)] = 0 for any distribution (the "expected grad-log-prob" lemma), so the dropped terms average to zero. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 34
+The second is the <strong>baseline</strong>: subtract any function b(s) of the state from the weight. Sutton and Barto's one-line proof: Σ<sub>a</sub> b(s) ∇π(a|s,θ) = b(s) ∇ Σ<sub>a</sub> π(a|s,θ) = b(s) ∇1 = 0. So the baseline "leaves the expected value of the update unchanged, but it can have a large effect on its variance". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The usual choice is b(s) = V(s), the state value, learned by regressing a second network onto the observed returns with a mean-squared-error loss. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/vpg.html">Achiam 2018</a>
+@@ 35
+θ ← θ + α (G<sub>t</sub> − b(S<sub>t</sub>)) ∇ ln π(A<sub>t</sub>|S<sub>t</sub>,θ)
+@@ 36
+Why does it help so much? Imagine two actions whose returns both land somewhere in [90, 110]. Without a baseline every update is a push of size about 100 in a random direction; the signal (the 5-point difference between the actions) is buried under a 100-point offset. With b = 100 the pushes are ±10 and point toward the better action.
+@@ 37
+Try it: the widget below has three arms paying 100, 105 and 95 on average, each with ±10 of noise, and a uniform softmax policy. Press "Sample batch", then switch the baseline on and off and change N.
+@@ 38
+Notice that the two estimates have the same target (0, +1.67, −1.67) but the baseline-free one is swamped: with the seeded N = 20 batch its variance is about 230 times larger, and even at N = 200 it still gets the sign of an arm wrong while the baseline version lands within 0.1 of the truth. The learned baseline starts at zero and improves across presses; that is what the critic will do online in the next section.
+@@ 39
+<strong>"A baseline biases the gradient toward the baseline's opinion."</strong> It does not. As long as b depends only on the state, not the action, the expected update is identical. Only the spread changes.
+@@ 40
+<strong>"Policy gradient is supervised learning on the good actions."</strong> The weights can be negative, and the data were produced by the policy you are changing, so a batch is only valid for the parameters that produced it. Supervised learning has neither property.
+@@ 41
+<strong>"Lower variance is always better."</strong> Reward-to-go and state baselines are free. The methods in sections 5 to 7 trade variance for bias, and the trade has to be tuned.
+@@ 42
+5. Advantage and actor–critic
+@@ 43
+Using V(s) as a baseline gives the weight G<sub>t</sub> − V(s<sub>t</sub>). Replace the sampled return by its expectation given the action and you get Q(s,a) − V(s), which has a name: the <strong>advantage</strong> A<sup>π</sup>(s,a). It answers "how much better than the policy's average is this particular action in this state?" The general policy gradient is E[Σ<sub>t</sub> ∇log π(a<sub>t</sub>|s<sub>t</sub>) Φ<sub>t</sub>] with Φ<sub>t</sub> any of R(τ), R̂<sub>t</sub>, R̂<sub>t</sub> − b(s<sub>t</sub>), Q<sup>π</sup>(s<sub>t</sub>,a<sub>t</sub>) or A<sup>π</sup>(s<sub>t</sub>,a<sub>t</sub>); all have the same expectation, and the advantage has the lowest variance of the exact ones. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Achiam 2018</a>
+@@ 44
+You cannot observe A exactly, but you can estimate it with the value network you already have. Sutton and Barto: methods that learn both a policy and a value function "are often called actor–critic methods, where 'actor' is a reference to the learned policy, and 'critic' refers to the learned value function". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The simplest version, <strong>one-step actor–critic</strong>, uses the TD error as the advantage estimate:
+@@ 45
+δ<sub>t</sub> = R<sub>t+1</sub> + γ V(S<sub>t+1</sub>,w) − V(S<sub>t</sub>,w) &nbsp;&nbsp; θ ← θ + α δ<sub>t</sub> ∇ ln π(A<sub>t</sub>|S<sub>t</sub>,θ) &nbsp;&nbsp; w ← w + α<sub>w</sub> δ<sub>t</sub> ∇V(S<sub>t</sub>,w)
+@@ 46
+The same number δ<sub>t</sub> trains both networks: for the actor it says "better or worse than expected"; for the critic it is the semi-gradient TD(0) error you met in the bootstrapped targets of <a href="#d6">Day 6</a>. Because δ<sub>t</sub> is available after one step, the update is fully online. You no longer wait for the episode to end, which also makes continuing tasks possible. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> The price is bias: if V is wrong, δ<sub>t</sub> is wrong in a consistent direction, whereas the Monte Carlo return is noisy but honest.
+@@ 47
+The critic never chooses anything. It only scores what the actor did. If that sounds like a coach shouting "better than I expected" or "worse than I expected" after each move, that is exactly the intended picture.
+@@ 48
+6. A3C and A2C: the CPU turning point
+@@ 49
+In February 2016 Mnih and colleagues at DeepMind published <strong>A3C</strong>, Asynchronous Advantage Actor-Critic. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> Its algorithmic content is modest: an actor–critic whose advantage uses k-step bootstrapping, A(s<sub>t</sub>,a<sub>t</sub>) = Σ<sub>i=0</sub><sup>k−1</sup> γ<sup>i</sup> r<sub>t+i</sub> + γ<sup>k</sup> V(s<sub>t+k</sub>) − V(s<sub>t</sub>), with k at most t<sub>max</sub> = 5, plus an <strong>entropy bonus</strong> β H(π(·|s)) added to the policy objective with β = 0.01, which the paper says "improved exploration by discouraging premature convergence to suboptimal deterministic policies". <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a>
+@@ 50
+The systems content is what changed the field. DQN needed a replay buffer to break correlations between consecutive samples, which forces off-policy learning. A3C instead ran 16 actor-learner threads on one multi-core CPU, with no GPU, each with its own copy of the environment. Every thread acts for up to 5 steps, computes gradients locally, and pushes them into a shared set of parameters with shared RMSProp (decay 0.99) and no locks, in the style of Hogwild!. Different threads explore different states at the same moment, so the gradient stream is decorrelated without any replay. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a>
+@@ 51
+Method (57 Atari games, human starts)
+@@ 52
+Training time
+@@ 53
+Mean
+@@ 54
+Median
+@@ 55
+8 days on a GPU
+@@ 56
+Dueling Double DQN
+@@ 57
+Prioritized DQN
+@@ 58
+A3C, feed-forward
+@@ 59
+1 day on 16 CPU cores
+@@ 60
+4 days on 16 CPU cores
+@@ 61
+A3C, LSTM
+@@ 62
+The scores are human-normalised, from Table 1 of the paper. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> One day on a CPU matched eight GPU-days of Dueling Double DQN on the mean, and four days beat every DQN variant on the mean. Going from 1 to 16 threads sped A3C up about 12.5 times, less than the 24.1 times of one-step Q-learning but enough. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> The same recipe trained a TORCS driver, MuJoCo continuous controllers and a 3D maze agent with an LSTM. The <a href="#p-a3c">A3C review</a> goes through the figures.
+@@ 63
+<strong>A2C</strong> is the synchronous version of the same update: the N environments step in lockstep, their N × T samples are stacked into one batch, one gradient is computed and applied, then everyone continues. There is no separate algorithm here; the PPO paper simply calls it "advantage actor critic" and uses it as a baseline. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> Synchronous batching wastes a little time waiting for the slowest environment but makes the GPU useful again and is deterministic, which is why nearly every modern implementation is A2C-shaped.
+@@ 64
+7. GAE: one knob between TD and Monte Carlo
+@@ 65
+Section 5 used the one-step TD error as the advantage (low variance, biased by whatever V gets wrong). Section 4 used the full return minus V (unbiased, high variance). A3C's k-step estimator sits in between at a fixed k. <strong>Generalized Advantage Estimation</strong>, published by Schulman and colleagues in 2015 and presented at ICLR 2016, replaces the hard cut-off with an exponentially weighted average of all the k-step estimators. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> Define the TD residual δ<sub>t</sub> = r<sub>t</sub> + γV(s<sub>t+1</sub>) − V(s<sub>t</sub>). Then
+@@ 66
+Â<sub>t</sub><sup>GAE(γ,λ)</sup> = Σ<sub>l=0</sub><sup>∞</sup> (γλ)<sup>l</sup> δ<sub>t+l</sub>
+@@ 67
+Two endpoints make the knob readable. At λ = 0 the sum collapses to δ<sub>t</sub>: the one-step TD error, which the paper calls "much lower variance" but biased unless V is exact. At λ = 1 the telescoping sum of discounted residuals equals Σ<sub>l</sub> γ<sup>l</sup> r<sub>t+l</sub> − V(s<sub>t</sub>): the discounted return minus the baseline, unbiased and noisy. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> Intermediate λ is a bias–variance dial, and <strong>λ is not a discount</strong>: γ defines what return you are optimising; λ only changes how you estimate the advantage of that return.
+@@ 68
+<strong>A three-step check by hand.</strong> With γ = 0.99 and λ = 0.95, γλ = 0.9405. Suppose the residuals are δ = [1.0, 0.5, −0.2]. Then Â<sub>0</sub> = 1.0 + 0.9405 × 0.5 + 0.9405² × (−0.2) = 1.0 + 0.470 − 0.177 ≈ 1.293. At λ = 0 the answer is 1.0; at λ = 1 it is 1.0 + 0.99 × 0.5 + 0.9801 × (−0.2) ≈ 1.299.
+@@ 69
+Try it: the widget below has a 10-step trajectory with fixed rewards and a half-decent critic. Slide λ and watch Â<sub>0</sub> move from the one-step TD error to the Monte Carlo value; then lower γ.
+@@ 70
+Notice that at γ = 0.99, Â<sub>0</sub> is 0.084 at λ = 0 (the critic thought step 0 was about as good as expected), 2.16 at λ = 0.95 and 3.13 at λ = 1 (the trajectory earned far more than the critic's V(s₀) = 1.5 promised). The big negative δ at step 5 and the big positive ones at steps 6 to 8 only reach Â<sub>0</sub> once λ lets the later residuals in. The weights (γλ)<sup>l</sup> printed under the chart are the whole mechanism.
+@@ 71
+In practice, the paper's experiments found intermediate λ in [0.9, 0.99] usually best. Cart-pole learned fastest with λ in [0.92, 0.98] at γ = 0.99; the 3D biped liked γ in [0.99, 0.995] and λ in [0.96, 0.99]; the quadruped did best at γ = 0.995, λ = 0.96. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a> The pair γ = 0.99, λ = 0.95 became the default that <a href="#d8">Day 8</a>'s PPO inherited, and PPO uses the truncated form of the sum, stopping at the end of each T-step rollout segment. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 72
+Going deeper (optional): why the λ = 1 endpoint is exactly Monte Carlo minus V
+@@ 73
+Write out Σ<sub>l</sub> γ<sup>l</sup> δ<sub>t+l</sub> = Σ<sub>l</sub> γ<sup>l</sup> r<sub>t+l</sub> + Σ<sub>l</sub> γ<sup>l+1</sup> V(s<sub>t+l+1</sub>) − Σ<sub>l</sub> γ<sup>l</sup> V(s<sub>t+l</sub>). The two V sums are the same series shifted by one term, so everything cancels except the first V(s<sub>t</sub>), leaving the discounted return minus V(s<sub>t</sub>). Any error in V drops out, which is why λ = 1 is unbiased. For λ &lt; 1 the cancellation is incomplete, and the leftover depends on V's accuracy; the GAE paper shows that if V were exactly the true value function, every λ would be unbiased, so the bias you pay is precisely the critic's error, discounted by γλ. <a class="src" href="https://arxiv.org/abs/1506.02438">Schulman 2016</a>
+@@ 74 attr
+Left panel: an actor–critic network. An observation box feeds a shared trunk, which splits into a policy head giving pi and a value head giving V. The environment returns reward and next state; the TD error delta is computed from reward and the two value estimates and flows into both the policy loss and the value loss, whose gradients flow back into the shared parameters. Right panel: A3C. A global parameter box in shared memory at the top; four worker boxes (labelled times sixteen) below, each with its own environment copy; arrows up carry gradients, arrows down carry parameter syncs.
+@@ 75
+Actor–critic: two heads, one trunk
+@@ 76
+observation s
+@@ 77
+shared
+@@ 78
+trunk
+@@ 79
+π head
+@@ 80
+V head
+@@ 81
+actor loss −δ log π
+@@ 82
+critic loss δ²
+@@ 83
+gradients →
+@@ 84
+shared params
+@@ 85
+A3C: 16 workers, shared θ
+@@ 86
+global θ, θ_v
+@@ 87
+shared RMSProp
+@@ 88
+worker 1
+@@ 89
+own env copy
+@@ 90
+local θ'
+@@ 91
+worker 16
+@@ 92
+push ∇ (no lock)
+@@ 93
+sync θ' ← θ
+@@ 94
+each: act ≤ 5 steps, k-step A, local grads
+@@ 95
+no replay buffer: worker diversity replaces it
+@@ 96
+1 CPU, 16 threads, 0 GPUs
+@@ 97
+Left: the actor–critic data flow. One trunk, two heads; the TD error δ is the only training signal and it feeds both losses. Right: A3C wraps that network in 16 asynchronous CPU workers that share parameters but nothing else.
+@@ 98
+Read the left panel top to bottom. An observation enters a <strong>shared trunk</strong> (A3C's Atari trunk is a 16-filter 8×8 stride-4 convolution, a 32-filter 4×4 stride-2 convolution and a 256-unit fully connected layer). It splits into a <strong>policy head</strong> (a softmax over actions, or μ and log σ for a Gaussian) and a <strong>value head</strong> (one scalar). <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> The sampled action goes to the environment; the reward and next state come back and, with two value estimates, form δ. The actor loss −δ log π(a|s) pushes the action up or down; the critic loss δ² pulls V toward the bootstrapped target; both gradients land in the same trunk parameters, so the value task also shapes the features the policy uses. An entropy term, when present, attaches to the policy head.
+@@ 99
+The right panel is the systems wrapper. A global parameter vector lives in shared memory. Each worker copies it, acts in its private environment for up to t<sub>max</sub> = 5 steps, computes k-step advantages and gradients locally, and adds them to the global parameters without waiting for anyone. Workers are always slightly out of date with respect to each other, and A3C simply tolerates that. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> A2C replaces the asynchrony with a barrier and a single batched update, which is the shape that <a href="#d8">Day 8</a>'s PPO keeps.
+@@ 100
+A3C's headline run used 16 actor-learner threads on a single multi-core CPU and no GPU at all, γ = 0.99, shared RMSProp with decay 0.99. On the 57-game Atari benchmark one day of this matched Dueling Double DQN's 8 GPU-days on the human-normalised mean (344.1% vs 343.8%), and the 16-thread setup was about 12.5 times faster than one thread. There is no replay memory to size; the only state besides the networks is each worker's current 5-step segment. On MuJoCo tasks the paper reports good solutions in under 24 hours, typically in a few hours. <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a>
+@@ 101
+Q1. In REINFORCE, why is the update proportional to ∇π(A<sub>t</sub>|S<sub>t</sub>) divided by π(A<sub>t</sub>|S<sub>t</sub>), that is, to ∇ ln π?
+@@ 102
+To keep the step size below 1
+@@ 103
+Because the environment's transition probabilities are unknown
+@@ 104
+So that actions already chosen often do not win merely from being updated more often
+@@ 105
+Because the logarithm makes returns positive
+@@ 106
+Answer 3. Frequently chosen actions appear in more updates; dividing by their probability compensates, so the expected update equals the true gradient. The transition probabilities vanish for a different reason (they do not depend on θ).
+@@ 107
+Q2. You subtract a state-dependent baseline b(s) from the return in the policy gradient. What happens to the expected gradient?
+@@ 108
+Nothing; only the variance changes
+@@ 109
+It shrinks by b(s)
+@@ 110
+It becomes biased toward actions the baseline likes
+@@ 111
+It becomes zero whenever b(s) = V(s)
+@@ 112
+Answer 1. Σ<sub>a</sub> b(s) ∇π(a|s) = b(s) ∇1 = 0, so the expectation is unchanged. The widget's "variance ratio" tile is the effect that remains.
+@@ 113
+Q3. In the two-action softmax example, the agent took "right" with π(right) = 0.5, got G = +10, and used baseline b = 12 with α = 0.01. What happened to π(right)?
+@@ 114
+It rose to about 0.525
+@@ 115
+It stayed exactly 0.5 because the baseline cancels the update
+@@ 116
+It rose to about 0.55
+@@ 117
+It fell to about 0.495
+@@ 118
+Answer 4. G − b = −2, so the logits move to [−0.01, 0.01] and π(right) = σ(−0.02) ≈ 0.495. A return below expectation counts as evidence against the action. Without the baseline the same episode gave 0.525.
+@@ 119
+Q4. What does the critic do in an actor–critic method?
+@@ 120
+It chooses the action with the highest value
+@@ 121
+It scores states so the actor can tell whether an action did better or worse than expected
+@@ 122
+It stores past transitions for replay
+@@ 123
+It sets the entropy coefficient
+@@ 124
+Answer 2. The critic learns V(s) and supplies the TD error δ; it never picks actions. Choosing the arg max of a value is what DQN did on Day 6, not what an actor–critic does.
+@@ 125
+Q5. Set λ = 0 in GAE. What is Â<sub>t</sub>?
+@@ 126
+The full discounted return minus V(s<sub>t</sub>)
+@@ 127
+Zero, because every term is multiplied by λ
+@@ 128
+The one-step TD error r<sub>t</sub> + γV(s<sub>t+1</sub>) − V(s<sub>t</sub>)
+@@ 129
+The undiscounted sum of rewards
+@@ 130
+Answer 3. Only the l = 0 term survives ((γλ)⁰ = 1), leaving δ<sub>t</sub>: low variance, biased by the critic's error. λ = 1 gives the Monte Carlo return minus V.
+@@ 131
+Q6. According to Table 1 of the A3C paper, how did one day of A3C on 16 CPU threads compare with Dueling Double DQN after 8 days on a GPU, on the human-normalised mean over 57 games?
+@@ 132
+A3C was far behind, around 120% versus 344%
+@@ 133
+They were essentially tied, 344.1% versus 343.8%
+@@ 134
+A3C was ahead by almost double, 623% versus 344%
+@@ 135
+The paper did not compare them
+@@ 136
+Answer 2. The one-day feed-forward A3C scored 344.1% mean against 343.8% for Dueling Double DQN. The 623.0% figure is the LSTM variant after four days; 121.9% is the original DQN.
+@@ 137
+Policy gradient methods parameterise π(a|s,θ) and climb J(θ) directly; this handles continuous actions and lets the optimum be stochastic, which value-plus-arg-max cannot express.
+@@ 138
+The log-derivative trick turns ∇J into E[Σ<sub>t</sub> ∇log π(a<sub>t</sub>|s<sub>t</sub>) · (how good)]; environment dynamics drop out because they do not depend on θ. REINFORCE (Williams 1992) uses the sampled return as "how good".
+@@ 139
+Reward-to-go and any state-only baseline b(s) leave the expected gradient unchanged and cut variance, often by orders of magnitude; the natural baseline is a learned V(s).
+@@ 140
+Actor–critic uses the TD error δ = r + γV(s') − V(s) as an online advantage estimate, trading some bias for far less variance and no waiting; A3C (2016) ran this on 16 CPU threads and matched 8 GPU-days of DQN in one day; A2C is its synchronous twin.
+@@ 141
+GAE's λ dials between the one-step TD error (λ = 0) and Monte Carlo minus V (λ = 1); γ = 0.99, λ = 0.95 is the default that PPO inherited. λ is not a discount.
+@@ 142
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd ed., Chapter 13: Policy Gradient Methods</a> — Sutton &amp; Barto, MIT Press, 2018. The policy gradient theorem, the short-corridor example, the REINFORCE and one-step actor–critic boxes, and the Gaussian policy.
+@@ 143
+<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html">Intro to Policy Optimization</a> — Achiam, OpenAI Spinning Up, 2018. The cleanest written derivation of the log-derivative trick, reward-to-go, and the baseline identity.
+@@ 144
+<a href="https://spinningup.openai.com/en/latest/algorithms/vpg.html">Vanilla Policy Gradient</a> — OpenAI Spinning Up, 2018. Pseudocode for the advantage-weighted gradient with a fitted value baseline.
+@@ 145
+<a href="https://link.springer.com/article/10.1007/BF00992696">Simple statistical gradient-following algorithms for connectionist reinforcement learning</a> — Williams, Machine Learning 8(3–4):229–256, 1992. The REINFORCE paper.
+@@ 146
+<a href="https://arxiv.org/abs/1602.01783">Asynchronous Methods for Deep Reinforcement Learning</a> — Mnih et al., DeepMind, ICML 2016. A3C: 16 CPU threads, t<sub>max</sub> = 5, entropy β = 0.01, Table 1 and Table 2 for the numbers quoted above.
+@@ 147
+<a href="https://arxiv.org/abs/1506.02438">High-Dimensional Continuous Control Using Generalized Advantage Estimation</a> — Schulman, Moritz, Levine, Jordan &amp; Abbeel, ICLR 2016. Equations 16–18 and Section 7's λ ranges.
+@@ 148
+<a href="https://arxiv.org/abs/1707.06347">Proximal Policy Optimization Algorithms</a> — Schulman et al., OpenAI, 2017. For the truncated GAE (eq. 11) and the use of A2C as a baseline; read fully on Day 8.

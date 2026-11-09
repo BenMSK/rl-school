@@ -1,0 +1,278 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 5</span>
+@@ 2
+경험에서 배우기: Monte Carlo와 TD
+@@ 3
+오늘을 마치면 Monte Carlo target과 TD(0) target을 손으로 계산할 수 있고, bootstrapping과 두 방법 사이의 bias/variance trade-off를 설명할 수 있으며, eligibility trace가 들어간 TD(λ) update를 읽을 수 있습니다.
+@@ 4
+약 90분 · Day 4 필요
+@@ 5
+어제의 update는 모델을 써서 가능한 모든 다음 state에 대해 평균을 냈습니다. 오늘은 모델을 버리고, 실제로 일어난 일을 대신 씁니다. Monte Carlo는 episode가 끝날 때까지 기다렸다가 실제 return을 씁니다. Temporal-difference learning은 한 step 뒤에 바로 update하며, 이때 reward에 다음 state에 대한 자신의 추측을 더해 씁니다. 둘 다 p(s′, r | s, a) 없이 하는 policy evaluation입니다. "진짜 값을 기다린다"와 "learn a guess from a guess"(추측으로부터 추측을 배운다) 사이의 선택이 남은 과정 전체를 관통하는 핵심 trade-off입니다.
+@@ 6
+1. 모델 버리기: sample return
+@@ 7
+<a href="#d4">Day 4</a>의 모든 DP update는 Σ<sub>s′,r</sub> p(s′, r | s, a)[r + γ V(s′)] 꼴이었습니다. 모든 결과에 대해 모델로 가중해서 낸 평균입니다. p가 없으면 이 합을 만들 수 없습니다. 대신 할 수 있는 일은 <em>행동하는 것</em>입니다. agent를 state s에 놓고, policy를 따르게 하고, 일어나는 일을 기록합니다. 한 번의 실행은 그 합이 계산하던 양의 sample 하나입니다. 충분히 많이 모아 평균을 내면 모델 없이도 모델이 주던 숫자를 얻습니다.
+@@ 8
+이것이 expected update에서 <strong>sample update</strong>로의 전환입니다. 확률로 가중한 모든 다음 state 대신, environment가 뽑아 준 다음 state 하나를 씁니다. 대가는 noise입니다. sample 하나는 평균에서 멀리 떨어져 있을 수 있습니다. 얻는 것은, 실제든 시뮬레이션이든 경험한 episode만 있으면 된다는 점입니다. 전체 transition table을 영영 만들 수 없는 문제에서도 episode는 얻을 수 있습니다. 이 방법들은 "environment의 모델을 필요로 하지 않습니다". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 9
+<a href="#d3">Day 3</a>에서 본 내용을 떠올려 봅시다. <strong>return</strong> G<sub>t</sub> = R<sub>t+1</sub> + γR<sub>t+2</sub> + γ²R<sub>t+3</sub> + …는 시각 t 이후 reward의 할인된 합이고, v<sub>π</sub>(s) = E[G<sub>t</sub> | S<sub>t</sub> = s]입니다. 기댓값은 평균을 내서 추정할 수 있습니다. 이 관찰에서 첫 번째 알고리즘이 나옵니다.
+@@ 10
+2. Monte Carlo prediction
+@@ 11
+<strong>Monte Carlo (MC) prediction</strong>은 s를 방문한 뒤 관측한 return들의 평균으로 v<sub>π</sub>(s)를 추정합니다. π를 따라 episode를 끝까지 진행하고, 마지막 reward에서부터 거꾸로 계산해 각 step의 G<sub>t</sub>를 구한 다음, 방문한 state마다 그 return을 해당 state의 목록에 추가합니다. <strong>First-visit MC</strong>는 각 episode에서 s를 처음 방문한 뒤의 return만 쓰고, <strong>every-visit MC</strong>는 모든 방문의 return을 씁니다. 둘 다 방문 횟수가 늘어나면 v<sub>π</sub>(s)로 수렴합니다. first-visit은 서로 독립이고 unbiased한 sample을 주며, 그 표준오차는 1/√n으로 줄어듭니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 이름은 1940년대 Los Alamos의 물리학자들에게서 왔고, first-visit MC 자체도 그 시기에 나왔습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 12
+대부분의 구현은 목록을 두는 대신, 오늘의 위젯처럼 고정된 step size α로 추정값을 그때그때 갱신합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 13
+이 식은 "추정값을 target 쪽으로 α만큼의 비율로 옮긴다"로 읽습니다. <strong>target</strong>(목표값)은 추정값이 같아지도록 맞추려는 값입니다. MC에서는 실제 return G<sub>t</sub>입니다. RL의 모든 prediction 방법은 이 꼴이고, target만 다릅니다.
+@@ 14
+V(S<sub>t</sub>)의 target
+@@ 15
+Sampling?
+@@ 16
+Bootstrapping?
+@@ 17
+필요한 것
+@@ 18
+=
+@@ 19
+아니요: 전체 기댓값
+@@ 20
+예: V(s′) 사용
+@@ 21
+모델
+@@ 22
+=
+@@ 23
+G<sub>t</sub>, 실제 return
+@@ 24
+예: trajectory 하나
+@@ 25
+아니요: 실제 reward만
+@@ 26
+episode의 끝
+@@ 27
+=
+@@ 28
+예: transition 하나
+@@ 29
+예: V(S<sub>t+1</sub>) 사용
+@@ 30
+한 step
+@@ 31
+책의 표현으로는 이렇습니다. "MC target이 추정값인 이유는 기댓값을 알 수 없어서 sample return을 쓰기 때문입니다. DP target이 추정값인 이유는 v<sub>π</sub>(S<sub>t+1</sub>)을 알 수 없어서 현재의 추정값을 쓰기 때문입니다. TD target은 두 가지 이유 모두에서 추정값입니다." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 32
+3. TD(0)와 TD error
+@@ 33
+Monte Carlo는 episode가 끝나기 전에는 아무것도 update할 수 없습니다. episode가 길면 문제가 되고, 끝나지 않는 task에서는 치명적입니다. <strong>Temporal-difference learning</strong>은 return 중 아직 보지 못한 부분을 그에 대한 현재 추정값으로 대체합니다. 한 step이 지나면 R<sub>t+1</sub>과 S<sub>t+1</sub>을 알게 되고, table에 있는 V(S<sub>t+1</sub>)이 나머지 return의 대략적인 값입니다. 그래서 다음과 같이 update합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 34
+이것이 <strong>TD(0)</strong>이고, 대괄호 안이 <strong>TD error</strong> δ<sub>t</sub> = R<sub>t+1</sub> + γV(S<sub>t+1</sub>) − V(S<sub>t</sub>)입니다. 지금 보기에 그 state가 얼마짜리였는지(reward 하나에 도착한 곳의 value를 더한 값)에서 조금 전에 생각했던 값을 뺀 것입니다. δ가 양수이면 기분 좋은 놀람이고 V(S<sub>t</sub>)가 올라갑니다. target 안에 자신의 추정값 V(S<sub>t+1</sub>)을 쓰는 것이 <strong>bootstrapping</strong>입니다. TD 방법은 "learn a guess from a guess", 곧 추측으로부터 추측을 배웁니다. DP도 bootstrapping을 하고, MC는 하지 않습니다. TD는 "Monte Carlo의 sampling과 DP의 bootstrapping"을 결합합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 35
+이제 trade-off를 봅시다. MC target G<sub>t</sub>는 <strong>unbiased</strong>(편향 없음)입니다. 기댓값이 정확히 v<sub>π</sub>(S<sub>t</sub>)입니다. 하지만 무작위 reward를 많이 더하므로 <strong>high variance</strong>(높은 분산)를 가집니다. TD target은 무작위 reward 하나와 무작위 다음 state 하나만 들어가므로 <strong>low variance</strong>(낮은 분산)입니다. 그러나 V(S<sub>t+1</sub>)이 틀린 동안에는 <strong>biased</strong>(편향됨)이고, 학습이 끝나기 전까지는 늘 틀려 있습니다. 실제로 TD는 "stochastic task에서 대개 constant-α MC 방법보다 빨리 수렴하는 것으로 나타났고", 충분히 작은 상수 α에서 v<sub>π</sub>로 수렴합니다. Dayan은 1992년에 확률 1로 수렴함을 증명했습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Richard Sutton은 1988년 논문에서 TD(0), TD(λ)와 그 이름을 처음 소개했습니다. 이 논문의 초록은 credit을 "시간상 연이은 예측들 사이의 차이를 이용해" 할당한다고 설명합니다. <a class="src" href="http://incompleteideas.net/papers/sutton-88-with-erratum.pdf">Sutton 1988</a>
+@@ 36
+할머니 댁까지 차로 얼마나 걸릴지 맞혀 본다고 해 봐요. Monte Carlo 방식은 도착할 때까지 기다렸다가 시계를 보고, 다음번을 위해 예상을 고치는 거예요. TD 방식은 눈에 띄는 곳을 지날 때마다 "지금까지 걸린 시간에 여기서부터 보통 걸리는 시간을 더한 값"을 처음 예상과 비교하고, 그 자리에서 바로 고치는 거예요. "여기서부터 걸리는 시간"이 틀리면 TD는 속을 수 있어요. 하지만 한 번 갈 때 한 번만 연습하는 게 아니라, 눈에 띄는 곳을 지날 때마다 연습해요.
+@@ 37
+4. Random walk
+@@ 38
+책의 시험용 문제는 <strong>5-state random walk</strong>입니다. state A부터 E까지가 한 줄로 늘어서 있고, 모든 episode는 C에서 시작합니다. 매 step 확률 ½로 왼쪽이나 오른쪽으로 가고, 어느 쪽이든 끝을 벗어나면 episode가 끝납니다. reward는 오른쪽 끝으로 나갈 때 받는 +1뿐이고, γ = 1입니다. v(s)는 오른쪽으로 나갈 확률이므로 A부터 E까지의 true value는 1/6, 2/6, 3/6, 4/6, 5/6이고, 모든 추정값은 0.5에서 시작합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 39
+TD step 하나를 손으로 계산해 봅시다. non-terminal state 사이에서는 모든 reward가 0이고 모든 V가 0.5이므로 δ = 0 + 0.5 − 0.5 = 0이고 아무것도 바뀌지 않습니다. 첫 episode는 숫자를 정확히 하나만 움직입니다. A에서 왼쪽으로 나가면 δ = 0 + 0 − 0.5 = −0.5이고, α = 0.1이면 V(A) ← 0.5 + 0.1 × (−0.5) = 0.45입니다. 오른쪽으로 나가면 V(E)가 0.55가 됩니다. 책의 왼쪽 그래프가 정확히 이것을 보여 줍니다. episode 하나가 지난 뒤에는 V(A)만 움직였습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 같은 episode에서 MC는 방문한 모든 state를 움직이며, 모두 0 또는 1이라는 같은 최종 return 쪽으로 옮깁니다.
+@@ 40
+이어서 책은 두 방법을 다섯 state에 걸친 root-mean-square error로 겨룹니다. 100번 실행한 평균이고, TD는 α ∈ {0.05, 0.10, 0.15}, MC는 α ∈ {0.01, 0.02, 0.03, 0.04}입니다. 책은 숫자가 아니라 곡선을 싣고, "이 task에서 TD 방법이 MC 방법보다 일관되게 더 좋았다"고 결론짓습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 우리가 재현한 실험(100번 실행, 같은 설정, seed 고정)의 숫자는 아래와 같습니다. 시작 시점의 오차는 직접 확인할 수 있습니다. 0.5와의 차이를 제곱하면 1/9, 1/36, 0, 1/36, 1/9이고 평균은 1/18이며, √(1/18) = 0.236입니다.
+@@ 41
+방법, α
+@@ 42
+Episode 0의 RMS
+@@ 43
+=
+@@ 44
+=
+@@ 45
+=
+@@ 46
+=
+@@ 47
+=
+@@ 48
+=
+@@ 49
+눈여겨볼 모양이 둘 있습니다. α = 0.10인 TD는 더 빨리 떨어지지만 그 뒤 조금씩 다시 올라갑니다. 상수 step size가 크면 추정값이 true value 주변에서 계속 흔들리기 때문입니다(책의 Exercise 6.5). MC는 episode 100에서도 수렴과 거리가 멉니다. update 하나하나의 noise가 더 크고, 그 noise를 누르는 데 필요한 작은 α가 학습을 느리게 만들기 때문입니다. 이 숫자는 책의 것이 아니라 재현 실험의 숫자입니다. 아래에서 여러분이 seed를 고정해 한 번 돌린 결과는 세부적으로 다를 것입니다.
+@@ 50
+직접 해 보기: "둘 다"를 고르고 "10개 실행"을 몇 번 누른 다음 "100개 실행"을 누릅니다. RMS 곡선과, true value 옆에 놓인 V의 막대를 지켜봅니다.
+@@ 51
+눈여겨볼 점: TD의 곡선은 거의 모든 곳에서 MC의 곡선 아래에 있습니다. 한 번의 실행은 표에 있는 100번 실행 평균보다 울퉁불퉁합니다. 그리고 episode 몇백 개가 지나면 둘 다 true value의 계단 0.17, 0.33, 0.50, 0.67, 0.83 근처에 머물지만 정확히 그 위에 놓이지는 않습니다. step size가 상수이기 때문입니다.
+@@ 52
+5. You are the predictor: batch updating과 certainty equivalence
+@@ 53
+TD와 MC는 속도만 다른 것이 아닙니다. 같은 유한한 데이터에서 서로 다른 답으로 수렴합니다. 이를 깔끔하게 보는 방법이 <strong>batch updating</strong>입니다. 고정된 episode 집합을 두고 반복해서 보여 주며, value가 더 움직이지 않을 때까지 update를 적용합니다. Batch MC는 관측된 return에 대한 mean squared error를 최소화하는 값, 곧 sample 평균으로 수렴합니다. Batch TD(0)는 <strong>certainty-equivalence estimate</strong>로 수렴합니다. 데이터로부터 Markov process의 maximum-likelihood 모델을 만들고(transition을 세고 reward를 평균 냅니다), 그 모델이 확실히 옳다고 보고 그 모델에서 정확히 맞는 value를 계산한 것입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 54
+책의 퍼즐이 이를 구체적으로 보여 줍니다. state A와 B가 있는 미지의 Markov process에서 episode 여덟 개를 관측합니다. A, 0, B, 0이 한 번, B, 1이 여섯 번, B, 0이 한 번입니다. V(B) = 6/8 = 3/4이라는 데는 모두 동의합니다. V(A)에는 근거 있는 답이 둘입니다. Batch MC는 0이라고 답합니다. A 이후에 관측된 return은 0 하나뿐이었고, 이 답은 훈련 데이터에서 오차가 0입니다. Batch TD(0)는 3/4이라고 답합니다. A에 있을 때마다 reward 0을 받고 B로 갔으니, A의 value는 B의 value와 같다는 것입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 55
+어느 쪽이 맞을까요? 가진 데이터에 대해서는 MC입니다. 다음 episode에 대해서는 아마 TD입니다. process가 Markov라면 B 이후에 일어난 일이 A에 대해서도 알려 주는데, MC는 그 정보를 버렸습니다. 책의 Figure 6.2에서 batch TD가 batch MC보다 계속 아래에 있었던 것도 이 때문입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Sutton의 1988년 논문에 이미 이 batch-optimality 결과가 들어 있었습니다. <a class="src" href="http://incompleteideas.net/papers/sutton-88-with-erratum.pdf">Sutton 1988</a>
+@@ 56
+<strong>"TD는 MC를 더 빠르게 한 것일 뿐이다."</strong> 유한한 데이터에서는 서로 다른 값으로 수렴합니다. MC는 sample 평균으로, TD는 certainty-equivalence estimate로 갑니다. 위 퍼즐에서는 0 대 3/4입니다.
+@@ 57
+<strong>"Bootstrapping을 하면 unbiased가 된다."</strong> 정반대입니다. TD target은 현재의 V에 기대므로 V가 맞을 때까지는 biased입니다. 그 대가로 얻는 것은 더 낮은 variance입니다.
+@@ 58
+<strong>"MC에는 모델이 필요하다."</strong> 필요한 것은 episode이지 p(s′, r | s, a)가 아닙니다. 모델이 필요 없다는 것이 두 방법 모두의 핵심입니다.
+@@ 59
+<strong>"First-visit MC와 every-visit MC는 같다."</strong> 극한은 같지만 유한한 sample에서의 동작은 다릅니다. every-visit이 function approximation과 trace로 더 자연스럽게 확장됩니다.
+@@ 60
+6. n-step return과 λ-return
+@@ 61
+TD(0)는 한 step 앞을 보고 bootstrapping을 합니다. MC는 끝까지 보고 bootstrapping을 전혀 하지 않습니다. 그 사이에 <strong>n-step return</strong>이 있습니다. 실제 reward n개를 쓰고, 그 뒤에 이어질 부분은 추정값으로 채웁니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 62
+n = 1이면 TD(0)이고, n = ∞(episode 끝까지 진행)이면 MC입니다. 그 사이의 n은 저마다 bias 조금과 variance 조금을 맞바꿉니다. expected n-step return의 최악의 경우 오차는 V의 최악의 경우 오차의 γ<sup>n</sup>배를 넘지 않으므로, 더 멀리 내다볼수록 틀린 V에 덜 속습니다. 책은 양 끝의 reward가 −1과 +1인 19-state random walk에서 n을 1부터 512까지 바꿔 가며 처음 10개 episode의 RMS error를 측정했습니다. 그 결과 "중간 값의 n을 쓴 방법이 가장 좋았고", n = 4에서 8 근처였습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 63
+n 하나를 고르는 대신 모든 n에 대해 평균을 낼 수 있습니다. <strong>λ-return</strong>은 n-step return들에 기하급수적으로 줄어드는 가중치를 줍니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 64
+가중치 (1 − λ), (1 − λ)λ, (1 − λ)λ², …의 합은 1입니다. episodic task에서는 episode가 끝난 뒤의 항들에 갈 가중치 λ<sup>T−t−1</sup>이 전체 return에 붙습니다. λ = 0이면 첫 항만 남습니다. TD(0)입니다. λ = 1이면 최종 return에만 가중치가 있습니다. MC입니다. Watkins가 1989년 학위논문에서 λ-return을 도입했습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 이것이 <strong>forward view</strong>(앞을 보는 관점)입니다. 시각 t의 G<sup>λ</sup>를 계산하려면 그 뒤에 일어나는 모든 일을 내다봐야 하고, 그래서 episode가 끝나기를 기다려야 합니다. TD가 피하려던 바로 그 일입니다.
+@@ 65
+7. Eligibility trace: backward view
+@@ 66
+<strong>backward view</strong>(뒤를 보는 관점)는 같은 효과를 점진적으로 얻습니다. state마다 <strong>eligibility trace</strong> z(s)를 둡니다. state를 방문하면 1을 더하고, 매 step γλ를 곱해 감쇠시킵니다. 그리고 step마다 보통의 TD error를 계산해 <em>모든</em> state에 각자의 trace에 비례하여 적용합니다. 책의 semi-gradient 표기로, weight w와 trace vector z를 써서 나타내면 다음과 같습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 67
+tabular한 경우 ∇v̂는 one-hot vector입니다. 그래서 첫 줄은 "모든 trace를 γλ만큼 감쇠시킨 다음 현재 state의 trace에 1을 더한다"는 뜻이고, 마지막 줄은 "모든 state의 value를 α δ<sub>t</sub>에 그 state의 trace를 곱한 만큼 update한다"는 뜻입니다. 이것이 <strong>TD(λ)</strong>입니다. 책은 agent가 "state의 흐름을 타고 가면서 TD error를 계산하고, 앞서 방문한 state들을 향해 뒤로 외치는" 모습으로 그립니다. 외침은 step마다 γλ씩 약해집니다. λ = 0이면 현재 state만 그 외침을 듣습니다. TD(0)입니다. λ = 1이고 γ = 1이면 trace가 전혀 감쇠하지 않고, 각 state는 이후의 모든 TD error를 받으며, 그 합이 MC error입니다. 이것이 TD(1)입니다. online으로 수행하는 MC이고 continuing task에도 쓸 수 있습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 이 아이디어는 1972년 Klopf를 통해 RL에 들어왔습니다. "eligibility trace"라는 용어는 1981년 Sutton과 Barto가 처음 썼습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 68
+직접 해 보기: 위젯은 모든 곳에서 V = 0인 채로 A부터 E까지를 오가는 10step짜리 episode 하나를 실행합니다. 그래서 마지막 step 전까지는 모든 TD error가 0이고, 마지막 step에서 오른쪽으로 나가면서 δ = 1이 됩니다. λ와 γ를 움직이며 어느 state가 credit을 받는지 지켜봅니다.
+@@ 69
+눈여겨볼 점: λ = 0이면 마지막 state인 E만 무언가를 배웁니다. TD(0)와 똑같습니다. λ = 1이고 γ = 1이면 각 state의 trace가 방문 횟수와 같아지므로, 이 update는 every-visit MC update입니다. 그 사이에서는 최근에 방문했고 자주 방문한 state가 credit의 대부분을 가져가고, 첫 state는 거의 받지 못합니다.
+@@ 70
+Eligibility trace는 젖은 모래 위에 찍혀 점점 흐려지는 발자국입니다. 놀라운 일이 생기면 해변을 따라 뒤를 돌아봅니다. 가장 선명한 발자국은 책임이 가장 큰 state의 것이고, 그 state들이 비난이나 칭찬의 대부분을 받습니다. λ는 발자국이 흐려지는 속도를 정합니다. "마지막 step만 중요하다"(λ = 0)에서 "모든 발자국이 선명하게 남는다"(λ = 1)까지입니다.
+@@ 71
+더 깊이 (선택): forward view와 backward view는 같은 것
+@@ 72
+forward view는 미래가 있어야 계산할 수 있는 target인 λ-return을 정의합니다. backward view는 한 step씩 돌아가며 결코 기다리지 않는 메커니즘입니다. Sutton과 Barto는 TD(λ)가 offline λ-return algorithm을 근사한다는 것을 보입니다. episode 전체에 걸쳐 더하면 trace update의 총 변화량은 각 state를 자신의 λ-return 쪽으로 옮긴 것과 거의 같고, λ = 0에서는 둘 다 정확히 TD(0)입니다. 두 개의 알고리즘이 아니라, 하나의 target에 대한 이론과 구현입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 73
+8. Monte Carlo control, 한 문단으로
+@@ 74
+지금까지는 모두 prediction이었습니다. policy를 개선하려면 이 추정값을 어제의 GPI loop에 끼워 넣으면 되는데, 한 가지를 바꿔야 합니다. V에 대해 greedy하게 행동하려면 one-step look-ahead에 모델이 필요합니다. 그래서 model-free 방법은 대신 <strong>action value</strong> q<sub>π</sub>(s, a)를 추정하고, greedy action은 그냥 argmax<sub>a</sub> Q(s, a)가 됩니다. <strong>Monte Carlo ES</strong>(exploring starts)가 이렇게 합니다. 모든 episode를 무작위 state–action pair에서 시작하되, 모든 pair가 0이 아닌 확률을 갖게 해서 모든 action이 계속 시도되도록 합니다. episode가 끝날 때마다 Q(S<sub>t</sub>, A<sub>t</sub>)를 관측한 return 쪽으로 옮기고 π(S<sub>t</sub>)를 argmax<sub>a</sub> Q(S<sub>t</sub>, a)로 정합니다. Monte Carlo ES는 "어떤 suboptimal policy로도 수렴할 수 없지만", 완전한 수렴 증명은 아직 미해결입니다. 이 알고리즘은 1998년 초판에 처음 실렸습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> <a href="#d6">Day 6</a>에서는 TD target으로 같은 일을 하며, 거기서 SARSA와 Q-learning이 나옵니다.
+@@ 75 attr
+경험으로부터 value table을 학습하는 두 가지 데이터 흐름. Monte Carlo: environment가 episode 전체를 episode buffer로 내보내고, 끝난 뒤 return G를 거꾸로 계산해 방문한 state마다 value table에 기록합니다. TD(0): environment가 transition 하나 (S, R, S prime)를 내보내고, R과 table 항목 두 개로 TD error delta를 계산해 table을 즉시 update합니다. 아래의 eligibility-trace 띠는 state A부터 E에 걸쳐 최근 방문한 state 위에 점점 흐려지는 막대를 보여 줍니다.
+@@ 76
+=
+@@ 77
+=
+@@ 78
+trajectory 전체, T step
+@@ 79
+끝난 뒤
+@@ 80
+=
+@@ 81
+R<tspan baseline-shift="sub" font-size="9">T</tspan>부터 거꾸로
+@@ 82
+=
+@@ 83
++α(G − V), 각 s
+@@ 84
+transition 하나
+@@ 85
+매 step
+@@ 86
+=
+@@ 87
+S<tspan baseline-shift="sub" font-size="9">t</tspan>에만 +αδ
+@@ 88
+V(S′) 읽기: bootstrapping
+@@ 89
+TD(λ): eligibility-trace 띠, 모든 state에 +αδ·z(s) 적용
+@@ 90
+E (현재)
+@@ 91
+z(s): 방문하면 +1, 매 step ×γλ. 외침 δ는 막대 길이에 비례해 각 state에 닿음
+@@ 92
+위: Monte Carlo는 episode 전체를 저장한 다음 return을 거꾸로 계산하고, 방문한 모든 state를 한 번씩 update해야 합니다. 가운데: TD(0)는 transition을 한 번에 하나씩 소비하고, table을 읽어 target을 만들고(점선 loop가 bootstrap입니다), 칸 하나를 update합니다. 아래: TD(λ)는 state마다 점점 흐려지는 trace를 두고 각 δ를 모든 state에 나눠 줍니다.
+@@ 93
+각 행을 왼쪽에서 오른쪽으로 읽습니다. Monte Carlo 행에서는 environment가 state, action, reward를 episode buffer로 흘려보내고, terminal state가 도착하기 전까지는 아무것도 value table을 건드리지 않습니다. 도착하면 return을 거꾸로 계산하고(G<sub>T−1</sub> = R<sub>T</sub>, G<sub>T−2</sub> = R<sub>T−1</sub> + γG<sub>T−1</sub>, …) 방문한 state의 칸을 각자의 return 쪽으로 조금씩 옮깁니다. 메모리는 episode 길이에 따라 커지고, 학습은 한꺼번에 몰아서 일어납니다. TD(0) 행에는 buffer가 없습니다. transition 하나가 도착하면 reward와 table 읽기 두 번으로 δ를 만들고(점선이 bootstrap입니다) 칸 하나에 씁니다. 메모리는 일정하고 학습은 매 step 일어납니다. 그래서 끝나지 않는 task에도 쓸 수 있습니다.
+@@ 94
+맨 아래 띠가 TD(λ)가 더하는 것입니다. V와 같은 크기이고 state마다 trace 하나를 담는 두 번째 table입니다. step마다 띠 전체를 γλ만큼 감쇠시키고, 현재 state에 1을 더하고, trace가 0이 아닌 모든 칸에 αδ·z(s)를 씁니다. 그래서 E에서의 놀람이 episode를 저장하지 않고도 C와 B까지 거슬러 닿습니다. 신경망에서는 z가 weight마다 항목 하나를 가지며 같은 세 줄이 그대로 적용됩니다. 책이 이 식을 ∇v̂와 w로 쓰는 이유입니다.
+@@ 95
+random walk에서는 이 모든 것이 사소합니다. V에 float 다섯 개, z에 다섯 개면 되고, 위젯은 두 방법의 episode 100개를 1밀리초에 한참 못 미치는 시간에 돌립니다. 차이는 규모가 커질 때 드러납니다. MC의 episode buffer는 policy-gradient 방법(2주차)에서 쓰는 rollout storage의 조상입니다. TD의 transition 하나짜리 update는 DQN(<a href="#d6">Day 6</a>)의 replay-memory sample의 조상이며, 거기서는 저장된 (s, a, r, s′) 하나면 target을 만들기에 충분합니다. 이 계보를 알면 메모리에 무엇이 들어 있고 learner가 언제 도는지 알 수 있습니다.
+@@ 96
+Q1. 모든 value를 0.5로 초기화하고 α = 0.1로 둔 random walk에서 첫 episode가 왼쪽으로 나갑니다. TD(0)가 이 episode를 처리한 뒤 어떤 value가 바뀌었을까요?
+@@ 97
+다섯 개 모두, 각각 0 쪽으로 낮아짐
+@@ 98
+시작 state인 C만, 0.45로 낮아짐
+@@ 99
+A만, 0.45로 낮아짐
+@@ 100
+없음, reward가 0이었으므로
+@@ 101
+정답 3. non-terminal state 사이에서는 모든 TD error가 0 + 0.5 − 0.5 = 0입니다. A에서 나갈 때 δ = 0 + 0 − 0.5 = −0.5이고 V(A) ← 0.5 + 0.1 × (−0.5) = 0.45입니다. Monte Carlo였다면 방문한 모든 state를 낮췄을 것입니다.
+@@ 102
+Q2. TD target을 왜 "두 가지 이유 모두에서 추정값"이라고 할까요?
+@@ 103
+전체 기댓값 대신 sampling한 transition 하나를 쓰고, true v<sub>π</sub> 대신 현재 추정값 V(S<sub>t+1</sub>)을 쓰기 때문
+@@ 104
+α와 γ 둘 다에 의존하기 때문
+@@ 105
+MC target과 DP target을 평균 내기 때문
+@@ 106
+앞으로 한 번, 뒤로 한 번, 모두 두 번 계산하기 때문
+@@ 107
+정답 1. MC는 sampling을 하지만 bootstrapping은 하지 않습니다. DP는 bootstrapping을 하지만 sampling은 하지 않습니다. TD는 둘 다 하며, 그래서 model-free이면서 동시에 online입니다.
+@@ 108
+Q3. batch episode 여덟 개가 있습니다. A,0,B,0이 한 번, B,1이 여섯 번, B,0이 한 번입니다. batch MC와 batch TD(0)는 V(A)를 각각 얼마라고 할까요?
+@@ 109
+둘 다 3/4
+@@ 110
+둘 다 0
+@@ 111
+MC는 3/4, TD는 0
+@@ 112
+MC는 0, TD는 3/4
+@@ 113
+정답 4. MC는 A 이후에 관측된 return 하나를 평균 내는데, 그 값은 0이었습니다. TD는 maximum-likelihood 모델(A는 항상 reward 0으로 B에 간다)을 만들고 A에 B의 value인 6/8 = 3/4을 줍니다. 이것이 certainty-equivalence estimate입니다.
+@@ 114
+Q4. "Bootstrapping을 하면 추정값이 unbiased가 된다." 이 말은 무엇이 틀렸을까요?
+@@ 115
+틀린 것이 없음. bootstrapping은 MC가 가진 bias를 없앰
+@@ 116
+Bootstrapping은 더 낮은 variance를 얻는 대신 bias를 들여옴(target이 현재의 틀린 V에 기댐)
+@@ 117
+Bootstrapping은 variance에만 영향을 주고 bias에는 전혀 영향을 주지 않음
+@@ 118
+Bootstrapping은 Monte Carlo에만 적용됨
+@@ 119
+정답 2. unbiased인 쪽은 MC target G<sub>t</sub>입니다. TD의 target R + γV(S′)는 V가 틀린 동안 biased이지만, 여러 reward가 아니라 하나만 더하므로 variance가 더 낮습니다. DP와 TD는 bootstrapping을 하고 MC는 하지 않습니다.
+@@ 120
+Q5. table에서 accumulating trace를 쓰는 TD(λ)에서, 어떤 state가 방문되지 않은 step에 그 state의 trace는 어떻게 될까요?
+@@ 121
+0으로 초기화됨
+@@ 122
+그대로 유지됨
+@@ 123
+γλ가 곱해짐
+@@ 124
+1만큼 늘어남
+@@ 125
+정답 3. z<sub>t</sub> = γλ z<sub>t−1</sub> + ∇v̂이고, ∇v̂는 방문한 state에서만 one-hot입니다. 그래서 방문하지 않은 state는 γλ만큼 감쇠하고, 방문한 state는 감쇠한 뒤 1이 더해집니다. λ = 1이고 γ = 1이면 아무것도 감쇠하지 않고 trace는 방문 횟수를 셉니다.
+@@ 126
+Q6. 19-state random walk에서 처음 10개 episode의 RMS error가 가장 낮았던 n은 무엇일까요?
+@@ 127
+n = 1. 5-state random walk에서 TD(0)가 가장 좋았으므로
+@@ 128
+중간 값의 n, 4에서 8 근처
+@@ 129
+n = 512. 실제 reward가 많을수록 bias가 줄어들므로
+@@ 130
+가장 좋은 α에서는 모든 n의 성능이 같았음
+@@ 131
+정답 2. Figure 7.2는 n이 1부터 512일 때의 오차 곡선을 보여 주는데, 양 극단이 모두 가운데보다 나쁩니다. 더 멀리 내다보면 틀린 V에서 오는 bias는 줄지만, 무작위 reward가 늘어 variance가 커집니다.
+@@ 132
+Monte Carlo와 TD는 모델 전체에 걸친 DP의 expected update를 경험에서 얻은 sample update로 바꿉니다. 필요한 것은 episode나 transition이지 p(s′, r | s, a)가 아닙니다.
+@@ 133
+모든 prediction 방법은 "V를 target 쪽으로 옮긴다"입니다. MC의 target은 실제 return G<sub>t</sub>입니다(unbiased, high variance, episode가 끝나야 함). TD(0)의 target은 R<sub>t+1</sub> + γV(S<sub>t+1</sub>)입니다(biased, low variance, 한 step). 대괄호 안이 TD error δ입니다.
+@@ 134
+Bootstrapping은 target 안에 자신의 추정값을 쓰는 것, 곧 "a guess from a guess"입니다. DP와 TD는 하고 MC는 하지 않습니다. 5-state random walk(true value 1/6 … 5/6)에서 TD는 MC보다 일관되게 좋았습니다.
+@@ 135
+유한한 데이터에서 MC와 TD는 서로 다른 답으로 수렴합니다. sample 평균과 certainty-equivalence estimate입니다. predictor 퍼즐에서 V(A)는 MC로는 0, TD로는 3/4입니다.
+@@ 136
+n-step return과 λ-return은 TD(0)와 MC 사이를 잇습니다. eligibility trace(γλ로 감쇠, 방문하면 +1, 모든 state를 αδz만큼 update)는 λ-return을 점진적으로 계산합니다. λ = 0이면 TD(0)이고, λ = 1, γ = 1이면 MC입니다.
+@@ 137
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd edition, Chapter 5, 6, 7, 12</a> — Sutton &amp; Barto, MIT Press, 2018 (2020 PDF). §5.1 Monte Carlo prediction, §5.3 Monte Carlo ES. §6.1–6.3 TD(0), Example 6.2(random walk, p.125), Example 6.4("You are the Predictor")와 certainty equivalence. §7.1 n-step TD와 Example 7.1. §12.1–12.2 λ-return과 eligibility trace를 쓰는 TD(λ). 연도는 p.116–117, 139, 328의 bibliographical remarks에서 확인했습니다.
+@@ 138
+<a href="http://incompleteideas.net/papers/sutton-88-with-erratum.pdf">Learning to Predict by the Methods of Temporal Differences</a> — Sutton, Machine Learning 3:9–44, 1988. TD(0), TD(λ), random-walk 예제를 처음 소개하고 batch-optimality 결과를 증명한 논문입니다. 짧고 읽기 쉽습니다.
+@@ 139
+<a href="http://incompleteideas.net/book/the-book-2nd.html">책 소개 페이지</a> — Sutton &amp; Barto. 무료 PDF, 코드, 정오표로 가는 링크가 있습니다.

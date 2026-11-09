@@ -1,0 +1,102 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+고정된 random network의 feature를 학습 중인 네트워크가 얼마나 못 맞히는지를 그대로 exploration bonus로 씁니다. Montezuma's Revenge에서 평균 8,152점을 기록했습니다. PPO는 2,497점, 평균적인 사람은 4,753점입니다. demonstration 없이 사람 평균을 넘은 첫 agent입니다.
+@@ 4
+<a href="#d11">Day 11</a>에서 다룸 · 원문 읽는 시간: 약 40분
+@@ 5
+RND는 고정된 random target network의 출력을 predictor network가 아직 따라 하지 못하는 observation을 방문할 때 agent에게 bonus를 줍니다. 이렇게 하면 예측할 수 없는 noise에는 휘둘리지 않으면서 novelty에 reward를 줄 수 있습니다. 이 bonus는 자체 discount를 쓰는 두 번째 value head를 통해 PPO에 전달됩니다.
+@@ 6
+한 번도 본 적 없는 방에 들어가면 사탕을 하나 받아요. 게임은 그걸 어떻게 알까요? 낙서 기계가 있어서, 어떤 그림이든 제멋대로지만 늘 똑같은 낙서로 바꿔 줘요. 그리고 복사기가 그 낙서를 따라 그리는 법을 배워요. 익숙한 방에서는 복사기가 잘 따라 그려서 아무것도 못 받아요. 새 방에서는 복사기가 낙서를 틀리게 그려서 사탕을 받아요. 지직거리는 TV로는 속일 수 없어요. 같은 그림은 언제나 같은 낙서가 되니까요.
+@@ 7
+Montezuma's Revenge에서 첫 reward를 얻으려면 치명적인 함정을 피해 정밀한 동작을 길게 이어 가야 하는데, random exploration으로는 사실상 절대 찾지 못합니다. <a href="#p-dqn">DQN</a>은 점수가 거의 0이었고 방을 2개만 봤습니다. <a class="src" href="https://arxiv.org/abs/1606.01868">Bellemare 2016</a> prediction error에 기반한 curiosity bonus가 도움이 되지만, 다음 프레임을 예측하는 <strong>forward model</strong>은 예측할 수 없는 것이라면 무엇에든 끌립니다. 화면의 잡음이나 동전 던지기 같은 "environment 안의 국소적인 entropy 원천"이 그런 것이고, 이를 흔히 noisy-TV problem이라고 부릅니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> count-based bonus는 table에서는 통하지만, 게임에서는 모든 프레임이 새롭습니다.
+@@ 8
+한 번도 본 적 없는, 그러나 deterministic한 것을 예측하게 합니다. 논문은 prediction error의 원천 네 가지를 꼽습니다. 훈련 데이터의 양, stochasticity, model misspecification, learning dynamics입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> 이 가운데 novelty는 첫 번째뿐입니다. 예측 대상이 <em>고정된 random network</em>의 출력이라면, target은 observation의 deterministic한 함수이고(stochasticity 없음) predictor와 같은 아키텍처 계열에 속합니다(misspecification 없음). 그래서 남는 것은 주로 "이것으로 훈련한 적이 있는가?"입니다.
+@@ 9
+<strong>같은 모양의 네트워크 두 개.</strong> target f는 random하게 초기화한 뒤 영원히 고정합니다. predictor f̂는 agent가 방문한 observation에서 f와 일치하도록 mean squared error로 훈련합니다. 둘 다 2015년 DQN의 convolutional encoder 뒤에 dense layer를 붙인 구조입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 10
+<strong>정규화.</strong> observation은 running statistics로 whitening한 뒤 [−5, 5]로 clip합니다. random target의 출력이 적당한 scale을 갖게 하기 위해서입니다. intrinsic reward는 intrinsic return의 표준편차에 대한 running estimate로 나눕니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 11
+<strong>value head 두 개.</strong> PPO는 V<sub>E</sub>를 extrinsic return(episodic, γ<sub>E</sub> = 0.999)에, V<sub>I</sub>를 intrinsic return(non-episodic, γ<sub>I</sub> = 0.99)에 맞춘 뒤 V = V<sub>E</sub> + V<sub>I</sub>를 씁니다. intrinsic return은 "'game over'에서 잘리지 않으므로", 죽는 것이 지루함에서 벗어나는 방법이 되지 못합니다. γ<sub>I</sub>를 0.999로 올리면 성능이 나빠졌습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 12
+<strong>규모.</strong> 대부분의 실행은 병렬 environment 128개와 약 19.7억 프레임을 쓰고, agent가 deterministic한 sequence를 외우지 못하도록 sticky action을 적용합니다. predictor는 experience의 25%로만 훈련해서, update 비율을 environment 32개짜리 실행과 맞춥니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 13 attr
+RND: 다음 observation을 whitening하고 clip한 뒤, 고정된 random target network와 학습 가능한 predictor network에 넣음. 두 출력의 차이를 제곱한 값을 정규화해 intrinsic reward를 만들고, 이것이 value head 두 개를 통해 PPO에서 extrinsic reward와 합쳐짐
+@@ 14
+=
+@@ 15
+Target f (고정)
+@@ 16
+random 초기화, 훈련 안 함
+@@ 17
+=
+@@ 18
+f를 향한 MSE
+@@ 19
+=
+@@ 20
+=
+@@ 21
+같은 error가 predictor의 훈련 loss (sample의 25%)
+@@ 22
+observation 하나, 고정된 random network 하나, 그리고 학습 가능한 복사본 하나. 둘의 불일치가 곧 bonus입니다. target이 deterministic하므로 noise가 bonus를 계속 높게 유지할 수 없고, predictor가 학습하므로 익숙한 방은 더 이상 bonus를 주지 않습니다.
+@@ 23 attr
+Gravitar, Montezuma's Revenge, Pitfall!, Private Eye, Solaris, Venture에서 프레임 수에 따른 mean episodic return을 그린 학습 곡선 여섯 개. RND, dynamics 기반 curiosity bonus, 기본 PPO를 비교하며, Montezuma's Revenge, Gravitar, Venture에서 RND가 뚜렷하게 앞섬
+@@ 24
+<a class="src" href="https://arxiv.org/abs/1810.12894">Figure 7, Burda 2018</a> RNN 기반 policy의 mean episodic return입니다. RND, dynamics-prediction bonus, extrinsic reward만 쓴 PPO를 hard-exploration 게임 여섯 개에서 비교했습니다.
+@@ 25
+Table 1 (최종 평균 점수, RND / PPO / 평균적인 사람): Montezuma's Revenge 8,152 / 2,497 / 4,753; Gravitar 3,906 / 3,426 / 3,351; Venture 1,859 / 0 / 1,188. dynamics 기반 curiosity baseline은 Montezuma에서 400점을 기록했습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> 가장 좋은 agent들은 "첫 번째 레벨의 방 24개 가운데 22개를 자주 찾아냅니다". 병렬 environment를 1,024개로 늘린 실행은 평균 10,070점을 기록했고, 그중 한 실행은 첫 레벨을 한 번 통과해 최고 return 17,500을 얻었습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> extrinsic reward가 전혀 없어도 non-episodic agent는 방을 21개까지 탐색했습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> 같은 표는 RND가 실패하는 곳도 보여 줍니다. Pitfall!은 −3, Private Eye는 8,666 (사람은 69,571), Solaris는 3,282 (사람은 12,327)입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a>
+@@ 26
+RND는 2018년 10월, "demonstration을 쓰거나 게임의 내부 state에 접근하지 않고" Montezuma's Revenge에서 평균적인 사람을 넘은 첫 agent였습니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> 이 bonus는 표준 구성 요소가 되었습니다. Atari 게임 57개 모두에서 human baseline을 넘은 첫 agent인 Agent57(2020년 3월)은 Never Give Up reward의 lifelong-novelty 요소로 RND를 씁니다. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a> 또한 <a href="#d11">Day 11</a>에서 "새로운 것"과 "예측할 수 없는 것"을 구분하는 가장 깔끔한 예이기도 합니다.
+@@ 27
+predictor가 훈련된 곳에서는 어디서든 bonus가 줄어들기 때문에, agent는 앞서 찾아낸 frontier로 돌아가는 법을 잊을 수 있습니다. Go-Explore(2019년 1월)는 이 현상을 <em>detachment</em>라고 부르고, 대신 state의 archive를 명시적으로 유지해 domain knowledge 없이 Montezuma에서 43,763점을 기록했습니다. <a class="src" href="https://arxiv.org/abs/1901.10995">Ecoffet 2019</a> RND는 약 20억 프레임이 필요하고, 조정해야 할 discount factor가 두 개이며, Pitfall!, Private Eye, Solaris에서는 여전히 사람에 한참 못 미칩니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1810.12894">Burda 2018</a> abstract 스스로도 첫 레벨을 "가끔 통과한다"고만 말합니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a>
+@@ 28
+Section 2.2–2.2.1 (error의 원천 네 가지)이 핵심 아이디어이고, 2.3은 head 두 개를 쓰는 요령, Figure 1은 실제 episode를 따라 bonus가 치솟는 모습입니다. 그다음 Section 3.6, Table 1, Appendix A.2의 pseudocode를 읽으세요. 3.2–3.5의 ablation은 처음 읽을 때 건너뛰어도 됩니다. 약 40분 걸립니다.
+@@ 29
+Q1. RND의 두 네트워크 가운데 훈련되는 것은 어느 쪽입니까?
+@@ 30
+둘 다 훈련되어 함께 수렴합니다
+@@ 31
+predictor만 훈련됩니다. target은 random하게 초기화된 그대로 남습니다
+@@ 32
+target만, 방문한 observation에서 훈련됩니다
+@@ 33
+둘 다 아닙니다. 둘 다 고정되어 있고 bonus는 둘의 고정된 차이입니다
+@@ 34
+target은 영원히 고정되고, predictor가 그것을 따라 하도록 학습합니다. 처음 보는 observation에서는 따라 하기 error가 큽니다.
+@@ 35
+Q2. Montezuma's Revenge에서 RND의 평균 점수와 평균적인 사람의 점수는 각각 얼마였습니까?
+@@ 36
+=
+@@ 37
+=
+@@ 38
+=
+@@ 39
+=
+@@ 40
+8,152 (RND) 대 4,753 (사람)입니다. 2,497은 PPO이고, 17,500은 단일 실행의 최고 return입니다.
+@@ 41
+Q3. noisy TV가 RND agent를 붙잡아 두지 못하는 이유는 무엇입니까?
+@@ 42
+target이 프레임의 deterministic한 함수이므로 predictor가 그것을 학습할 수 있고 bonus가 사라집니다
+@@ 43
+agent가 가만히 있으면 penalty를 받습니다
+@@ 44
+observation을 ±5로 clip해서 noise가 제거됩니다
+@@ 45
+붙잡아 둡니다. RND는 무작위성이 있는 게임에서 실패합니다
+@@ 46
+forward model은 줄일 수 없는 stochasticity를 쫓아갑니다. RND는 고정된 random mapping을 예측하므로, 화면 잡음도 학습할 수 있는 대상이 되어 더 이상 bonus를 주지 않습니다.
+@@ 47
+Burda, Edwards, Storkey, Klimov. Exploration by Random Network Distillation. 2018년 10월 30일. <a href="https://arxiv.org/abs/1810.12894">arXiv 1810.12894</a>
+@@ 48
+=
+@@ 49
+=
+@@ 50
+=
+@@ 51
+=

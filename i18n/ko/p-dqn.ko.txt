@@ -1,0 +1,102 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+convolutional network 하나와 하이퍼파라미터 한 세트로, 픽셀과 점수만 보고 Atari 게임 49개를 학습해 "전문 게임 테스터에 견줄 만한" 수준에 도달했습니다.
+@@ 4
+<a href="#d6">Day 6</a>에서 다룸 · 원문 읽는 시간: 약 40분 (본문 5쪽과 Methods)
+@@ 5
+DQN은 Watkins의 Q-learning에서 Q table 자리에 deep convolutional network를 넣고, 과거 transition을 모아 둔 replay memory와 target 계산용으로 천천히 update되는 신경망 사본이라는 두 가지 기법으로 안정시킨 것으로, 49개 게임 중 43개에서 기존 최고 기법을 이겼고 29개에서 전문 테스터 점수의 75% 이상에 도달했습니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 6
+컴퓨터가 여러분처럼 화면과 점수만 보면서 옛날 TV 게임을 배워요. 컴퓨터는 자기가 본 순간들을 일기장에 적어 두고, 마지막 쪽만 읽는 게 아니라 아무 쪽이나 펼쳐서 다시 읽어요. 그래야 오늘 있었던 일에만 매달리지 않거든요. 그리고 새로 한 추측은 가끔씩 복사해 두는 예전의 자기 모습과 비교해서 채점해요. 그러면 쫓아가는 과녁이 맞힐 수 있을 만큼 오래 가만히 있어 줘요.
+@@ 7
+Q-learning과 신경망을 결합하면 불안정하다는 것은 이미 알려져 있었습니다. Nature 논문은 원인을 짚습니다. 연속된 observation은 서로 상관되어 있고, Q가 조금만 바뀌어도 policy가 바뀌어 데이터 분포까지 바뀔 수 있으며, Q 값은 자기 자신의 target r + γ max<sub>a′</sub> Q(s′,a′)와 상관되어 있습니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> Sutton과 Barto의 용어로는 이것이 deadly triad입니다. function approximation, bootstrapping, off-policy 학습이 한꺼번에 있는 상황입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> DQN 이전의 최고 Atari agent는 손으로 만든 feature 위에서 학습하는 linear learner였습니다(Bellemare et al. 2012, Figure 3의 baseline). 2013년 12월의 arXiv 버전이 첫 돌파구였습니다. 게임은 일곱 개였고, "여섯 게임에서 기존의 모든 접근법을 앞섰고 그중 세 게임에서는 인간 전문가를 넘어섰다"고 했습니다. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a>
+@@ 8
+평범한 Q-learning loss에 안정화 장치 두 개를 붙입니다. <strong>Experience replay</strong>는 transition을 저장해 두고, 저장소에서 무작위로 뽑은 minibatch로 훈련합니다. 이렇게 하면 "이러한 상관관계가 끊어지고 따라서 update의 분산이 줄어들며", 훈련 분포가 과거의 여러 behaviour에 걸쳐 평균됩니다. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> <strong>target network</strong>는 파라미터 θ<sup>−</sup>를 가지며, C step마다 한 번씩만 online network에서 복사됩니다. target은 이 신경망이 계산하므로, Q를 update해도 자기 target이 곧바로 움직이지 않습니다. replay가 통하는 것은 Q-learning이 off-policy이기 때문입니다. replay되는 action은 더 오래된 policy에서 나온 것입니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 9
+<strong>전처리.</strong> 210×160 컬러 프레임을 받아, 깜빡임을 없애기 위해 연속한 두 프레임의 max를 취하고, luminance로 변환하고, 84×84로 줄인 뒤, 최근 4개 프레임을 쌓습니다. 입력은 84×84×4입니다. agent는 4번째 프레임마다 action을 고릅니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 10
+<strong>Q-network.</strong> Conv 32 filter 8×8 stride 4, conv 64 filter 4×4 stride 2, conv 64 filter 3×3 stride 1이며 각각 ReLU가 붙습니다. 이어서 fully connected 512 unit, 그리고 유효한 action마다 linear 출력 하나(4개에서 18개)가 있습니다. forward pass 한 번으로 모든 Q 값이 나옵니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 11
+<strong>Action 선택.</strong> ε-greedy로 고릅니다. ε은 처음 100만 프레임 동안 1.0에서 0.1까지 서서히 낮춘 뒤 고정합니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 12
+<strong>저장.</strong> (φ<sub>t</sub>, a<sub>t</sub>, r<sub>t</sub>, φ<sub>t+1</sub>)을 최근 100만 프레임을 담는 replay memory에 저장합니다. 훈련 중 reward는 +1, −1 또는 0으로 clipping됩니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a>
+@@ 13
+<strong>학습.</strong> transition 32개를 균등하게 sampling하고, 복사와 복사 사이에는 target network를 고정한 채로 squared TD error를 최소화합니다:
+@@ 14
+=
+@@ 15
+error 항은 [−1, 1]로 clipping되는데, 저자들은 이것이 "안정성을 더욱 높였다"고 보고합니다. optimiser는 RMSProp, γ = 0.99입니다. C step마다 θ<sup>−</sup> ← θ로 둡니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> 다시 정리된 하이퍼파라미터 값은 C = 10,000회 update, learning rate 0.00025입니다. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a>
+@@ 16
+게임마다 5,000만 프레임, 플레이 시간으로 약 38일을 훈련합니다. 2013년 버전은 1,000만 프레임을 썼습니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a>
+@@ 17 attr
+DQN convolutional network의 구조도: 84×84 프레임 네 장을 쌓은 입력이 convolutional layer 세 개와 fully connected layer 하나를 거쳐 action마다 출력 하나로 이어짐
+@@ 18
+<a class="src" href="https://www.nature.com/articles/nature14236">Figure 1, Mnih 2015</a> 신경망 구조. 전처리된 프레임 네 장이 들어가서 convolution 세 번과 dense layer 하나를 거치면, 조이스틱 action마다 Q 값 하나가 나옵니다. 49개 게임 모두에 같은 아키텍처를 썼습니다.
+@@ 19
+평가에서는 ε = 0.05로 최대 5분짜리 episode 30개를 플레이하고, 약 2시간 연습한 전문 테스터와 비교합니다. 점수는 100 × (DQN − 무작위)/(사람 − 무작위)로 정규화합니다. DQN은 49개 게임 중 43개에서 기존 최고 RL 기법을 이겼고, 29개에서 사람 점수의 75% 이상을 기록했습니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> 게임 사이의 편차는 엄청납니다. Double DQN 논문에 다시 정리된 raw score 몇 개를 봅니다: <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a>
+@@ 20
+게임
+@@ 21
+무작위
+@@ 22
+사람
+@@ 23
+정규화 점수
+@@ 24
+=
+@@ 25
+=
+@@ 26
+=
+@@ 27 attr
+Atari 게임 49개에서 DQN의 human-normalised 점수를 나타낸 가로 막대 그래프. 맨 위 Video Pinball부터 맨 아래 Montezuma's Revenge까지 정렬되어 있고, 75% 선과 최고 linear learner가 표시됨
+@@ 28
+<a class="src" href="https://www.nature.com/articles/nature14236">Figure 3, Mnih 2015</a> 게임별 human-normalised 점수. 100% = 사람 테스터입니다. 반응 속도가 중요한 게임이 맨 위에 있고, long-horizon exploration이 필요한 게임은 0에 머물며 그중 Montezuma's Revenge가 맨 마지막입니다.
+@@ 29
+Spinning Up은 DQN을 "deep RL 분야를 본격적으로 출범시킨 고전"이라고 부릅니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro2.html">Achiam 2018</a> 1년도 안 되어 구성 요소가 하나씩 개선되었습니다. Double DQN(2015년 9월)은 arg-max를 target network로 평가해 median normalised score를 93.5%에서 114.7%로 올렸고, prioritised replay(2015년 11월)는 49개 게임 중 41개에서 성능을 높였으며, dueling architecture(2015년 11월)는 V와 A를 분리했습니다. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> <a class="src" href="https://arxiv.org/abs/1511.05952">Schaul 2015</a> <a class="src" href="https://arxiv.org/abs/1511.06581">Wang 2015</a> Rainbow(2017)는 그중 여섯 가지를 결합해 DQN의 79%에 비해 median 223%를 기록했고, 전체 2억 프레임 가운데 700만 프레임 만에 DQN의 최종 점수에 도달했습니다. <a class="src" href="https://arxiv.org/abs/1710.02298">Hessel 2017</a> Agent57(2020)은 57개 게임 모두에서 human benchmark를 넘어선 첫 agent였습니다. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a>
+@@ 30
+게임당 5,000만 프레임은 플레이 시간으로 약 38일입니다. 사람은 몇 시간이면 됩니다. <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> exploration이 ε-greedy라서 sparse-reward 게임에서는 0점이 나옵니다(Montezuma's Revenge). RND의 exploration bonus는 2018년에 이 게임에서 8,152점에 도달했습니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> target에 들어 있는 max는 값을 과대추정합니다. Double DQN은 49개 게임 전부에서 overestimation을 측정했습니다. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> reward clipping 때문에 agent는 "크기가 다른 reward를 구별할 수 없습니다". <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> action은 discrete하고 개수가 적어야 합니다. 그리고 "network 하나"란 아키텍처가 하나라는 뜻입니다. weight는 게임마다 초기화해서 따로 훈련했습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 안정성은 경험적으로 확인된 것일 뿐입니다. 이 설정에서 deadly triad에 대한 수렴 정리는 없습니다.
+@@ 31
+먼저 본문(20분)입니다. 불안정의 세 가지 원인이 나오는 첫 페이지, Figure 1, Figure 3, Figure 2의 learning curve를 봅니다. 다음은 Methods(20분)입니다. "Model architecture", "Training details", θ<sup>−</sup>가 들어간 loss, 그리고 replay와 target network를 차례로 제거하는 ablation인 Extended Data Table 3을 읽습니다. t-SNE 그림은 건너뜁니다. 2013년 arXiv 논문은 두 번째로 읽기에 좋습니다. 이 논문의 Algorithm 1은 target network가 추가되기 전의 방법 전체를 열두 줄 남짓에 담고 있습니다. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a>
+@@ 32
+Q1. 49개 게임 중 몇 개에서 DQN이 사람 테스터 점수의 75% 이상에 도달했습니까?
+@@ 33
+49개 중 29개에서 ≥75%였습니다. 49개 중 43개에서는 기존 최고 RL 기법을 이겼습니다. 7은 2013년 논문의 게임 수입니다.
+@@ 34
+Q2. "target network는 자체 loss로 훈련되는 두 번째 신경망이다." 실제로는 무엇입니까?
+@@ 35
+reward만으로 훈련되는 더 작은 신경망
+@@ 36
+online network를 주기적으로 복사한 것으로, 직접 훈련되지 않고 target 계산에만 쓰인다
+@@ 37
+사람의 demonstration으로 훈련된 신경망
+@@ 38
+과거 모든 online network의 평균
+@@ 39
+C step마다 θ⁻ ← θ로 복사하고, 복사와 복사 사이에는 frozen 상태입니다. 역할은 regression target을 가만히 붙들어 두는 것입니다.
+@@ 40
+Q3. experience replay에는 왜 off-policy learner가 필요합니까?
+@@ 41
+replay가 action이 아니라 reward를 저장하기 때문에
+@@ 42
+target network가 off-policy이기 때문에
+@@ 43
+필요하지 않다. Sarsa도 똑같이 잘 작동한다
+@@ 44
+replay되는 transition은 더 오래된, 다른 policy가 만든 것이기 때문에
+@@ 45
+Q-learning의 target은 다음 action들에 대한 max를 쓰므로, 어떤 policy가 그 transition을 만들었는지 상관하지 않습니다. Sarsa처럼 on-policy인 target은 오래된 데이터에는 맞지 않습니다.
+@@ 46
+=
+@@ 47
+Mnih, V. et al. (2013). Playing Atari with Deep Reinforcement Learning. <a href="https://arxiv.org/abs/1312.5602">arXiv:1312.5602</a>; 전문 <a href="https://arxiv.org/abs/1312.5602">ar5iv</a>.
+@@ 48
+=
+@@ 49
+=
+@@ 50
+=
+@@ 51
+=

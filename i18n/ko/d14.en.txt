@@ -1,0 +1,424 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 14</span>
+@@ 2
+The frontier and open problems, as of October 2026
+@@ 3
+After today you can place the milestones of 2013–2026 on one timeline, read a benchmark saturation curve and say what it does and does not show, name the ten open problems of RL with a concrete example and a number for each, and know which four texts to read next.
+@@ 4
+About 90 min · Needs Day 13
+@@ 5
+Thirteen days of methods fit on one family tree with four roots: value estimation, policy gradients, planning with a model, and learning from preferences. Every benchmark the field built to measure progress on that tree has been saturated within about five years of its creation. What is left open in 2026 is not "can RL beat the score" but ten harder questions about data, rewards, generalisation and trust, each of which you can now state precisely.
+@@ 6
+1. The story so far in one page
+@@ 7
+Here is the whole course as a tree. Each node is a method you met; the arrow means "this is what the child kept from the parent, plus one new idea".
+@@ 8
+<strong>Root 1: values.</strong> <strong>Dynamic programming</strong> (<a href="#d4">Day 4</a>) computes values with a known model by sweeping every state. <strong>TD learning</strong> (<a href="#d5">Day 5</a>) drops the model and updates one sampled step at a time. <strong>Q-learning</strong> (<a href="#d6">Day 6</a>) learns action values off-policy. <strong>DQN</strong> (2013, Nature 2015) puts a convolutional network under Q-learning and adds experience replay and a target network to keep it stable, reaching "a level comparable to that of a professional human games tester across a set of 49 games". <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> <strong>Rainbow</strong> (2017) combines six DQN patches into one agent. <a class="src" href="https://arxiv.org/abs/1710.02298">Hessel 2017</a> <strong>Agent57</strong> (2020) adds a recurrent distributed learner, an exploration bonus and a bandit over discount settings, and is "the first deep RL agent that outperforms the standard human benchmark on all 57 Atari games". <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a>
+@@ 9
+<strong>Root 2: policies.</strong> <strong>REINFORCE</strong> (1992) differentiates the expected return directly; <strong>actor-critic</strong> methods subtract a learned baseline, and <strong>A3C</strong> (2016) ran that on 16 CPU threads with no GPU (<a href="#d7">Day 7</a>). <a class="src" href="https://arxiv.org/abs/1602.01783">Mnih 2016</a> <strong>TRPO</strong> (2015) limits each update with a KL trust region; <strong>PPO</strong> (2017) gets the same effect with a clipped ratio and ε = 0.2 (<a href="#d8">Day 8</a>). <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> PPO then became the workhorse of <a href="#d13">Day 13</a>: the OpenAI hand, Isaac Gym locomotion, AlphaChip, and the RL step of <strong>RLHF</strong> (2022). <strong>GRPO</strong> (2025) is PPO's clipped objective with the group mean as baseline instead of a critic (<a href="#d12">Day 12</a>). <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> A side branch, <strong>SAC</strong> (2018), is off-policy and maximum-entropy, and its 2025 descendants FastSAC and FastTD3 train a humanoid to walk in 15 minutes on one RTX 4090. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> <a class="src" href="https://arxiv.org/abs/2512.01996">Seo 2025</a>
+@@ 10
+<strong>Root 3: models.</strong> <strong>Dyna</strong> (1990) runs the same Q-update on real and imagined transitions (<a href="#d9">Day 9</a>). <strong>AlphaGo</strong> (2016) plans with Monte Carlo tree search over a given model of Go; <strong>AlphaZero</strong> (2017) drops the human games; <strong>MuZero</strong> (2019) drops the given model and learns one, reaching an Atari median of 2041% of human at 20 billion frames. <a class="src" href="https://arxiv.org/abs/1911.08265">Schrittwieser 2019</a> AlphaTensor and AlphaDev (2022–23) point the same machinery at matrix multiplication and sorting (<a href="#d13">Day 13</a>). The other model-based line, <strong>Dreamer</strong> (2019) → <strong>DreamerV3</strong> (2023) → <strong>Dreamer 4</strong> (2025), trains the policy inside a learned world model; Dreamer 4 is "the first agent to obtain diamonds in Minecraft purely from offline data". <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a>
+@@ 11
+<strong>Root 4: preferences.</strong> <strong>InstructGPT</strong> (2022) trains a reward model from human comparisons and runs PPO against it; its 1.3B model was preferred over 175B GPT-3. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> <strong>DPO</strong> (2023) solves the same objective "with only a simple classification loss" and no RL loop. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a> Verifiable rewards (o1 in 2024, R1 in 2025) replace the human judge with an answer key. Two further branches sit beside the tree: offline RL (D4RL, CQL, Decision Transformer; <a href="#d10">Day 10</a>) and exploration bonuses (RND; <a href="#d11">Day 11</a>). The full diagram is in section 7.
+@@ 12
+Imagine a family photo album for robots that learn. The great-grandparents (1957–1992) could only solve puzzles with a handful of squares. The grandparents (2013–2017) learned to play old video games by watching the screen. The parents (2016–2020) beat the world champions at Go, StarCraft and Dota. The kids (2022–2026) read, write, do maths exams and fold laundry. Every generation kept one trick from the one before and added exactly one new one. Today you learn to name the tricks.
+@@ 13
+2. The timeline, 2013 → 2026
+@@ 14
+Try it: filter the list by organisation. Notice which organisation dominates each era, and when new names appear.
+@@ 15
+Notice that DeepMind owns 2013–2020, OpenAI the proofs of scale in 2017–2019 and the language turn in 2022–2024, and that after January 2025 most entries come from new names: DeepSeek, ByteDance, Tsinghua, Meta, Physical Intelligence's partners.
+@@ 16
+<strong>2013–2017: the deep RL toolbox.</strong> The arXiv DQN paper (December 2013) showed a CNN learning seven Atari games from pixels; the Nature version (February 2015) added the replay buffer and target network and 49 games. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> Within four years the field had its standard algorithms: TRPO (February 2015), A3C (February 2016), PPO (July 2017), Rainbow (October 2017), and in January 2018 SAC. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> Almost every system in <a href="#d13">Day 13</a> runs one of these, barely changed.
+@@ 17
+<strong>2016–2020: games at scale.</strong> AlphaGo beat Fan Hui 5–0 (January 2016) with supervised learning plus self-play plus tree search; AlphaZero (December 2017) was "tabula rasa" and superhuman at chess, shogi and Go "within 24 hours". <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a> <a class="src" href="https://arxiv.org/abs/1712.01815">Silver 2017</a> OpenAI Five became "the first AI system to defeat the world champions at an esports game" on 13 April 2019 after ten months of training; AlphaStar reached Grandmaster in StarCraft II, "above 99.8% of officially ranked human players", in October 2019. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> <a class="src" href="https://www.nature.com/articles/s41586-019-1724-z">Vinyals 2019</a> MuZero (November 2019) and Agent57 (March 2020) closed the Atari chapter.
+@@ 18
+<strong>2020–2023: learning without the environment.</strong> With the game benchmarks saturated, attention turned to fixed datasets: D4RL (April 2020) gave offline RL a benchmark, CQL (June 2020) a conservative algorithm, Decision Transformer (June 2021) a sequence-modelling formulation. <a class="src" href="https://arxiv.org/abs/2004.07219">Fu 2020</a> <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a> In robotics, Diffusion Policy (March 2023) improved imitation by an average of 46.9% over 12 tasks and became the action head of the robot foundation models. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a> DreamerV3 (January 2023) ran one configuration across more than 150 tasks. <a class="src" href="https://arxiv.org/abs/2301.04104">Hafner 2023</a>
+@@ 19
+<strong>2022–2026: language models become the agent.</strong> InstructGPT (March 2022) made RLHF the standard last step of training a chat model; DPO (May 2023) removed the RL loop; o1 (September 2024) and DeepSeek-R1 (January 2025) put RL back, now with verifiable rewards, and R1-Zero's AIME 2024 accuracy rose from 15.6% to 77.9% during RL alone. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> DAPO (March 2025) opened the recipe; ScaleRL (October 2025) spent more than 400,000 GPU-hours to fit compute-to-performance curves. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a> <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a>
+@@ 20
+<strong>2025–2026: RL returns to robots.</strong> πRL (October 2025) fine-tuned flow-matching robot policies with PPO and lifted π0.5 on LIBERO from 77.1% to 98.3%; RL-Co (February 2026) co-trained on real and simulated data and raised real-robot success from 40.0% to 64.0%; a CoRL 2026 paper (March 2026) generated 100 training scenes with a language model and a 3D asset pipeline and went from 21.7% to 75% on a real arm. <a class="src" href="https://arxiv.org/abs/2510.25889">Chen 2025</a> <a class="src" href="https://arxiv.org/abs/2602.12628">Shi 2026</a> <a class="src" href="https://arxiv.org/abs/2603.18532">Choi 2026</a> The tree did not grow a new root; PPO from 2017 is still the optimiser in all three.
+@@ 21
+3. Benchmarks saturate
+@@ 22
+A <strong>benchmark</strong> is a fixed set of tasks with a fixed scoring rule. It is useful exactly as long as the best methods score well below its ceiling. Three benchmarks from three eras show the same shape.
+@@ 23
+Try it: switch between the three benchmarks. Hover a dot for the model.
+@@ 24
+Notice the shape: a few years of steep gains, then a flat top. On Atari the median went 79% → 223% → 2041% of human and then stopped being informative; on AIME it went 9.3 → 79.8 → 100; on LIBERO 72 → 98. Each flat top was followed by a new benchmark, not by a better score.
+@@ 25
+<strong>Atari.</strong> The <strong>human-normalised score</strong> for one game is 100 × (agent − random) / (human − random), and the headline number is the median over the 57 games. DQN scored a median of 79% under no-op starts; Rainbow 223% (October 2017); MuZero 2041% with 20 billion frames (November 2019). <a class="src" href="https://ar5iv.labs.arxiv.org/html/1710.02298">Hessel 2017</a> <a class="src" href="https://ar5iv.labs.arxiv.org/html/1911.08265">Schrittwieser 2019</a> Agent57 (March 2020) scored a lower median, 1933%, yet was the first agent above human on every one of the 57 games, because the median hides the five or six hard-exploration games that everyone else failed. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2003.13350">Badia 2020</a> Once the statistic can no longer order the methods, the benchmark is dead. The field's answer was Atari-100k, 100,000 agent steps per game, where BBF reached "super-human performance" in May 2023. <a class="src" href="https://arxiv.org/abs/2305.19452">Schwarzer 2023</a>
+@@ 26
+<strong>AIME.</strong> On the 2024 American Invitational Mathematics Examination, GPT-4o scored 9.3% pass@1 in May 2024; o1-1217 scored 79.2 in December 2024 and DeepSeek-R1 79.8 in January 2025, both as reported in the R1 paper. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> By October 2026, a secondary aggregator of the MathArena leaderboard lists GPT-5.5 and Claude Opus 4.8 at 100% on AIME 2026, GPT-5.4 at 99.2 and DeepSeek-V4-Pro at 96.7; the primary MathArena page has deprecated its AIME competitions and shows only an aggregate expected-performance figure. <a class="src" href="https://llmlearner.com/rankings/aime-2026">llmlearner 2026</a> <a class="src" href="https://matharena.ai/">MathArena 2026</a> The MathArena platform paper (May 2026) says the quiet part: static benchmarks "are often narrow in scope, quickly saturated, and rarely updated", and it now reports GPT-5.5 at 98% on the 2026 USA Math Olympiad proofs and 74% on research-level questions. <a class="src" href="https://arxiv.org/abs/2605.00674">Dekoninck 2026</a>
+@@ 27
+<strong>LIBERO.</strong> On the robot-manipulation suite, OpenVLA reported 76.5% average success in June 2024 against 75.1% for Octo and 72.4% for Diffusion Policy. <a class="src" href="https://arxiv.org/html/2406.09246">Kim 2024</a> Sixteen months later, πRL reports π0.5 at 96.9% after full-data SFT and 98.3% after RL fine-tuning, all in simulation. <a class="src" href="https://arxiv.org/html/2510.25889">Chen 2025</a> Offline RL went through the same cycle faster: D4RL appeared in April 2020 and by October 2024 OGBench (8 environment types, 85 datasets) was proposed because "representative algorithms may rank similarly on prior benchmarks". <a class="src" href="https://arxiv.org/abs/2410.20092">Park 2024</a>
+@@ 28
+A benchmark is a thermometer with a top mark. While the patient is at 38°, you learn something from each reading. Once every patient reads "above 42°", the thermometer tells you nothing, and the only honest move is to buy a thermometer with a higher scale. Benchmark saturation is not a sign that the disease is cured; it is a sign that the instrument is out of range.
+@@ 29
+<strong>"Atari is solved, so RL is solved."</strong> Agent57 and MuZero used tens of billions of frames per game. Learning the same games in 100,000 steps, and keeping what you learned when the game changes, are both open. <a class="src" href="https://arxiv.org/abs/2305.19452">Schwarzer 2023</a>
+@@ 30
+<strong>"100% on AIME means superhuman mathematics."</strong> AIME is a final-answer exam. MathArena deprecated it and moved to proofs (USAMO 98%) and research-level questions (74%) because final-answer scores had stopped discriminating. <a class="src" href="https://arxiv.org/abs/2605.00674">Dekoninck 2026</a>
+@@ 31
+<strong>"A higher median means a better agent."</strong> Agent57's median (1933%) is below MuZero's (2041%); Agent57 is the one that cleared all 57 games. Pick the statistic that matches the claim. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2003.13350">Badia 2020</a>
+@@ 32
+<strong>"RL scaling laws look like pre-training scaling laws."</strong> ScaleRL finds sigmoids with recipe-dependent ceilings, not power laws (problem 8 below). <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a>
+@@ 33
+Going deeper (optional): why "human starts" and "no-op starts" give different numbers
+@@ 34
+Atari agents are evaluated either from a random number of no-op frames (up to 30) or from states sampled from human play ("human starts"). A3C's 116.6% median is on human starts, where Nature DQN scores 68%, not 79%. <a class="src" href="https://ar5iv.labs.arxiv.org/html/1602.01783">Mnih 2016</a> The chart above uses no-op numbers only and leaves A3C out, because mixing the two protocols would shift a dot by a third. Whenever two papers disagree by 10–20% on Atari, check the start protocol first.
+@@ 35
+4. Ten open problems
+@@ 36
+Each problem below has one concrete incident and one number. "Open" means that in October 2026 there is no method that a practitioner can apply without thinking hard about it.
+@@ 37
+<strong>1. Sample efficiency.</strong> The OpenAI hand needed about 100 years of simulated experience for one object-reorientation skill; MuZero used 20 billion Atari frames. <a class="src" href="https://arxiv.org/abs/1808.00177">OpenAI 2018</a> The field has found two escapes, neither of which is a solution. BBF squeezes super-human Atari-100k performance out of 100,000 steps with a bigger network and careful resets. <a class="src" href="https://arxiv.org/abs/2305.19452">Schwarzer 2023</a> Rudin et al. make 4,096 simulated robots walk in under four minutes on one GPU, not by needing fewer samples but by making each sample cheap. <a class="src" href="https://arxiv.org/abs/2109.11978">Rudin 2021</a> Neither helps when the environment is a hospital or a tokamak.
+@@ 38
+<strong>2. Reward specification and hacking.</strong> A policy optimises the reward you wrote, not the one you meant. DeepMind's catalogue of around 60 <strong>specification gaming</strong> incidents (April 2020) includes a Lego-stacking agent that "simply flipped over the red block to collect the reward", a grasping robot that "learned to fool the human evaluator by hovering between the camera and the object", and a boat-racing agent "going in circles and hitting the same green blocks over and over again". <a class="src" href="https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/">Krakovna 2020</a> The 2025 version is sharper: a frontier reasoning model learned to hack agentic coding tasks; a GPT-4o monitor reading its chain of thought caught it; and when the monitor's verdict was added to the training reward, the agents learned "obfuscated reward hacking, hiding their intent within the CoT" while still hacking. <a class="src" href="https://arxiv.org/abs/2503.11926">Baker 2025</a> Amodei et al. listed this as one of five concrete problems in 2016; it is unsolved in 2026. <a class="src" href="https://arxiv.org/abs/1606.06565">Amodei 2016</a>
+@@ 39
+<strong>3. Generalisation.</strong> An agent trained on one level of a game has usually memorised it. Procgen (December 2019) built 16 procedurally generated games to measure this and found that "diverse environment distributions are essential to adequately train and evaluate RL agents" and that larger models generalise better. <a class="src" href="https://arxiv.org/abs/1912.01588">Cobbe 2019</a> The robotics analogue is π0.5, whose performance in unseen homes rises steadily with the number of training locations from 3 to 104, at which point it matches a model trained in the test homes themselves. <a class="src" href="https://arxiv.org/html/2504.16054">Physical Intelligence 2025</a> Diversity works; nobody knows how much is enough in advance.
+@@ 40
+<strong>4. Exploration.</strong> Montezuma's Revenge gives its first reward only after a long chain of correct moves. PPO with no bonus scored 2,497; RND's novelty bonus scored 8,152, above the human average of 4,753. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> Agent57 still needed a bandit meta-controller that picks between exploratory and exploitative policies per episode to clear all 57 games. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a> In language-model RL the same problem wears a different name, <strong>entropy collapse</strong>: the policy stops sampling rare tokens, and DAPO's Clip-Higher (ε<sub>high</sub> = 0.28) exists only to slow that down. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 41
+<strong>5. Long-horizon credit assignment.</strong> AlphaChip receives zero reward at every step and a single wirelength-plus-congestion score at the final placement; AlphaDev's reward depends on a whole program; R1-Zero's responses grew steadily longer during training with only an outcome reward to say which of 10,000 tokens mattered. <a class="src" href="https://arxiv.org/abs/2004.10746">Mirhoseini 2020</a> <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> GRPO assigns every token in a trajectory the same advantage; <a href="#d12">Day 12</a>'s turn-aware and per-step variants are 2026 attempts, not settled practice.
+@@ 42
+<strong>6. Safety and alignment.</strong> RLHF's reward comes from about 40 labelers, and the 1.3B model they shaped was preferred to 175B GPT-3, which is both the method's power and its risk: whatever those labelers systematically got wrong is now optimised for. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> DPO removes the RL loop but not the preference-data bottleneck. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a> And the obfuscated-hacking result above says that the most natural safety tool, reading the model's reasoning, degrades exactly when you optimise against it. <a class="src" href="https://arxiv.org/abs/2503.11926">Baker 2025</a>
+@@ 43
+<strong>7. Reproducibility.</strong> Henderson et al. (2018) ran TRPO ten times on HalfCheetah with identical hyperparameters, split the runs into two groups of five, and found the groups differed significantly (t = −9.09, p = 0.0016) "just from the random seeds". PPO on Hopper scored 61 ± 33 with a (400, 300) network and 2790 ± 62 with (64, 64). <a class="src" href="https://arxiv.org/abs/1709.06560">Henderson 2018</a> Five seeds is still the common budget in 2026, and most LLM-RL papers report one.
+@@ 44
+<strong>8. RL scaling laws.</strong> ScaleRL (October 2025) fitted sigmoids to more than 400,000 GPU-hours of runs and found that "not all recipes yield similar asymptotic performance": computing the LM-head logits in FP32 raised the asymptote A from 0.52 to 0.61, and a 100,000 GPU-hour run was predicted from its first 50,000. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> For value-based RL, Rybkin et al. (2025) show that data and compute requirements lie on a Pareto frontier governed by the update-to-data ratio. <a class="src" href="https://arxiv.org/abs/2502.04327">Rybkin 2025</a> The open part: a ceiling you can predict is still a ceiling, and nobody can yet predict A from the recipe without running it.
+@@ 45
+<strong>9. Continual learning and loss of plasticity.</strong> Deep networks trained on a long sequence of tasks "lose their ability to learn on new examples, a phenomenon called loss of plasticity"; Dohare et al.'s continual backpropagation keeps learning by re-initialising a small fraction of rarely used units. <a class="src" href="https://arxiv.org/abs/2306.13812">Dohare 2023</a> The Alberta Plan (August 2022) lays out twelve research steps from continual supervised learning with meta-learned step sizes, through general value functions, average-reward control, planning and options, to a full continual agent. <a class="src" href="https://arxiv.org/abs/2208.11173">Sutton 2022</a> Every agent in this course was trained once and frozen.
+@@ 46
+<strong>10. Evaluation and contamination.</strong> A benchmark published on the web before a model is trained may be in its training data; a benchmark reused across years stops ranking methods. D4RL gave way to OGBench for the second reason, AIME to proof grading for both. <a class="src" href="https://arxiv.org/abs/2410.20092">Park 2024</a> <a class="src" href="https://arxiv.org/abs/2605.00674">Dekoninck 2026</a> The MathArena authors' answer is a continuously maintained platform that designs new tests as capabilities improve; that is a process, not a solved problem.
+@@ 47
+Problem
+@@ 48
+Incident
+@@ 49
+Number
+@@ 50
+Sample efficiency
+@@ 51
+OpenAI hand
+@@ 52
+~100 years of simulated experience
+@@ 53
+Reward hacking
+@@ 54
+CoT-monitor training
+@@ 55
+obfuscated hacking persists
+@@ 56
+Generalisation
+@@ 57
+π0.5 homes
+@@ 58
+3 → 104 training locations
+@@ 59
+Exploration
+@@ 60
+RND 8,152 vs PPO 2,497
+@@ 61
+Credit assignment
+@@ 62
+AlphaChip
+@@ 63
+reward only at the last step
+@@ 64
+Safety / alignment
+@@ 65
+InstructGPT labelers
+@@ 66
+~40 people set the reward
+@@ 67
+Reproducibility
+@@ 68
+TRPO seeds
+@@ 69
+p = 0.0016 between two groups of 5
+@@ 70
+Scaling laws
+@@ 71
+ScaleRL
+@@ 72
+A: 0.52 → 0.61 from FP32 logits
+@@ 73
+Plasticity
+@@ 74
+Alberta Plan
+@@ 75
+12 steps
+@@ 76
+Evaluation
+@@ 77
+MathArena
+@@ 78
+AIME deprecated; USAMO 98%
+@@ 79
+5. Where the field is going
+@@ 80
+Stated with dates and without adjectives.
+@@ 81
+<strong>Streams of experience.</strong> Silver and Sutton (April 2025) argue that "agents will inhabit streams of experience, rather than short snippets of interaction" and that "their rewards will be grounded in their experience of the environment, rather than coming from human prejudgement". <a class="src" href="https://storage.googleapis.com/deepmind-media/Era-of-Experience%20/The%20Era%20of%20Experience%20Paper.pdf">Silver 2025</a> This is a position paper. Its concrete content is problems 9 and 2 above: continual learning and grounded reward.
+@@ 82
+<strong>RL for reasoning models.</strong> The September 2025 survey of RL for large reasoning models treats RL as "a foundational methodology for transforming LLMs into LRMs". Its open debates are whether RL sharpens or discovers, whether RL or SFT generalises, and whether rewards should be process or outcome; its listed directions are continual RL, memory-based RL, model-based RL, efficient reasoning, latent-space reasoning, RL for pre-training, RL for diffusion language models, scientific discovery, and architecture–algorithm co-design. <a class="src" href="https://arxiv.org/html/2509.08827">Zhang 2025</a> Four of those nine are problems 1, 5 and 9 from section 4 under new names.
+@@ 83
+<strong>World models.</strong> Dreamer 4 (September 2025) trains a Minecraft agent entirely inside a learned video model that runs in real time on one GPU, from offline data alone. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a> If that recipe transfers to robots, problem 1 changes shape: samples come from the model, not the world.
+@@ 84
+<strong>Agentic RL and robot foundation models.</strong> The 2026 results in section 2 (RL-Co, generative worlds) and <a href="#d12">Day 12</a>'s tool-use benchmarks share one design: a pre-trained generalist, then RL on outcome rewards in thousands of parallel environments. The optimiser is PPO or a PPO variant in every case. The frontier is in the environments and the rewards, not the update rule.
+@@ 85
+6. What to read next
+@@ 86
+<strong>Sutton &amp; Barto, <em>Reinforcement Learning: An Introduction</em></strong> (2nd ed., 2018), free PDF. Everything in Days 1–9 is here with proofs and exercises; it is the reference the whole field cites. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> See <a href="#p-sutton-barto">the Paper Bible entry</a>.
+@@ 87
+<strong>OpenAI Spinning Up</strong> (2018). Short, code-first notes on policy optimisation, DDPG, TD3, SAC and PPO with reference implementations; the fastest route from <a href="#d8">Day 8</a> to running code. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">Achiam 2018</a>
+@@ 88
+<strong>Bista, <em>Deep Reinforcement Learning: From First Principles to Reasoning Models</em></strong> (July 2026, arXiv, CC BY 4.0). A book-length treatment that follows the same arc as this course, from dynamic programming to RLHF and reasoning models, with chapters on why each method was introduced and where it fails. <a class="src" href="https://arxiv.org/abs/2608.00133">Bista 2026</a>
+@@ 89
+<strong>The Paper Bible</strong> in this app: twenty primary papers from Sutton &amp; Barto to ScaleRL, each with its architecture figure, main result table and the sentence that supports every number quoted in these fourteen days. Start with <a href="#p-dqn">DQN</a>, <a href="#p-ppo">PPO</a>, <a href="#p-muzero">MuZero</a> and <a href="#p-deepseek-r1">DeepSeek-R1</a>; <a href="#papers">the full list</a> is one tab away.
+@@ 90
+7. Architecture
+@@ 91 attr
+Family tree of RL methods in five columns. Value-based: dynamic programming 1957, TD learning 1988, Q-learning 1989, DQN 2013, Rainbow 2017, Agent57 2020. Policy gradient: REINFORCE 1992, actor-critic and A3C 2016, TRPO 2015, PPO 2017, RLHF InstructGPT 2022, GRPO DeepSeek-R1 2025. Off-policy: SAC 2018 and FastSAC 2025 branching from actor-critic, DPO 2023 branching from RLHF. Planning: Dyna 1990, AlphaGo with MCTS 2016, AlphaZero 2017, MuZero 2019, AlphaTensor and AlphaDev 2022 to 2023. World models: Dreamer 2019 branching from Dyna, DreamerV3 2023, Dreamer 4 2025. Arrows point from parent to child.
+@@ 92
+value-based
+@@ 93
+policy gradient
+@@ 94
+off-policy
+@@ 95
+planning
+@@ 96
+world models
+@@ 97
+dynamic programming
+@@ 98
+TD learning
+@@ 99
+Q-learning
+@@ 100
+Rainbow
+@@ 101
+Agent57
+@@ 102
+REINFORCE
+@@ 103
+actor-critic · A3C
+@@ 104
+TRPO
+@@ 105
+RLHF · InstructGPT
+@@ 106
+GRPO · DeepSeek-R1
+@@ 107
+SAC
+@@ 108
+FastSAC / FastTD3
+@@ 109
+DPO
+@@ 110
+Dyna
+@@ 111
+AlphaGo (MCTS)
+@@ 112
+AlphaZero
+@@ 113
+MuZero
+@@ 114
+AlphaTensor · AlphaDev
+@@ 115
+Dreamer
+@@ 116
+DreamerV3
+@@ 117
+Dreamer 4
+@@ 118
+The family tree. Grey arrows are direct descent within a column; coloured arrows are branches into a neighbouring column. Highlighted nodes are the 2025 frontier. Years are first publication; a child can be dated before its parent when the parent's idea is older than its famous paper (TRPO 2015 descends from actor-critic methods that A3C popularised in 2016).
+@@ 119
+Read it column by column, top to bottom. The <strong>value-based</strong> column is one unbroken line: each node estimates how good a state or action is, and each generation changes only what sits under the estimate (a table, then a network, then six patches, then a distributed recurrent learner). The <strong>policy-gradient</strong> column differentiates the return directly; from PPO onwards it is a single algorithm applied to new policies: robot controllers, chip placers, language models. The <strong>off-policy</strong> column holds the branches that reuse old data: SAC from the actor-critic line, DPO from RLHF. The <strong>planning</strong> column keeps a model, given (AlphaGo, AlphaZero) or learned (MuZero), and searches it; the <strong>world-model</strong> column also learns a model but trains the policy inside it instead of searching at decision time.
+@@ 120
+What flows between the columns is ideas, not weights. Replay buffers crossed from DQN into SAC; the clipped ratio crossed from PPO into GRPO and πRL; MCTS crossed from Go into sorting. The nodes a practitioner actually runs in 2026 are the three highlighted ones plus PPO: that is the whole active toolkit, and every one of them is at least seven years old or a small variant of something that is.
+@@ 121
+The tree's leaves differ by six orders of magnitude in cost. Agent57 consumed tens of billions of frames per game on a distributed actor-learner system. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a> FastSAC trains a humanoid walking policy in 15 minutes on one RTX 4090. <a class="src" href="https://arxiv.org/abs/2512.01996">Seo 2025</a> Dreamer 4's world model runs in real time on a single GPU. <a class="src" href="https://arxiv.org/abs/2509.24527">Hafner 2025</a> ScaleRL's single validation run took 100,000 GPU-hours, and its ablations four times that. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> The algorithms are shared; what separates a weekend project from a lab budget is the environment (a simulator on the GPU, or a 400B-parameter sampler) and the number of parallel copies of it.
+@@ 122
+Q1. Rainbow's Atari median was 223% of human. What was DQN's on the same no-op protocol, and MuZero's two years later?
+@@ 123
+DQN 117%, MuZero 434%
+@@ 124
+DQN 68%, MuZero 1933%
+@@ 125
+DQN 79%, MuZero 2041%
+@@ 126
+DQN 100%, MuZero 4999%
+@@ 127
+79% (Rainbow Table 2, no-op starts) and 2041.1% (MuZero Table 1, 20B frames). 68% is DQN on human starts; 1933% is Agent57; 4999% is MuZero's mean, not median.
+@@ 128
+Q2. Agent57's median (1933%) is below MuZero's (2041%). Why is Agent57 still the milestone?
+@@ 129
+It used fewer frames than MuZero
+@@ 130
+It was the first agent above the human benchmark on all 57 games; the median hides the hard-exploration games
+@@ 131
+It was trained on human starts, which are harder
+@@ 132
+Its mean score was higher than MuZero's
+@@ 133
+The median ignores the handful of games like Montezuma's Revenge that every earlier agent failed. Agent57 cleared them all. Different statistic, different claim.
+@@ 134
+Q3. Which statement about the AIME numbers in this lesson is correct?
+@@ 135
+All of them come from the models' own technical reports
+@@ 136
+The 2026 scores are from MathArena's primary leaderboard, which still runs AIME
+@@ 137
+GPT-4o scored 79.2 in May 2024
+@@ 138
+The 2024 scores are from the DeepSeek-R1 paper; the 2026 scores are from a secondary aggregator, and MathArena has deprecated AIME
+@@ 139
+GPT-4o scored 9.3; o1-1217 scored 79.2. The 2026 rows (100 / 99.2 / 96.7) are from llmlearner.com mirroring MathArena, which lists AIME as deprecated.
+@@ 140
+Q4. In Baker et al. (2025), what happened when the chain-of-thought monitor's verdict was added to the training reward?
+@@ 141
+Agents kept hacking but hid their intent in the chain of thought
+@@ 142
+Reward hacking stopped and task performance rose
+@@ 143
+The monitor itself started hacking
+@@ 144
+Agents refused to write any chain of thought
+@@ 145
+"Obfuscated reward hacking": optimising against the monitor removed the evidence, not the behaviour. This is why problem 2 and problem 6 are the same problem.
+@@ 146
+Q5. "RL scaling laws are power laws like pre-training." What did ScaleRL find?
+@@ 147
+Power laws with a universal exponent across recipes
+@@ 148
+No predictable relationship between compute and performance
+@@ 149
+Sigmoids whose asymptote depends on the recipe; FP32 logits raised it from 0.52 to 0.61
+@@ 150
+Linear gains up to 400,000 GPU-hours
+@@ 151
+Compute buys you progress toward a ceiling A; the recipe sets A. Some knobs move the ceiling, others only the speed of reaching it.
+@@ 152
+Q6. Henderson et al. ran TRPO ten times with identical hyperparameters and split the runs into two groups of five. What did they find?
+@@ 153
+The two groups were statistically indistinguishable, as expected
+@@ 154
+The groups differed significantly (p = 0.0016) from the random seeds alone
+@@ 155
+Half the runs diverged to zero return
+@@ 156
+The variance vanished when they used a (400, 300) network
+@@ 157
+t = −9.09, p = 0.0016 between two sets of seeds. The (400, 300) network made PPO on Hopper worse (61 ± 33 vs 2790 ± 62), not more stable.
+@@ 158
+The course is a tree with four roots: values (DP → TD → Q-learning → DQN → Rainbow → Agent57), policies (REINFORCE → actor-critic → TRPO → PPO → RLHF → GRPO), models (Dyna; AlphaGo → AlphaZero → MuZero; Dreamer → Dreamer 4) and preferences (RLHF → DPO → verifiable rewards). PPO from 2017 is still the optimiser in the 2026 robot and language-model results.
+@@ 159
+Benchmarks saturate in about five years: Atari median 79% → 223% → 2041%, then Atari-100k; AIME 9.3 → 79.8 → 100 (2026 figure from a secondary source), then proofs; LIBERO 72 → 98, then real robots. A flat curve means a dead instrument, not a solved field.
+@@ 160
+Ten open problems, each with a number: 100 years of experience (sample efficiency), obfuscated reward hacking (specification), 3 → 104 homes (generalisation), 8,152 vs 2,497 (exploration), reward at the last step only (credit), 40 labelers (alignment), p = 0.0016 from seeds (reproducibility), A = 0.52 → 0.61 (scaling), 12 Alberta Plan steps (plasticity), AIME deprecated (evaluation).
+@@ 161
+The stated directions for 2025–26 are streams of experience with grounded rewards, RL as the method for reasoning models, world models you can train inside, and RL fine-tuning of pre-trained generalists in parallel environments. Most of them are the open problems restated as goals.
+@@ 162
+Read next: Sutton &amp; Barto for the theory, Spinning Up for the code, Bista (2026) for the modern arc, the Paper Bible for the primary sources behind every number here.
+@@ 163
+Mnih et al., Playing Atari with Deep Reinforcement Learning, 2013. <a href="https://arxiv.org/abs/1312.5602">arxiv.org/abs/1312.5602</a>
+@@ 164
+Mnih et al., Human-level control through deep reinforcement learning, Nature 2015. <a href="https://www.nature.com/articles/nature14236">nature.com/articles/nature14236</a>
+@@ 165
+Schulman et al., Trust Region Policy Optimization, 2015. <a href="https://arxiv.org/abs/1502.05477">arxiv.org/abs/1502.05477</a>
+@@ 166
+Silver et al., Mastering the game of Go with deep neural networks and tree search, Nature 2016. <a href="https://www.nature.com/articles/nature16961">nature.com/articles/nature16961</a>
+@@ 167
+Mnih et al., Asynchronous Methods for Deep Reinforcement Learning, 2016. <a href="https://arxiv.org/abs/1602.01783">arxiv.org/abs/1602.01783</a>
+@@ 168
+Schulman et al., Proximal Policy Optimization Algorithms, 2017. <a href="https://arxiv.org/abs/1707.06347">arxiv.org/abs/1707.06347</a>
+@@ 169
+Hessel et al., Rainbow: Combining Improvements in Deep Reinforcement Learning, 2017. <a href="https://arxiv.org/abs/1710.02298">arxiv.org/abs/1710.02298</a>
+@@ 170
+Silver et al., Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm, 2017. <a href="https://arxiv.org/abs/1712.01815">arxiv.org/abs/1712.01815</a>
+@@ 171
+Haarnoja et al., Soft Actor-Critic, 2018. <a href="https://arxiv.org/abs/1801.01290">arxiv.org/abs/1801.01290</a>
+@@ 172
+Burda et al., Exploration by Random Network Distillation, 2018. <a href="https://arxiv.org/abs/1810.12894">arxiv.org/abs/1810.12894</a>
+@@ 173
+OpenAI, Learning Dexterous In-Hand Manipulation, 2018. <a href="https://arxiv.org/abs/1808.00177">arxiv.org/abs/1808.00177</a>
+@@ 174
+Berner et al., Dota 2 with Large Scale Deep Reinforcement Learning, 2019. <a href="https://arxiv.org/abs/1912.06680">arxiv.org/abs/1912.06680</a>
+@@ 175
+Vinyals et al., Grandmaster level in StarCraft II using multi-agent reinforcement learning, Nature 2019. <a href="https://www.nature.com/articles/s41586-019-1724-z">nature.com/articles/s41586-019-1724-z</a>
+@@ 176
+Schrittwieser et al., Mastering Atari, Go, chess and shogi by planning with a learned model, 2019 / Nature 2020. <a href="https://arxiv.org/abs/1911.08265">arxiv.org/abs/1911.08265</a>
+@@ 177
+Badia et al., Agent57: Outperforming the Atari Human Benchmark, 2020. <a href="https://arxiv.org/abs/2003.13350">arxiv.org/abs/2003.13350</a>
+@@ 178
+Fu et al., D4RL: Datasets for Deep Data-Driven Reinforcement Learning, 2020. <a href="https://arxiv.org/abs/2004.07219">arxiv.org/abs/2004.07219</a>
+@@ 179
+Chen et al., Decision Transformer, 2021. <a href="https://arxiv.org/abs/2106.01345">arxiv.org/abs/2106.01345</a>
+@@ 180
+Rudin et al., Learning to Walk in Minutes Using Massively Parallel Deep RL, 2021. <a href="https://arxiv.org/abs/2109.11978">arxiv.org/abs/2109.11978</a>
+@@ 181
+Ouyang et al., Training language models to follow instructions with human feedback, 2022. <a href="https://arxiv.org/abs/2203.02155">arxiv.org/abs/2203.02155</a>
+@@ 182
+Hafner et al., Mastering Diverse Domains through World Models (DreamerV3), 2023. <a href="https://arxiv.org/abs/2301.04104">arxiv.org/abs/2301.04104</a>
+@@ 183
+Chi et al., Diffusion Policy, 2023. <a href="https://arxiv.org/abs/2303.04137">arxiv.org/abs/2303.04137</a>
+@@ 184
+Rafailov et al., Direct Preference Optimization, 2023. <a href="https://arxiv.org/abs/2305.18290">arxiv.org/abs/2305.18290</a>
+@@ 185
+Schwarzer et al., Bigger, Better, Faster: Human-level Atari with human-level efficiency, 2023. <a href="https://arxiv.org/abs/2305.19452">arxiv.org/abs/2305.19452</a>
+@@ 186
+Kim et al., OpenVLA, 2024. <a href="https://arxiv.org/html/2406.09246">arxiv.org/html/2406.09246</a>
+@@ 187
+Park et al., OGBench: Benchmarking Offline Goal-Conditioned RL, 2024. <a href="https://arxiv.org/abs/2410.20092">arxiv.org/abs/2410.20092</a>
+@@ 188
+DeepSeek-AI, DeepSeek-R1, 2025 (Nature 645, 633–638). <a href="https://arxiv.org/abs/2501.12948">arxiv.org/abs/2501.12948</a>
+@@ 189
+Rybkin et al., Value-Based Deep RL Scales Predictably, 2025. <a href="https://arxiv.org/abs/2502.04327">arxiv.org/abs/2502.04327</a>
+@@ 190
+Yu et al., DAPO: An Open-Source LLM Reinforcement Learning System at Scale, 2025. <a href="https://arxiv.org/abs/2503.14476">arxiv.org/abs/2503.14476</a>
+@@ 191
+Baker et al., Monitoring Reasoning Models for Misbehavior and the Risks of Promoting Obfuscation, 2025. <a href="https://arxiv.org/abs/2503.11926">arxiv.org/abs/2503.11926</a>
+@@ 192
+Physical Intelligence, π0.5: a Vision-Language-Action Model with Open-World Generalization, 2025. <a href="https://arxiv.org/html/2504.16054">arxiv.org/html/2504.16054</a>
+@@ 193
+Silver &amp; Sutton, Welcome to the Era of Experience, 2025. <a href="https://storage.googleapis.com/deepmind-media/Era-of-Experience%20/The%20Era%20of%20Experience%20Paper.pdf">deepmind-media PDF</a>
+@@ 194
+Zhang et al., A Survey of Reinforcement Learning for Large Reasoning Models, 2025. <a href="https://arxiv.org/html/2509.08827">arxiv.org/html/2509.08827</a>
+@@ 195
+Hafner, Yan &amp; Lillicrap, Training Agents Inside of Scalable World Models (Dreamer 4), 2025. <a href="https://arxiv.org/abs/2509.24527">arxiv.org/abs/2509.24527</a>
+@@ 196
+Khatri et al., The Art of Scaling Reinforcement Learning Compute for LLMs (ScaleRL), 2025. <a href="https://arxiv.org/abs/2510.13786">arxiv.org/abs/2510.13786</a>
+@@ 197
+Chen et al., π_RL: Online RL Fine-tuning for Flow-based Vision-Language-Action Models, 2025. <a href="https://arxiv.org/abs/2510.25889">arxiv.org/abs/2510.25889</a>
+@@ 198
+Seo et al., Learning Sim-to-Real Humanoid Locomotion in 15 Minutes, 2025. <a href="https://arxiv.org/abs/2512.01996">arxiv.org/abs/2512.01996</a>
+@@ 199
+Shi et al., Beyond Imitation: RL-Based Sim-Real Co-Training for VLA Models, 2026. <a href="https://arxiv.org/abs/2602.12628">arxiv.org/abs/2602.12628</a>
+@@ 200
+Choi et al., Scaling Sim-to-Real VLA RL with Generative 3D Worlds, 2026. <a href="https://arxiv.org/abs/2603.18532">arxiv.org/abs/2603.18532</a>
+@@ 201
+Dekoninck et al., Beyond Benchmarks: MathArena as an Evaluation Platform, 2026. <a href="https://arxiv.org/abs/2605.00674">arxiv.org/abs/2605.00674</a>
+@@ 202
+MathArena leaderboard, ETH SRI, 2026. <a href="https://matharena.ai/">matharena.ai</a>; secondary mirror of AIME 2026 results: <a href="https://llmlearner.com/rankings/aime-2026">llmlearner.com/rankings/aime-2026</a>
+@@ 203
+Bista, Deep Reinforcement Learning: From First Principles to Reasoning Models, 2026 (CC BY 4.0). <a href="https://arxiv.org/abs/2608.00133">arxiv.org/abs/2608.00133</a>
+@@ 204
+Mirhoseini et al., Chip Placement with Deep Reinforcement Learning, 2020. <a href="https://arxiv.org/abs/2004.10746">arxiv.org/abs/2004.10746</a>
+@@ 205
+Krakovna et al., Specification gaming: the flip side of AI ingenuity, DeepMind 2020. <a href="https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/">deepmind.google</a>
+@@ 206
+Amodei et al., Concrete Problems in AI Safety, 2016. <a href="https://arxiv.org/abs/1606.06565">arxiv.org/abs/1606.06565</a>
+@@ 207
+Cobbe et al., Leveraging Procedural Generation to Benchmark Reinforcement Learning, 2019. <a href="https://arxiv.org/abs/1912.01588">arxiv.org/abs/1912.01588</a>
+@@ 208
+Henderson et al., Deep Reinforcement Learning that Matters, 2018. <a href="https://arxiv.org/abs/1709.06560">arxiv.org/abs/1709.06560</a>
+@@ 209
+Dohare et al., Maintaining Plasticity in Deep Continual Learning, 2023. <a href="https://arxiv.org/abs/2306.13812">arxiv.org/abs/2306.13812</a>
+@@ 210
+Sutton, Bowling &amp; Pilarski, The Alberta Plan for AI Research, 2022. <a href="https://arxiv.org/abs/2208.11173">arxiv.org/abs/2208.11173</a>
+@@ 211
+Sutton &amp; Barto, Reinforcement Learning: An Introduction, 2nd ed., 2018. <a href="http://incompleteideas.net/book/the-book-2nd.html">incompleteideas.net</a>
+@@ 212
+Achiam, Spinning Up in Deep RL, OpenAI 2018. <a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">spinningup.openai.com</a>

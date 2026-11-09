@@ -1,0 +1,96 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+달성해야 할 return이 주어졌을 때 action을 예측하도록 학습한 causal GPT입니다. value function도 policy gradient도 없지만 D4RL 평균 74.7로 CQL의 63.9를 넘었고, CQL이 13.3%에 그친 Key-to-Door에서 94.6%를 기록했습니다.
+@@ 4
+<a href="#d10">Day 10</a>에서 다룸 · 원문 읽는 시간: 약 35분
+@@ 5
+Decision Transformer는 offline RL을 지도학습 방식의 sequence modelling으로 바꿉니다. trajectory를 (return-to-go, state, action) token으로 Transformer에 넣고 action을 예측하도록 학습시킨 뒤, 테스트 때는 높은 return을 요구하고 그 return을 얻을 action을 자동완성하게 합니다.
+@@ 6
+휴대폰의 자동완성이 게임 기록 수백만 개를 읽었다고 해 봐요. 기록의 모든 수에는 "앞으로 몇 점을 더 얻는지"가 적혀 있어요. 이제 "이 게임은 1,000점으로 끝나고, 판은 이렇게 생겼고, 다음 수는…"이라고 입력하면 자동완성이 다음 수를 채워 줘요. 자동완성은 "좋다"가 무슨 뜻인지 배운 적이 없어요. 결국 1,000점을 낸 플레이어들이 그다음에 무엇을 했는지를 배웠을 뿐이에요.
+@@ 7
+2020년의 offline RL 방법들은 conservatism이나 constraint로 extrapolation error에 맞서고, temporal-difference learning의 장치를 그대로 물려받습니다. bootstrap된 target, target network, 불안정성이 그것입니다(<a href="#p-cql">CQL 논문 리뷰</a>). <a class="src" href="https://arxiv.org/abs/2006.04779">Kumar 2020</a> 한편 GPT 방식의 Transformer는 언어에서 순조롭게 규모를 키워 가고 있었습니다. 데이터가 고정되어 있을 때 지도학습의 레시피가 TD learning을 대신할 수 있을까요?
+@@ 8
+원하는 결과에 condition합니다. reward 대신 앞으로 받을 reward의 합인 <strong>return-to-go</strong> R̂<sub>t</sub> = Σ<sub>t'≥t</sub> r<sub>t'</sub>를 쓰고, sequence (R̂<sub>1</sub>, s<sub>1</sub>, a<sub>1</sub>, R̂<sub>2</sub>, s<sub>2</sub>, a<sub>2</sub>, …)를 causal mask를 씌운 Transformer로 모델링합니다. abstract는 이렇게 직접 말합니다. "autoregressive model을 원하는 return(reward)과 과거의 state, action에 condition하면, 우리의 Decision Transformer 모델은 원하는 return을 달성하는 미래의 action을 생성할 수 있다". <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a>
+@@ 9
+<strong>Token.</strong> timestep마다 return-to-go, state, action의 token 세 개가 나오므로, 마지막 K개 timestep은 3K개의 token이 됩니다. modality마다 linear embedding을 따로 두고(이미지에는 convolutional encoder), 학습된 <em>timestep별</em> embedding을 한 step의 세 token 모두에 더합니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 10
+<strong>모델과 loss.</strong> causal mask가 있는 GPT입니다. state token 위치의 출력이 action을 예측하며, continuous action에는 mean-squared error를, discrete action에는 cross-entropy를 씁니다. state나 return을 예측하게 해도 성능은 나아지지 않았습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 11
+=
+@@ 12
+<strong>Rollout.</strong> target return을 정합니다(예를 들어 dataset의 최고 return, 또는 그 이상). action을 생성하고, environment를 한 step 진행하고, 받은 reward를 target에서 빼고, 새 token을 덧붙입니다. 이를 episode가 끝날 때까지 반복합니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 13
+<strong>크기.</strong> Atari: layer 6개, head 8개, embedding 128, context K = 30(Pong은 50). Gym: layer 3개, head 1개, embedding 128, K = 20(Reacher는 5). <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 14 attr
+Decision Transformer 아키텍처: 여러 timestep의 return-to-go, state, action token이 한 줄로 늘어서 있고, 각각 자기 linear embedding과 timestep embedding을 거쳐 causal Transformer로 들어갑니다. state 위치의 출력이 다음 action을 예측합니다
+@@ 15
+<a class="src" href="https://arxiv.org/abs/2106.01345">Figure 1, Chen 2021</a> state, action, return을 modality별 linear embedding에 넣고, episode 안의 timestep을 나타내는 positional encoding을 더합니다. GPT가 causal mask 아래에서 action을 autoregressive하게 예측합니다.
+@@ 16 attr
+Decision Transformer의 token 흐름: 세 timestep에 걸쳐 return-to-go, state, action token이 causal Transformer로 들어갑니다. 각 state token 위의 출력이 예측된 action입니다. 테스트 때 return-to-go는 사용자가 정하고, 관측된 reward만큼 줄어듭니다
+@@ 17
+Causal Transformer (GPT): 각 token은 앞선 token에만 attend
+@@ 18
+=
+@@ 19
+학습: sₜ 위의 출력으로 aₜ 예측 (MSE 또는 cross-entropy).
+@@ 20
+테스트: R̂₁ = target return, 매 step 뒤 R̂ₜ₊₁ = R̂ₜ − rₜ. timestep embedding 하나를 세 token이 공유.
+@@ 21
+timestep마다 token이 세 개이고, 다음 action은 각 state token 위에 적혀 있습니다. 여기에는 value를 추정하는 것이 없습니다. return은 사용자가 고르는 입력입니다.
+@@ 22
+DQN-replay 데이터의 1%만 쓴 Atari(gamer-normalised)에서 DT는 Breakout(267.5 대 211.1)과 Seaquest(2.5 대 1.7)에서 CQL을 이겼고, Qbert(15.4 대 104.2)에서 졌으며, Pong(106.1 대 111.9)에서는 거의 비겼습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> D4RL gym에서는 Reacher를 빼면 평균 74.7로 CQL의 63.9를 앞섰고, 모든 설정을 합치면 69.2 대 54.2였습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> Key-to-Door는 초반에 열쇠를 집은 행동에 credit이 돌아가야 나중의 reward에 닿을 수 있는 과제입니다. 여기서 DT의 성공률은 random trajectory 1K개로 71.8%, 10K개로 94.6%였고, CQL은 각각 13.1%와 13.3%였습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> context도 중요합니다. K = 1로 두면 Breakout은 267.5에서 73.9로, Pong은 106.1에서 2.5로 떨어졌습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> Figure 4는 달성한 return이 요청한 return을 따라가는 모습을 보여 줍니다. Seaquest에서는 dataset의 최고치보다 높은 return을 요청할 수 있었고, 모델이 실제로 그만큼 해내기도 했습니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 23
+2021년 6월에 하루 간격으로 공개된 DT와 Trajectory Transformer는 "sequence modelling으로서의 RL"을 하나의 연구 프로그램으로 만들었고, offline RL에 언어 모델처럼 규모를 키울 수 있는 방법을 안겨 주었습니다. <a class="src" href="https://arxiv.org/abs/2106.02039">Janner 2021</a> action을 Transformer 흐름 속의 token으로 쓰는 방식은 이제 로봇 foundation model의 기본값입니다. RT-2(2023년 7월)는 action을 텍스트와 같은 vocabulary의 정수 token 8개로 내보냅니다. <a class="src" href="https://arxiv.org/abs/2307.15818">Brohan 2023</a> <a href="#d10">Day 10</a>에서 DT는 CQL의 대척점에 있습니다. value를 추정하는 대신 결과에 condition합니다.
+@@ 24
+value function이 없으므로, DT는 한 번도 함께 나타난 적 없는 부분 trajectory들을 이어 붙이는 stitching을 일반적으로 해내지 못합니다. 논문의 최단 경로 예제에서 생성된 경로 가운데 suboptimal한 조각들을 이어 붙여 만든 것은 15.8%뿐이었고, Qbert 결과는 데이터가 나쁠 때 TD 방법이 이긴다는 것을 보여 줍니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> target return은 사용자가 직접 맞춰야 하는 손잡이이고, 불가능한 값을 요구하면 제멋대로인 행동이 나올 수 있습니다. 저자들은 stochastic environment를 약점으로 짚고(return 분포를 다루는 것은 후속 연구 과제), "악의적인 행위자가 reward를 설계하면 의도하지 않은 행동이 만들어질 수 있다"고 경고합니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> 이후 연구에서는 stitching이 많이 필요한 AntMaze 과제에서 IQL을 비롯한 TD 방법이 앞서는 것으로 나타났습니다. <a class="src" href="https://arxiv.org/abs/2110.06169">Kostrikov 2021</a>
+@@ 25
+Figure 1과 Section 3(한 페이지, pseudocode 포함)이 방법의 전부입니다. 그다음 Table 1–2와 Figure 4를 보고, Section 5의 논의를 읽습니다. 그저 behaviour cloning일 뿐인가, 장기 credit assignment, context 길이를 다룹니다. Section 6은 건너뜁니다. 약 35분입니다.
+@@ 26
+Q1. Decision Transformer에서 timestep마다 들어가는 token 세 개는 무엇입니까?
+@@ 27
+=
+@@ 28
+State, action, value 추정값
+@@ 29
+=
+@@ 30
+=
+@@ 31
+Return-to-go(앞으로 받을 reward), state, action입니다. value나 advantage는 전혀 추정하지 않습니다.
+@@ 32
+Q2. trajectory 10K개의 Key-to-Door에서 DT와 CQL의 성공률은 각각 얼마였습니까?
+@@ 33
+94.6% 대 13.3%
+@@ 34
+71.8% 대 13.1%
+@@ 35
+74.7 대 63.9
+@@ 36
+267.5 대 211.1
+@@ 37
+10K에서는 94.6% 대 13.3%, 1K에서는 71.8% 대 13.1%입니다. 나머지 두 쌍은 D4RL 평균과 Breakout 점수입니다.
+@@ 38
+Q3. "Decision Transformer는 value function을 암묵적으로 학습한다." 어느 설명이 정확합니까?
+@@ 39
+맞다: return-to-go head가 value 추정값이다
+@@ 40
+아니다: return-to-go는 예측이 아니라 사용자가 고르는 입력이며, 그래서 stitching이 불안정하다
+@@ 41
+맞다: 내부적으로 TD target을 쓴다
+@@ 42
+아니다: return을 전혀 쓰지 않는다
+@@ 43
+DT는 원하는 return에 condition합니다. return을 예측하게 하는 것도 시도했지만 도움이 되지 않았습니다. 학습된 value가 없으므로, 본 적 없는 조각들을 조합할 수 있다는 보장이 없습니다.
+@@ 44
+=
+@@ 45
+=
+@@ 46
+=
+@@ 47
+=
+@@ 48
+=

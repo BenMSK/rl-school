@@ -1,0 +1,84 @@
+@@ 1
+<span class="eyebrow">2023 · Chi et al. · RSS 2023 / IJRR</span>
+@@ 2
+Diffusion Policy: visuomotor policy learning via action diffusion
+@@ 3
+A robot policy that denoises a sequence of actions out of Gaussian noise, the way an image diffusion model denoises pixels, beat the best prior imitation methods by 46.9% on average across 12 simulated tasks and reached 95% success on a real Push-T task. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a>
+@@ 4
+Taught in <a href="#d10">Day 10</a> · Read time of the original: ~60 min (the IJRR version is long; the RSS core is ~35 min)
+@@ 5
+Instead of outputting one action, the policy outputs a 16-step block of actions by running a learned denoiser from random noise, conditioned on the last two camera frames, which lets it copy demonstrations that go left <em>or</em> right without averaging them into "go straight". <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a>
+@@ 6
+Imagine learning to draw an arm movement by starting from a page of scribbles and erasing the scribble a little at a time until a clean line appears. The eraser has watched thousands of good movements, so it knows which bits are noise. If the teacher sometimes went around the left of a cup and sometimes around the right, the eraser can produce either path, but never the silly one straight through the cup.
+@@ 7
+Behaviour cloning (<a href="#d10">Day 10</a>) fits a network to "state → action" from human demonstrations. Humans are inconsistent: for the same scene one demo pushes a block from the left, another from the right. A Gaussian or mean-squared-error policy averages the two and pushes straight ahead, which fails. The standard fixes, mixture models (LSTM-GMM) and energy-based implicit policies (IBC), favour one mode or fail to commit, and IBC is unstable to train. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a> On the real Push-T task, the baselines scored 20% (LSTM-GMM) and 0% (IBC). <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 8
+Treat the action as something to <strong>generate</strong>, not to regress. A <strong>denoising diffusion probabilistic model</strong> (DDPM) learns to turn noise into samples from a data distribution in K small steps. Apply it to a short sequence of future actions, conditioned on recent observations, and you get a policy that can represent any shape of action distribution, including several separate modes, and that is trained with a plain regression loss. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a>
+@@ 9
+<strong>Inputs.</strong> The last T<sub>o</sub> = 2 observations (camera images through a ResNet encoder, or low-dimensional state). <a class="src" href="https://ar5iv.labs.arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 10
+<strong>Training.</strong> Take a ground-truth action block A<sup>0</sup> of T<sub>p</sub> = 16 steps from the demos, pick a noise level k, add Gaussian noise ε<sup>k</sup>, and train the network ε<sub>θ</sub> to predict the noise that was added. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 11
+L = MSE( ε<sup>k</sup>, ε<sub>θ</sub>(O<sub>t</sub>, A<sup>0</sup><sub>t</sub> + ε<sup>k</sup>, k) )
+@@ 12
+<strong>Inference.</strong> Start from A<sup>K</sup> ~ N(0, I) and repeat for k = K … 1 (Eq. 4 of the paper): <a class="src" href="https://ar5iv.labs.arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 13
+<strong>Act.</strong> Execute the first T<sub>a</sub> = 8 actions of the 16, then observe and re-plan (receding horizon). Training uses 100 diffusion iterations; at test time a DDIM sampler needs only 10, giving 0.1 s latency on an RTX 3080. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 14
+<strong>Two backbones.</strong> A 1-D temporal U-Net with FiLM conditioning on the observation in every convolution layer, or a Transformer with cross-attention to observations and causal attention among action tokens. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 15 attr
+Diffusion Policy overview: (a) observation block in, action block out through K denoising steps; (b) CNN U-Net with FiLM conditioning; (c) Transformer with cross-attention to observations
+@@ 16
+<a class="src" href="https://arxiv.org/abs/2303.04137">Figure 2, Chi 2023</a> (a) The general recipe: the last few observations go in, a block of future actions comes out after K denoising steps. (b) The CNN version injects the observation into every layer with FiLM. (c) The Transformer version attends from action tokens to observation tokens.
+@@ 17
+Across 12 tasks from 4 benchmarks (Robomimic, Push-T, Block Pushing, Franka Kitchen), the average improvement over the best prior method was 46.9%. <a class="src" href="https://arxiv.org/abs/2303.04137">Chi 2023</a> The journal version adds real-world tasks: Push-T 95% success and 0.80 IoU against 100% and 0.84 for the human demonstrator, with LSTM-GMM at 20% and IBC at 0%; plus mug flipping, sauce pouring and three bimanual tasks (egg beater, mat unrolling, shirt folding). <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a> The encoder matters: with a frozen R3M encoder real Push-T drops to 80%, with ImageNet weights to 15%. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a> Figure 3 of the paper is the one to remember: on Push-T the policy takes the left route in some rollouts and the right in others, and commits to one per rollout. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a>
+@@ 18
+Diffusion Policy made generative action models the default head for robot imitation. π0 (Physical Intelligence, October 2024) kept the idea but swapped diffusion for <strong>flow matching</strong>: the network predicts a velocity field and 10 Euler steps carry noise to a 50-step action chunk, on top of a 3B vision-language model trained on more than 10,000 hours of robot data across 7 robot configurations and 68 tasks. <a class="src" href="https://arxiv.org/abs/2410.24164">Black 2024</a> Then came RL on top. Because a diffusion or flow policy's final-action likelihood is intractable, DPPO (September 2024) treats each denoising step as an action in an inner MDP and runs PPO there. <a class="src" href="https://arxiv.org/abs/2409.00588">Ren 2024</a> πRL (October 2025) does the same for flow policies with Flow-Noise and Flow-SDE, lifting π0 on LIBERO from 57.6% to 97.6% after few-shot fine-tuning. <a class="src" href="https://arxiv.org/abs/2510.25889">Chen 2025</a>
+@@ 19
+The authors say the method inherits behaviour cloning's limits: it cannot do better than the demonstrations and degrades when they are scarce, and they point to RL as the way to use suboptimal and negative data. Inference costs more than an LSTM-GMM, which action chunking only partly hides at high control rates. <a class="src" href="https://arxiv.org/html/2303.04137">Chi 2023</a> The task count is quoted inconsistently across versions (11 in v1, 12 in v5, 15 in the full text once the bimanual tasks are counted); the 46.9% figure is the same in all. <a class="src" href="https://arxiv.org/abs/2303.04137v1">Chi 2023</a>
+@@ 20
+Read the abstract and Figure 1 (explicit vs implicit vs diffusion policies), then Section 2.3 for Eq. 4, Figure 2 for the two backbones, and Section 4.1 with Figure 3 for multimodality. Skim Tables 1–2 and read Table 6 (real Push-T). Skip Sections 6.2–7 unless you care about the bimanual hardware. About 40 minutes.
+@@ 21
+Q1. Why does a mean-squared-error policy fail on Push-T when demos go both left and right?
+@@ 22
+The images are too blurry
+@@ 23
+It cannot see the block
+@@ 24
+It averages the two routes into one that hits the block
+@@ 25
+It overfits to the last demo
+@@ 26
+MSE regression predicts the mean action, which lies between the two modes and drives into the block.
+@@ 27
+Q2. What does the network ε<sub>θ</sub> learn to predict during training?
+@@ 28
+The noise that was added to the true action block
+@@ 29
+The reward of the action
+@@ 30
+The next camera image
+@@ 31
+The value of the state
+@@ 32
+Standard DDPM training: add noise ε<sup>k</sup>, predict it back with an MSE loss.
+@@ 33
+Q3. Which numbers describe the receding-horizon setup?
+@@ 34
+Observe 16, predict 2, execute 8
+@@ 35
+Observe 8, predict 8, execute 8
+@@ 36
+Observe 2, predict 8, execute 16
+@@ 37
+Observe 2, predict 16, execute 8
+@@ 38
+T<sub>o</sub> = 2, T<sub>p</sub> = 16, T<sub>a</sub> = 8; then re-plan.
+@@ 39
+Chi, Xu, Feng, Cousineau, Du, Burchfiel, Tedrake, Song. Diffusion Policy: Visuomotor Policy Learning via Action Diffusion. RSS 2023; extended IJRR version. <a href="https://arxiv.org/abs/2303.04137">arXiv 2303.04137</a> · <a href="https://diffusion-policy.cs.columbia.edu/">project page</a>
+@@ 40
+Black et al. π0: A Vision-Language-Action Flow Model for General Robot Control. 2024. <a href="https://arxiv.org/abs/2410.24164">arXiv 2410.24164</a>
+@@ 41
+Ren et al. Diffusion Policy Policy Optimization (DPPO). 2024. <a href="https://arxiv.org/abs/2409.00588">arXiv 2409.00588</a>
+@@ 42
+Chen et al. πRL: Online RL Fine-tuning for Flow-based Vision-Language-Action Models. 2025. <a href="https://arxiv.org/abs/2510.25889">arXiv 2510.25889</a>

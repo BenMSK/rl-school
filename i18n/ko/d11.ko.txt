@@ -1,0 +1,374 @@
+@@ 1
+<span class="eyebrow">2주차 · Day 11</span>
+@@ 2
+Exploration, self-play, 그리고 multi-agent RL
+@@ 3
+오늘을 마치면 Montezuma's Revenge가 왜 DQN을 꺾었는지, curiosity와 RND, Go-Explore가 이를 어떻게 풀었는지, self-play가 TD-Gammon에서 AlphaZero까지 어떻게 발전했는지, 그리고 학습 중인 다른 agent들과 함께 학습하는 일이 왜 보기보다 어려운지 설명할 수 있습니다.
+@@ 4
+약 90분 · <a href="#d10">Day 10</a> 필요
+@@ 5
+Reward를 최대화하는 agent는 이미 우연히 마주친 것만 개선합니다. Reward가 드물 때는 새로운 곳으로 갈 이유를 만들어 줘야 합니다. 새로움에 주는 bonus, 어디에 가 봤는지에 대한 기억, 또는 나와 실력이 정확히 같은 상대가 그런 이유가 됩니다. Self-play는 이 마지막 방법을 가장 깔끔하게 구현한 것입니다. 하지만 플레이어가 둘을 넘거나 협력이 끼어드는 순간 더는 깔끔하지 않습니다.
+@@ 6
+1. Hard exploration: 0점을 받은 게임
+@@ 7
+2015년 무렵 DQN(<a href="#d6">Day 6</a>, <a href="#p-dqn">DQN 논문 리뷰</a>)은 수십 개의 Atari 게임에서 사람을 넘어섰습니다. 그런데 Montezuma's Revenge에서는 2억 프레임 뒤에도 0.02점에 그쳤고 방을 두 개밖에 보지 못했습니다. <a class="src" href="https://arxiv.org/abs/1606.01868">Bellemare 2016</a> 첫 레벨은 방 24개로 된 미로이고, 첫 점수를 얻으려면 긴 연쇄 동작이 필요합니다. 사다리를 내려가고, 해골을 뛰어넘고, 열쇠를 집고, 다시 올라와 문을 열어야 하며, 한 걸음만 잘못 디뎌도 죽습니다. 무작위 action으로는 이 연쇄를 끝까지 해내지 못하니 agent는 reward를 한 번도 보지 못하고, 따라서 gradient도 없습니다. 이것이 <strong>hard exploration</strong>입니다. Reward가 너무 드물거나 너무 멀리 있어서 방향 없는 noise로는 닿을 수 없는 문제입니다.
+@@ 8
+ε-greedy(<a href="#d6">Day 6</a>)와 entropy bonus(<a href="#d7">Day 7</a>)는 <strong>undirected</strong>(방향 없음) 방식입니다. 천 번 가 본 곳까지 포함해 모든 곳을 똑같이 탐색합니다. 끝에 reward 하나가 있는 30칸 복도에서 모든 Q-value가 0이면 ε-greedy는 random walk가 되고, 끝에 닿으려면 30² ≈ 900 step 정도가 필요합니다. Montezuma는 이 복도에 사다리와 해골을 더한 것입니다.
+@@ 9
+2. Count 기반 bonus와 pseudo-count
+@@ 10
+가장 오래된 해법은 드물게 가 본 state를 방문할 때 agent에게 대가를 주는 것입니다. 각 state를 몇 번 방문했는지 표 <strong>N(s)</strong>에 기록하고, reward에 다음과 같은 <strong>exploration bonus</strong>(탐색 보너스)를 더합니다.
+@@ 11
+처음 가 본 state는 β를 받고, 100번 방문한 state는 β/10을 받습니다. Bonus도 reward이므로 Q-learning이 이를 뒤로 전파하고, agent는 헤매는 대신 가 본 곳의 끝자락인 frontier 쪽으로 <em>방향을 잡는</em> 법을 배웁니다. 문제는 표입니다. 픽셀 공간에서는 모든 프레임이 새것이라 N(s)는 영원히 1이고 bonus는 어디서나 똑같습니다.
+@@ 12
+Bellemare와 동료들은 표 대신 프레임에 대한 density model ρ에서 <strong>pseudo-count</strong>(유사 방문 횟수)를 유도했습니다. ρ(x)가 프레임 x에 대한 모델의 확률이고 ρ′(x)가 x로 한 번 더 학습한 뒤의 확률이라면, N̂(x) = ρ(x)(1 − ρ′(x)) / (ρ′(x) − ρ(x))는 방문 횟수처럼 동작합니다. 이들은 β = 0.05로 두고 bonus β(N̂ + 0.01)^−1/2을 썼습니다. <a class="src" href="https://arxiv.org/abs/1606.01868">Bellemare 2016</a> 이를 DQN에 붙이자 agent는 5,000만 프레임 안에 Montezuma의 방 <strong>15개</strong>를 방문했습니다. Bonus가 없을 때는 2개였습니다. 그 시점의 평균 점수는 2,461점, 1억 프레임에서는 3,439점이었고, 가장 좋은 run은 6,600점이었습니다. <a class="src" href="https://arxiv.org/abs/1606.01868">Bellemare 2016</a>
+@@ 13
+직접 해 보기: 아래 복도에는 맨 끝에 reward가 하나 있습니다. 먼저 ε-greedy만으로 200 step을 실행하고, 초기화한 뒤, count bonus를 켜고 다시 200 step을 실행해 봅시다.
+@@ 14
+눈여겨볼 점: 방문 횟수가 어떤 모양으로 쌓이는지 봅시다. ε-greedy에서는 방문이 출발점 근처에 몰립니다(200 step 동안 가장 멀리 간 곳이 15번 칸이고, 29번 칸에 한 번 닿으려면 약 1,100 step이 필요합니다). Count bonus는 방문을 복도 전체로 퍼뜨리고, 82번째 step에서 reward에 도달한 뒤 계속 되돌아옵니다. Policy는 바뀌지 않았습니다. 바뀐 것은 무엇을 reward로 치느냐뿐입니다.
+@@ 15
+아주 큰 집이 있는데 사탕은 맨 마지막 방에만 있다고 상상해 보세요. 아무렇게나 돌아다니면 자꾸 현관 옆 방 세 개만 맴돌게 돼요. 이제 방마다 스티커 기계가 생겼어요. 처음 들어가면 스티커 한 장을 통째로 주고, 네 번째 들어가면 반 장, 그 뒤로는 거의 아무것도 안 줘요. 그러자 갑자기 먼 방들이 재미있는 곳이 되고, 가는 길에 사탕과 딱 마주치게 돼요. 아래에 나오는 RND는 올 때마다 방이 조금씩 달라 보여도 여전히 잘 돌아가는 스티커 기계예요.
+@@ 16
+3. Curiosity: ICM과 RND
+@@ 17
+두 번째 아이디어는 count를 <strong>prediction error</strong>(예측 오차)로 바꿉니다. 아직 예측하지 못하는 것에 호기심을 가지라는 것입니다. <strong>Intrinsic Curiosity Module</strong>(ICM)은 φ(s<sub>t</sub>)와 a<sub>t</sub>로부터 다음 state의 feature를 예측하는 forward model을 학습시키고, 그 오차를 agent에게 지급합니다.
+@@ 18
+핵심은 φ에 있습니다. <strong>inverse model</strong>(역모델)이 (φ(s<sub>t</sub>), φ(s<sub>t+1</sub>))로부터 a<sub>t</sub>를 예측하도록 φ를 학습시키므로, φ는 agent의 action이 영향을 줄 수 있는 것만 남기고 바람에 날리는 나뭇잎 같은 것은 무시합니다. Sparse-reward VizDoom에서 ICM은 평균 점수 100%에 도달했고 일반 A3C는 0%였습니다. 게임 reward를 없앤 Super Mario에서는 curiosity만으로 레벨 1의 30% 넘게 나아갔습니다. <a class="src" href="https://arxiv.org/abs/1705.05363">Pathak 2017</a>
+@@ 19
+<strong>Random Network Distillation</strong>(RND, <a href="#p-rnd">RND 논문 리뷰</a>)은 더 단순하고, 이후 표준이 되었습니다. 모양이 같은 신경망 두 개를 준비합니다. <strong>target</strong> f는 무작위로 초기화한 뒤 영원히 고정합니다. <strong>predictor</strong> f̂는 agent가 본 observation에 대해 f의 출력을 따라 하도록 mean-squared error로 학습합니다. Intrinsic reward는 이 따라 하기의 오차입니다.
+@@ 20
+익숙한 observation에서는 predictor가 이미 target의 출력을 배웠으므로 bonus가 작고, 새로운 observation에서는 오차가 큽니다. Target은 고정된 deterministic 함수이므로 깜빡이는 화면도 영원히 놀라운 것으로 남지 않습니다. Predictor가 이를 배울 수 있고 bonus는 줄어듭니다. 이로써 픽셀 예측 방식 curiosity의 <strong>noisy-TV problem</strong>, 즉 무작위성이 있는 것이라면 무엇이든 무한히 흥미로워지는 문제가 사라집니다. Observation은 whitening한 뒤 [−5, 5]로 clipping하고, bonus는 running standard deviation으로 나누며, PPO에는 <strong>value head 두 개</strong>를 답니다. Extrinsic 쪽은 episodic, intrinsic 쪽은 non-episodic입니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a>
+@@ 21
+약 19.7억 프레임 뒤 RND는 Montezuma's Revenge에서 평균 <strong>8,152</strong>점을 기록했습니다. 일반 PPO는 2,497점, dynamics 예측 방식 curiosity는 400점이었습니다. RND의 점수는 <strong>사람 평균 점수 4,753</strong>점보다 높았고, 최고 return은 17,500이었으며, 가장 좋은 agent들은 레벨 1의 <strong>방 24개 중 22개</strong>를 찾았습니다. 병렬 environment 1,024개를 쓴 recurrent 변형은 평균 10,070점이었습니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> Demonstration 없이 사람 평균을 넘은 첫 agent였습니다.
+@@ 22
+<strong>"Curiosity는 놀라운 픽셀에 reward를 주는 것이다."</strong> 날것의 픽셀 예측 오차는 무작위한 것이라면 무엇이든 멍하니 쳐다보다 그 자리에 갇힙니다. ICM은 제어할 수 있는 feature만 예측합니다. RND는 고정된 deterministic 함수를 예측하므로 noise도 학습할 수 있게 되고, 더는 bonus를 주지 않습니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a>
+@@ 23
+<strong>"RND는 두 신경망을 모두 학습시킨다."</strong> 학습하는 것은 predictor뿐입니다. Target까지 움직이면 오차가 결코 가라앉지 않고 bonus는 아무 의미도 없어집니다.
+@@ 24
+<strong>"Go-Explore는 또 하나의 intrinsic reward다."</strong> Go-Explore는 bonus를 전혀 쓰지 않습니다. 가 본 곳을 모아 둔 명시적인 archive와, 그곳으로 돌아가는 규칙으로 이루어져 있습니다.
+@@ 25
+<strong>"AlphaGo는 사람 없이 바둑을 배웠다."</strong> 2016년의 AlphaGo는 사람 고수의 기보에서 출발했습니다. 백지 상태(tabula rasa)에서 시작한 시스템은 1년 뒤에 나온 <em>AlphaGo Zero</em>입니다. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017</a>
+@@ 26
+4. Go-Explore와 Agent57: 기억하고, 돌아가고, 그다음 탐색하기
+@@ 27
+Go-Explore의 저자들은 bonus로는 고칠 수 없는 두 가지 실패를 진단했습니다. <strong>Detachment</strong>(이탈): 어느 영역의 bonus가 다 소진되면 agent는 다른 곳으로 흘러가고, frontier로 돌아가는 길을 잊습니다. <strong>Derailment</strong>(탈선): 길을 기억하더라도, 새로운 것을 찾는 데 필요한 noise가 길고 정밀한 귀환 경로에서 agent를 밀어냅니다. <a class="src" href="https://www.nature.com/articles/s41586-020-03157-9">Ecoffet 2021</a>
+@@ 28
+<strong>Go-Explore</strong>는 이 두 가지 일을 분리합니다. 먼저 <strong>cell의 archive</strong>를 유지합니다. Cell은 프레임을 11 × 8 greyscale 픽셀, 밝기 8단계로 줄인 것이어서 비슷한 프레임 여럿이 한 cell을 공유합니다. 매 iteration마다 cell 하나를 고르고(드물게 선택된 cell을 우선), noise 없이 그곳으로 <strong>돌아간(return)</strong> 다음(2019년에는 emulator state를 복원하는 방식), 거기서부터 무작위로 <strong>탐색(explore)</strong>하면서 새 cell과 더 나은 경로를 archive에 추가합니다. Phase 2에서는 끝 근처에서 시작해 거꾸로 거슬러 올라가는 imitation learning으로 가장 좋은 trajectory들을 policy로 <strong>robustify</strong>합니다. <a class="src" href="https://arxiv.org/abs/1901.10995">Ecoffet 2019</a>
+@@ 29
+게임별 지식 없이도 Go-Explore는 Montezuma's Revenge에서 평균 <strong>43,763</strong>점을 냈습니다. 이전 intrinsic motivation의 최고 기록은 평균 약 11,500점, 사람 전문가는 약 34,900점이었습니다. 손으로 만든 cell feature(방, 레벨, 열쇠)를 쓰면 평균 666,474점이었고, 한 run은 18,003,200점에 도달해 사람의 세계 기록 1,219,200점을 넘었습니다. 이전의 모든 RL 방법이 0점 이하였던 Pitfall에서는 평균 <strong>59,494</strong>점을 냈습니다. <a class="src" href="https://arxiv.org/abs/1901.10995">Ecoffet 2019</a> Nature 버전은 state 복원을 goal-conditioned policy로 대체했고, 그때까지 풀리지 않았던 Atari 게임을 모두 풀었으며, sparse-reward 로봇 과제에도 적용되었습니다. <a class="src" href="https://www.nature.com/articles/s41586-020-03157-9">Ecoffet 2021</a>
+@@ 30
+<strong>Agent57</strong>(2020)은 한 줄로 정리합니다. Episodic novelty × RND 방식의 lifelong novelty, curious한 것부터 greedy한 것까지 이어지는 policy 묶음, 그리고 그중에서 고르는 bandit을 결합해, 57개 Atari 게임 모두에서 human baseline을 넘은 첫 agent가 되었습니다. <a class="src" href="https://arxiv.org/abs/2003.13350">Badia 2020</a>
+@@ 31
+탐색하려는 동기의 출처
+@@ 32
+ε-greedy noise만
+@@ 33
+≈ 0점, 방 2개
+@@ 34
+Pseudo-count
+@@ 35
+=
+@@ 36
+50M 프레임에서 방 15개; 100M에서 평균 3,439
+@@ 37
+=
+@@ 38
+제어 가능한 feature에서의 forward model 오차
+@@ 39
+Montezuma가 아니라 VizDoom과 Mario에서 시험
+@@ 40
+=
+@@ 41
+predictor 대 고정된 random network
+@@ 42
+평균 8,152; 방 24개 중 22개; 최고 17,500
+@@ 43
+=
+@@ 44
+cell의 archive, 돌아간 뒤 탐색; bonus 없음
+@@ 45
+평균 43,763; domain knowledge 사용 시 666,474
+@@ 46
+=
+@@ 47
+episodic × lifelong novelty, policy들 위의 bandit
+@@ 48
+57개 게임 모두에서 사람 이상
+@@ 49
+Go-Explore는 사람들이 어려운 비디오 게임을 실제로 하는 방식 그대로입니다. 세이브 포인트를 남겨 두고, 가장 멀리 간 세이브를 불러와 다른 것을 시도하고, 새로운 곳에 닿았으면 새 세이브를 남깁니다. 학습된 policy는 경로가 존재한다는 것을 확인한 뒤 맨 마지막에 옵니다.
+@@ 50
+5. Self-play: TD-Gammon에서 AlphaZero까지
+@@ 51
+보드게임은 문제가 정반대입니다. Reward는 분명하지만 내 수준에 맞는 상대가 필요하고, 너무 강한 상대에게서는 아무것도 배우지 못합니다. <strong>Self-play</strong>(자가 대국)에서는 agent가 자기 복사본과 대국합니다. 그래서 상대는 언제나 나와 실력이 정확히 같고, 나와 같은 속도로 강해집니다. 공짜로 얻는 자동 curriculum입니다.
+@@ 52
+이 아이디어는 딥러닝보다 먼저 나왔습니다. Gerald Tesauro의 <strong>TD-Gammon</strong>(1992–1995)은 작은 multilayer network를 무작위 weight에서 시작해 self-play만으로, TD(λ)로 학습시켰습니다. Hidden unit 40개 버전은 약 200,000 게임을 두었습니다. 버전 2.1은 세계 최고 수준의 플레이어 Bill Robertie와 치른 40게임 시리즈를 거의 대등하게 마쳤습니다. <a class="src" href="https://www.bkgm.com/articles/tesauro/tdl.html">Tesauro 1995</a>
+@@ 53
+<strong>AlphaGo</strong>(<a href="#p-alphago">AlphaGo 논문 리뷰</a>)는 이 방법을 세 부분으로 바둑에 가져왔습니다. 첫째는 <strong>policy network</strong>로, 먼저 사람 고수의 기보로 학습한 뒤 self-play policy gradient로 학습합니다. 둘째는 self-play 국면에서 승자를 예측하는 <strong>value network</strong>입니다. 셋째는 <strong>Monte Carlo tree search</strong>(MCTS, <a href="#d9">Day 9</a>)로, policy를 써서 어떤 수를 살펴볼지 고르고 value network와 빠른 rollout으로 국면을 평가합니다. AlphaGo는 다른 바둑 프로그램을 상대로 99.8%의 대국을 이겼고, 2015년 10월 유럽 챔피언 Fan Hui를 <strong>5–0</strong>으로 이겼습니다. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a> 2016년 3월에는 서울에서 2억 명이 넘는 시청자가 지켜보는 가운데 Lee Sedol을 <strong>4–1</strong>로 이겼습니다. 2국의 37번째 수는 사람이 둘 확률이 10,000분의 1인 수였습니다. <a class="src" href="https://deepmind.google/research/breakthroughs/alphago/">DeepMind 2016</a>
+@@ 54
+그다음 DeepMind는 사람을 빼 버렸습니다. <strong>AlphaGo Zero</strong>(2017년 10월)는 규칙만 가지고 무작위 대국에서 출발하고, policy head와 value head가 달린 <strong>신경망 하나</strong>를 쓰며, rollout을 없앱니다. MCTS는 value head만으로 leaf를 평가합니다. Search가 선생님이 됩니다. 모든 국면에서 MCTS는 날것의 policy p보다 나은 visit distribution π를 만들어 내고, 신경망은 p가 π와, v가 대국 결과 z와 일치하도록 학습합니다. <strong>3일</strong> 뒤에는 Lee Sedol을 이긴 버전을 <strong>100–0</strong>으로 이겼고, <strong>40일</strong> 뒤에는 TPU 4개로 약 500만 게임을 둔 끝에 이전의 가장 강한 버전인 AlphaGo Master를 넘어섰습니다. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017</a> <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a>
+@@ 55
+<strong>AlphaZero</strong>(preprint 2017년 12월, Science 2018년 12월)는 같은 알고리즘을 아무것도 바꾸지 않고 체스와 쇼기에 돌렸습니다. 무작위 대국에서 시작해 <strong>4시간</strong> 만에 Stockfish를, <strong>2시간</strong> 만에 쇼기 프로그램 Elmo를, <strong>30시간</strong> 만에 AlphaGo Lee를 추월했습니다. Stockfish를 상대로는 1,000 게임 중 155번 이기고 6번 졌습니다. AlphaZero는 <strong>초당 약 6만 국면</strong>을 탐색했고 Stockfish는 <strong>6,000만</strong> 국면을 탐색했습니다. 천 배나 적은데, 신경망이 search를 선택적으로 만들어 주기 때문입니다. 대국에는 1세대 TPU 4개와 CPU 코어 44개를 썼습니다. <a class="src" href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">DeepMind 2018</a>
+@@ 56
+직접 해 보기: 아래 위젯은 그 loop의 MCTS 쪽 절반을 틱택토에서 돌린 것이고, value head 대신 random rollout을 씁니다. 한 수당 simulation 수를 정하고 100 게임을 두거나, Sweep을 눌러 곡선 전체를 봅시다.
+@@ 57
+눈여겨볼 점: simulation 수가 늘면 승률이 올라갑니다. 무작위 상대에게는 simulation 10회에서 약 83%이던 승률이 500회에서 약 96%가 되고, 1-ply 상대에게는 약 61%에서 95%가 됩니다. 플레이어는 전혀 바뀌지 않습니다. 더 오래 생각할 뿐입니다. AlphaZero에서는 신경망이 rollout을 대신하고, 개선된 search가 학습 target이 됩니다. 그래서 오늘 더 오래 생각하면 내일 신경망이 더 강해집니다.
+@@ 58
+더 깊이 (선택): AlphaZero loss
+@@ 59
+Self-play의 수 하나마다 (s, π, z)를 저장합니다. 국면, MCTS visit distribution, 그리고 그 플레이어 입장에서 본 최종 결과입니다. 신경망 f<sub>θ</sub>(s) = (p, v)는 다음 loss로 학습합니다.
+@@ 60
+=
+@@ 61
+MCTS는 PUCT, 즉 Q(s,a) + U(s,a)로 child를 고르며 U ∝ p(a) · √N(s) / (1 + N(s,a))입니다. Prior가 search를 이끌고, value가 rollout 없이 leaf를 평가합니다. 그리고 π는 현재 신경망으로 search해서 나온 것이므로 신경망과 search가 서로를 개선합니다. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017</a> <a href="#p-muzero">MuZero</a>(<a href="#d9">Day 9</a>)는 이 loop를 유지하면서 규칙까지 학습합니다.
+@@ 62
+6. Multi-agent RL: 왜 보기보다 어려운가
+@@ 63
+2인 zero-sum 게임은 multi-agent 학습 가운데 쉬운 경우입니다. 여기서 벗어나면 네 가지가 깨집니다.
+@@ 64
+<strong>Non-stationarity(비정상성).</strong> 지금까지의 모든 방법은 학습하는 동안 environment가 변하지 않는다고 가정합니다. 그런데 학습 중인 다른 agent들도 내 environment의 일부입니다. 그래서 MADDPG 논문의 표현대로 "어느 개별 agent의 관점에서 보아도 environment는 non-stationary해집니다". <a class="src" href="https://arxiv.org/abs/1706.02275">Lowe 2017</a> 지난달의 transition을 replay하면, 그것은 이제 존재하지 않는 상대를 두고 만들어진 데이터입니다. Q-learning과 replay의 바탕인 Markov 가정이 소리 없이 무너집니다.
+@@ 65
+<strong>"Optimal"이 무슨 뜻인가.</strong> 플레이어가 여럿일 때의 표준적인 답은 <strong>Nash equilibrium</strong>입니다. 누구도 자기 전략만 바꿔서는 더 나아질 수 없는, 모든 플레이어의 전략 조합입니다. 가위바위보에서는 셋을 각각 3분의 1씩 내는 것이고, 여기서 조금이라도 벗어나면 상대가 그 틈을 파고들 수 있습니다. 2인 zero-sum 게임에서는 equilibrium이 minimax 해이고 self-play가 그쪽으로 수렴합니다. AlphaZero의 방법이 통하는 이유입니다. 팀원이나 협상이 있는 <strong>general-sum</strong> 게임에서는 payoff가 서로 다른 equilibrium이 여럿 있을 수 있어서, "equilibrium대로 플레이하라"는 완전한 지시가 못 됩니다. 아래에 나오는 Cicero가 게임을 푸는 대신 <em>사람</em>이 어떻게 플레이하는지를 모델링하는 이유입니다.
+@@ 66
+<strong>누가 무엇을 보는가.</strong> <strong>Centralised training, decentralised execution</strong>(CTDE, 중앙에서 훈련하고 분산해서 실행): 훈련 중에는 각 agent의 critic이 모든 agent의 observation과 action을 보므로 critic의 세계가 다시 stationary해집니다. 실행할 때는 각 actor가 자기 observation만 쓰므로 팀은 중앙 두뇌 없이 돌아갑니다. MADDPG는 이것의 actor-critic(<a href="#d7">Day 7</a>) 버전입니다. <a class="src" href="https://arxiv.org/abs/1706.02275">Lowe 2017</a>
+@@ 67
+<strong>누구를 상대로 훈련하는가.</strong> 가장 최신의 자기 자신하고만 대국하면 순환에 빠질 수 있습니다. B로 A를 이기고, A를 잊고, A를 다시 배우는 식입니다. <strong>Population-based training</strong>은 agent를 10~80개 유지하면서, 주기적으로 하위 20%가 상위 20%의 weight와 hyperparameter를 복사하게 한 다음 hyperparameter에 ×0.8 또는 ×1.2를 곱해 흔듭니다. 이 방법으로 DMLab의 UNREAL은 human-normalised 점수가 93%에서 106%로 올랐습니다. <a class="src" href="https://arxiv.org/abs/1711.09846">Jaderberg 2017</a> AlphaStar의 <strong>league</strong>는 main agent의 약점을 찾는 것만이 임무인 <strong>exploiter</strong> agent를 추가합니다. <a class="src" href="https://www.nature.com/articles/s41586-019-1724-z">Vinyals 2019</a>
+@@ 68
+이 일에 얼마나 큰 규모가 필요했는지 세 시스템이 보여 줍니다. 2026년 10월 기준 이들은 여전히 이정표로 남아 있습니다.
+@@ 69
+<strong>OpenAI Five</strong>(Dota 2, 5 대 5). 단 한 번의 run이었고, <strong>10개월에 걸쳐 180일을 훈련</strong>했으며(2018년 6월부터 2019년 4월까지), 재시작 없이 모델이나 environment를 바꾸는 "surgery"를 20번 넘게 거쳤습니다. 2019년 4월 13일 세계 챔피언 OG를 <strong>2–0</strong>으로 이겼고, 이어 나흘간 열린 OpenAI Five Arena에서는 hero 17개의 pool로 공개 게임 <strong>7,257판 중 99.4%</strong>를 이겼습니다. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a>
+@@ 70
+<strong>AlphaStar</strong>(StarCraft II). 사람의 게임을 모방하는 것으로 시작했고(이 단계에서 이미 플레이어의 84%보다 나았습니다), 그 뒤 league에서 훈련했습니다. 세 종족 모두에서 Grandmaster에 올라 Battle.net 랭크 플레이어의 <strong>99.8%</strong>보다 위에 섰습니다. 익명으로, 사람과 같은 카메라 시야로, 5초에 최대 22개 action이라는 제한 아래 플레이한 결과입니다. <a class="src" href="https://www.nature.com/articles/s41586-019-1724-z">Vinyals 2019</a>
+@@ 71
+<strong>Cicero</strong>(Diplomacy, 7인, 자연어 협상). 사람의 게임 40,000판 이상으로 fine-tuning한 27억 파라미터 dialogue model에, 사람의 수를 예측하고 사람다움을 유지하면서 그 수를 개선하는 planner(piKL)를 더했습니다. webDiplomacy.net에서 40게임을 치르며 평균의 두 배가 넘는 점수를 냈고 <strong>상위 10%</strong>에 들었습니다. <a class="src" href="https://ai.meta.com/blog/cicero-ai-negotiates-persuades-and-cooperates-with-people/">Meta 2022</a>
+@@ 72
+7. 아키텍처
+@@ 73 attr
+RND: observation을 whitening하고 clipping한 뒤 모양이 같은 두 신경망에 넣습니다. 하나는 고정된 random target network이고 다른 하나는 학습되는 predictor network입니다. 두 출력을 비교하고, 그 차이의 제곱을 정규화한 값이 intrinsic reward가 됩니다. 이 값은 PPO agent 안에서 environment의 extrinsic reward에 더해집니다. PPO agent는 reward 흐름마다 하나씩 value head 두 개를 가지며 다음 action을 출력합니다. Gradient는 predictor로만 흐릅니다.
+@@ 74
+=
+@@ 75
+=
+@@ 76
+=
+@@ 77
+=
+@@ 78
+random, 고정
+@@ 79
+=
+@@ 80
+MSE로 학습
+@@ 81
+=
+@@ 82
+=
+@@ 83
+=
+@@ 84
+=
+@@ 85
+value head V_ext, V_int
+@@ 86
+gradient (predictor만)
+@@ 87
+RND. Observation 하나가 모양이 같은 두 신경망으로 들어가고, 아래쪽 것만 학습합니다. 두 신경망의 불일치가 curiosity 신호이며, value head 두 개를 거쳐 게임 점수와 섞입니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a>
+@@ 88
+왼쪽에서 오른쪽으로: environment가 observation과 실제 reward r<sub>ext</sub>를 내놓습니다. Observation은 정규화된 뒤 고정된 target f와 학습 가능한 predictor f̂를 통과합니다. 두 출력의 차이를 제곱하고 running standard deviation으로 나눈 값이 r<sub>int</sub>입니다. PPO는 두 흐름을 모두 받습니다. Extrinsic head는 r<sub>ext</sub>를 episodic으로, intrinsic head는 r<sub>int</sub>를 non-episodic으로 다루고(어떤 방에 대한 curiosity가 죽었다고 초기화되어서는 안 됩니다), 두 advantage를 더합니다. 점선으로 그린 gradient는 predictor에서 멈춥니다. Target은 절대 변하지 않으므로, predictor가 이미 맞춘 observation은 더는 bonus를 주지 않습니다.
+@@ 89 attr
+AlphaZero: 판의 국면이 policy head와 value head가 달린 residual network로 들어갑니다. select, expand, evaluate, backup으로 이루어진 MCTS loop가 새 leaf마다 신경망에 질의하고, search policy pi와 선택한 수를 돌려줍니다. Self-play 게임은 (국면, pi, 결과 z) 기록을 만들어 replay buffer에 저장합니다. 이 기록으로 학습하면 새 신경망이 나오고, 그 신경망이 다음 게임을 둡니다.
+@@ 90
+국면 s
+@@ 91
+실제 규칙
+@@ 92
+=
+@@ 93
+신경망 하나
+@@ 94
+=
+@@ 95
+=
+@@ 96
+MCTS, simulation 800회
+@@ 97
+=
+@@ 98
+2 expand: leaf 하나
+@@ 99
+3 evaluate: f_θ 호출 → (p, v)
+@@ 100
+4 backup: v를 root로
+@@ 101
+출력: visit count π, 수
+@@ 102
+leaf s′ 평가
+@@ 103
+self-play 게임
+@@ 104
+(s, π, z) 저장
+@@ 105
+=
+@@ 106
+최근 게임
+@@ 107
+학습
+@@ 108
+새 θ
+@@ 109
+다음 대국
+@@ 110
+파라미터 θ
+@@ 111
+수를 두고 π 기록
+@@ 112
+수마다 (위) · 학습 step마다 (아래)
+@@ 113
+AlphaZero. 위: 수 하나를 두는 과정으로, search가 새 leaf마다 하나뿐인 신경망을 호출합니다. 아래: search 결과를 다음 신경망의 학습 target으로 바꾸는 데이터 loop입니다. <a class="src" href="https://www.nature.com/articles/nature24270">Silver 2017</a>
+@@ 114
+위 줄: 국면이 head 두 개가 달린 residual network 하나로 들어갑니다. MCTS는 simulation을 800회 돌립니다. 매번 PUCT(Q에, prior p에 비례하는 bonus U를 더한 값)로 경로를 선택하고, leaf를 expand하고, 그 leaf를 신경망에 통과시켜 새 (p, v)를 얻고, v를 root까지 backup합니다. 출력은 visit distribution π이고, 여기서 둘 수를 정합니다. 아래 줄: 끝난 게임마다 각 국면의 (s, π, z)를 buffer에 기록합니다. 학습은 p를 π 쪽으로, v를 z 쪽으로 밀고, 새 파라미터는 self-play worker들에게 돌아갑니다. 더 나은 신경망이 더 나은 search를, 더 나은 search가 더 나은 target을 만듭니다.
+@@ 115 attr
+Centralised training, decentralised execution: actor 세 개가 각자 자기 observation만 받아 자기 action을 출력합니다. 훈련 중에는 centralised critic 하나가 모든 observation과 모든 action을 받아 각 actor에게 gradient를 보냅니다. 점선이 훈련 때만 쓰는 critic과 실행 때의 actor들을 구분합니다.
+@@ 116
+훈련 전용
+@@ 117
+=
+@@ 118
+모두를 봄; 세계가 stationary하게 보임
+@@ 119
+실행 시 제거
+@@ 120
+실행: actor 각자 따로
+@@ 121
+=
+@@ 122
+자기 시야만
+@@ 123
+=
+@@ 124
+=
+@@ 125
+oᵢ, aᵢ 위로
+@@ 126
+gradient 아래로
+@@ 127
+MADDPG 방식의 CTDE. Critic은 학습하는 동안 모든 것을 알아도 되지만, actor는 행동할 때 그 정보가 필요해서는 안 됩니다. <a class="src" href="https://arxiv.org/abs/1706.02275">Lowe 2017</a>
+@@ 128
+아래에서 위로: 각 actor는 자기 observation을 자기 action으로 바꿉니다. 훈련 중에는 모든 observation과 action이 위로 올라가 critic 하나로 모입니다. Critic은 팀의 결과에서 각 agent의 선택이 차지하는 몫을 따질 수 있고, policy gradient를 아래로 돌려보냅니다. 실행할 때는 맨 위 상자가 지워지고 actor들이 독립적으로 돌아갑니다. 그래서 결과물을 서로 떨어진 로봇이나 플레이어에 배포할 수 있습니다.
+@@ 129
+시스템 관점: 무엇이 어디서 돌았나
+@@ 130
+RND의 대표 run은 약 19.7억 프레임 동안 이어졌고, recurrent 변형은 병렬 environment 1,024개를 돌렸습니다. <a class="src" href="https://arxiv.org/abs/1810.12894">Burda 2018</a> AlphaGo Zero의 40일짜리 run은 TPU 4개로 약 500만 게임을 두었고, AlphaZero는 1세대 TPU 4개와 CPU 코어 44개로 대국을 치렀습니다. <a class="src" href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">DeepMind 2017</a> <a class="src" href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">DeepMind 2018</a> OpenAI Five는 극단적인 사례였습니다. Policy는 파라미터가 1억 5,900만 개였고 그 84%가 4,096-unit LSTM 하나였습니다. 최대 172,800개의 rollout CPU가 2초마다 약 200만 프레임의 batch를 만들어 최대 1,536개의 optimiser GPU에 공급했습니다. 10개월 동안 대략 770 petaflop/s-days입니다. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> 패턴은 이렇습니다. 값싼 시뮬레이터는 많은 CPU 코어에서, learner 하나는 가속기에서 돌고, 그 둘 사이의 간극을 메우는 일이 곧 엔지니어링입니다.
+@@ 131
+Q1. DQN은 왜 Montezuma's Revenge에서 사실상 0점을 받았을까요?
+@@ 132
+신경망이 너무 작아 화면을 볼 수 없었다
+@@ 133
+이 게임에는 reward 신호가 아예 없다
+@@ 134
+무작위 exploration으로는 첫 reward에 필요한 긴 action 연쇄를 끝내지 못해, 배울 것이 없었다
+@@ 135
+Experience replay는 Atari 프레임을 저장할 수 없다
+@@ 136
+ε-greedy noise로 agent는 방 두 개를 보았고 reward는 거의 보지 못했습니다. Reward가 없으면 Q-learning에는 신호가 없습니다. Bellemare 2016은 2억 프레임 뒤 0.02점이라고 보고합니다.
+@@ 137
+Q2. RND에서 학습되는 신경망은 어느 것일까요?
+@@ 138
+둘 다. 모든 observation에서 서로 일치하도록 학습한다
+@@ 139
+predictor만. Random target은 영원히 고정된다
+@@ 140
+target만. Predictor의 출력 쪽으로 학습한다
+@@ 141
+둘 다 아니다. Bonus는 두 random network 사이의 고정된 차이다
+@@ 142
+Predictor는 방문한 observation에서 고정된 target을 따라 하도록 학습합니다. 성공한 곳에서는 오차(와 bonus)가 작고, 새로운 observation에서는 여전히 오차가 큽니다.
+@@ 143
+Q3. RND는 Montezuma's Revenge에서 평균 8,152점을 냈습니다. 같은 논문에 보고된 사람 평균 점수와 비교하면 어떨까요?
+@@ 144
+그 5분의 1 정도 (사람 ≈ 43,000)
+@@ 145
+거의 같다 (사람 ≈ 8,000)
+@@ 146
+한참 아래 (사람 ≈ 34,900)
+@@ 147
+그보다 높다 (사람 ≈ 4,753)
+@@ 148
+Burda 2018은 사람 평균을 4,753으로 제시합니다. RND는 demonstration 없이 이를 넘은 첫 사례였습니다. 34,900은 Go-Explore가 인용한 사람 전문가의 수치이고, 43,763은 Go-Explore 자체의 평균입니다.
+@@ 149
+Q4. Go-Explore와 curiosity bonus의 핵심 차이는 무엇일까요?
+@@ 150
+Go-Explore는 방문한 cell의 명시적 archive를 유지하고, 탐색하기 전에 deterministic하게 그곳으로 돌아간다. Bonus는 쓰지 않는다
+@@ 151
+Go-Explore는 더 큰 bonus 계수 β를 쓴다
+@@ 152
+Go-Explore는 픽셀을 예측하고 curiosity는 feature를 예측한다
+@@ 153
+Go-Explore는 사람의 demonstration이 있어야만 동작한다
+@@ 154
+"First return, then explore."(먼저 돌아가고, 그다음 탐색하라.) Noise 없이 돌아가면 derailment가 해결되고, archive가 detachment를 해결합니다. 평균 43,763점에는 domain knowledge도 demonstration도 쓰이지 않았습니다.
+@@ 155
+Q5. AlphaZero는 Stockfish와 비교해 초당 얼마나 탐색했고, 누가 이겼을까요?
+@@ 156
+거의 같은 초당 6,000만 국면. AlphaZero가 더 나은 평가로 이겼다
+@@ 157
+천 배 더 많이. AlphaZero가 순수한 속도로 이겼다
+@@ 158
+약 6만 대 Stockfish의 6,000만. 그래도 AlphaZero가 1,000 게임 중 155번 이기고 6번 졌다
+@@ 159
+약 6만 대 6,000만. Stockfish가 근소하게 이겼다
+@@ 160
+신경망이 search를 선택적으로 만듭니다. 더 적은 국면을 더 잘 골라서 봅니다. 이 숫자들은 Science 버전에 대한 DeepMind 2018의 수치입니다.
+@@ 161
+Q6. "Multi-agent RL은 single-agent learner 여럿을 동시에 돌리는 것일 뿐이다." 이 말은 무엇이 틀렸을까요?
+@@ 162
+틀린 것이 없다. MADDPG는 정확히 agent마다 독립적인 DDPG다
+@@ 163
+각 agent의 environment에 다른 learner들이 포함되므로 non-stationary해지고, Q-learning과 replay의 바탕인 Markov 가정이 깨진다
+@@ 164
+agent들이 신경망 하나를 공유해야 하므로 따로 돌릴 수 없다
+@@ 165
+Single-agent learner는 action을 하나보다 많이 출력할 수 없다
+@@ 166
+Lowe 2017: "어느 개별 agent의 관점에서 보아도 environment는 non-stationary해집니다". CTDE는 훈련 중에만 critic에게 stationary한 시야를 되돌려 줍니다.
+@@ 167
+Hard exploration은 신호가 없어서 생기는 문제입니다. Montezuma's Revenge에서 DQN은 무작위 action이 첫 reward에 한 번도 닿지 못해, 방 두 개만 보고 0점에 가까운 점수를 받았습니다.
+@@ 168
+새로움은 reward가 될 수 있습니다. Count(β/√N), density model에서 얻은 pseudo-count, prediction error(ICM, RND)는 모두 "여기는 안 와 봤다"를 gradient로 바꿉니다. RND의 고정 target 기법은 사람의 4,753점을 넘는 8,152점을 냈고 방 24개 중 22개를 찾았습니다.
+@@ 169
+Go-Explore는 bonus를 기억으로 대체합니다. Cell을 archive에 담고, noise 없이 그곳으로 돌아간 다음, 탐색합니다. Montezuma에서 43,763점, RL이 한 점도 내지 못하던 Pitfall에서 59,494점을 냈습니다.
+@@ 170
+Self-play는 자동 curriculum입니다. AlphaGo Zero와 AlphaZero는 신경망 하나를 자신의 search 결과로 학습시켜 loop를 닫았고, 초당 국면 수가 천 배 적은데도 4시간 만에 Stockfish를 이겼습니다.
+@@ 171
+2인 zero-sum 게임을 벗어나면 "optimal"의 뜻은 여러 Nash equilibrium 사이에서 흐려지고, 다른 learner들이 environment를 non-stationary하게 만듭니다. 해법은 centralised critic(CTDE), population과 league, 그리고 Cicero의 경우 게임을 푸는 대신 사람을 모델링하는 것입니다.
+@@ 172
+=
+@@ 173
+=
+@@ 174
+=
+@@ 175
+=
+@@ 176
+=
+@@ 177
+=
+@@ 178
+=
+@@ 179
+=
+@@ 180
+DeepMind. AlphaGo (breakthrough 페이지). <a href="https://deepmind.google/research/breakthroughs/alphago/">deepmind.google/research/breakthroughs/alphago/</a>
+@@ 181
+Silver et al. Mastering the game of Go without human knowledge. Nature 550, 354–359 (2017). <a href="https://www.nature.com/articles/nature24270">nature.com/articles/nature24270</a> · 블로그: <a href="https://deepmind.google/discover/blog/alphago-zero-starting-from-scratch/">AlphaGo Zero: Starting from scratch</a>
+@@ 182
+DeepMind. AlphaZero: Shedding new light on chess, shogi, and Go. 2018년 12월 6일. <a href="https://deepmind.google/discover/blog/alphazero-shedding-new-light-on-chess-shogi-and-go/">deepmind.google/discover/blog/alphazero-…</a>
+@@ 183
+=
+@@ 184
+=
+@@ 185
+=
+@@ 186
+=
+@@ 187
+Meta AI. CICERO: An AI agent that negotiates, persuades, and cooperates with people. 2022년 11월 22일. <a href="https://ai.meta.com/blog/cicero-ai-negotiates-persuades-and-cooperates-with-people/">ai.meta.com/blog/cicero-…</a>

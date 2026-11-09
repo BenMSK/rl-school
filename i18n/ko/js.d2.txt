@@ -1,0 +1,120 @@
+@@ bandit
+"true arm values as hollow bars and current estimates as filled bars, with pull counts"
+==
+"빈 막대는 arm의 실제 value, 채운 막대는 현재 추정값, 그 아래는 pull 횟수"
+@@ bandit
+"hollow = true q*(a) · filled = estimate Q(a) · ★ best arm"
+==
+"빈 막대 = 실제 q*(a) · 채운 막대 = 추정값 Q(a) · ★ 최고 arm"
+@@ bandit
+"cumulative regret over pulls"
+==
+"pull 횟수에 따른 누적 regret"
+@@ bandit
+"cumulative regret"
+==
+"누적 regret"
+@@ bandit
+"percentage of pulls on the best arm"
+==
+"가장 좋은 arm을 당긴 비율"
+@@ bandit
+"Reward per pull (last 100)"
+==
+"pull당 reward (최근 100번)"
+@@ bandit
+"best possible "
+==
+"가능한 최댓값 "
+@@ bandit
+"% on best arm"
+==
+"가장 좋은 arm 비율"
+@@ bandit
+"all pulls so far"
+==
+"지금까지의 전체 pull"
+@@ bandit
+"Cumulative regret"
+==
+"누적 regret"
+@@ bandit
+"Method"
+==
+"방법"
+@@ bandit
+"The 10-armed testbed"
+==
+"10-armed testbed"
+@@ bandit
+"One bandit problem: 10 arms with q*(a) ~ N(0,1), rewards ~ N(q*(a),1), fixed seed. Pick a method, pull, and compare estimates with the truth and regret with time."
+==
+"bandit 문제 하나: arm 10개, q*(a) ~ N(0,1), reward ~ N(q*(a),1), 고정 seed. 방법을 고르고 arm을 당기면서, 추정값을 실제 value와 비교하고 regret이 시간에 따라 어떻게 변하는지 보세요."
+@@ bandit
+"Pull ×1"
+==
+"당기기 ×1"
+@@ bandit
+"Pull ×100"
+==
+"당기기 ×100"
+@@ bandit
+"Pull ×1000"
+==
+"당기기 ×1000"
+@@ ucb
+"UCB bonus versus total pulls t on a log axis, for a fixed pull count and for an arm pulled one time in ten"
+==
+"전체 pull 횟수 t(log 축)에 따른 UCB bonus. pull 횟수가 고정된 arm과 열 번에 한 번 당기는 arm"
+@@ ucb
+"total pulls t (log scale)"
+==
+"전체 pull 횟수 t (log 스케일)"
+@@ ucb
+"never pulled again (N = "
+==
+"다시 당기지 않음 (N = "
+@@ ucb
+"pulled one time in ten (N = t/10)"
+==
+"열 번에 한 번 당김 (N = t/10)"
+@@ ucb
+"Bonus at t=100"
+==
+"t=100에서의 bonus"
+@@ ucb
+"Bonus at t=1,000"
+==
+"t=1,000에서의 bonus"
+@@ ucb
+"same arm, still N="
+==
+"같은 arm, 여전히 N="
+@@ ucb
+"Bonus at t=10,000"
+==
+"t=10,000에서의 bonus"
+@@ ucb
+"grows only like √ln t"
+==
+"√ln t 정도로만 증가"
+@@ ucb
+"If pulled 1 in 10, at t=10,000"
+==
+"10번에 1번 당기면, t=10,000에서"
+@@ ucb
+"N=1,000 → shrinks"
+==
+"N=1,000 → 줄어듦"
+@@ ucb
+"One arm's UCB bonus c·√(ln t / N)"
+==
+"arm 하나의 UCB bonus c·√(ln t / N)"
+@@ ucb
+"Drag c and the arm's pull count N. The bonus of an ignored arm rises slowly with ln t; the bonus of an arm pulled regularly falls toward zero."
+==
+"c와 이 arm의 pull 횟수 N을 움직여 보세요. 방치된 arm의 bonus는 ln t를 따라 천천히 올라가고, 꾸준히 당기는 arm의 bonus는 0을 향해 떨어집니다."
+@@ ucb
+"N (pulls of this arm)"
+==
+"N (이 arm의 pull 횟수)"

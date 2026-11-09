@@ -1,0 +1,110 @@
+@@ 1
+<span class="eyebrow">2025 · Yu et al. · ByteDance Seed / Tsinghua</span>
+@@ 2
+DAPO: an open-source LLM reinforcement learning system at scale
+@@ 3
+Four fixes to GRPO, each ablated in the open, took a Qwen2.5-32B base model from 30 to 50 on AIME 2024 and beat DeepSeek-R1-Zero-Qwen-32B's 47 with half the training steps, with code, data and recipe released. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 4
+Taught in <a href="#d12">Day 12</a> · Read time of the original: ~30 min
+@@ 5
+GRPO as written collapses its own exploration, wastes compute on questions where every sample agrees, under-weights long answers and punishes truncation randomly; DAPO fixes each with one change and shows the ladder of gains. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 6
+Same classroom as <a href="#p-deepseek-r1">DeepSeek-R1</a>: 16 students answer a question and get compared with the class average. DAPO adds four house rules. If everyone gets a question right or everyone gets it wrong, swap it out, it teaches nothing today. Let rare good ideas grow a bit faster than usual. Grade every sentence equally, not every student equally, so long careful answers count. And warn a student who is running out of paper before cutting them off.
+@@ 7
+When R1 appeared, the recipe was described but the training details were not, and the authors of DAPO report that naive GRPO on Qwen2.5-32B reached only 30 on AIME 2024 and suffered <strong>entropy collapse</strong>, reward noise and training instability. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> Entropy collapse means the policy's distribution sharpens early; the 16 samples become near-copies, the group has no variance, and the advantages go to zero (see the worked example in <a href="#d12">Day 12</a>).
+@@ 8
+Keep GRPO's group-relative advantage and PPO's clipped ratio (<a href="#p-ppo">review</a>), drop the KL term, and change four details that each attack a named failure. The paper's contribution is as much the <strong>open ablation ladder</strong> as the algorithm. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 9
+The objective (Eq. 12):
+@@ 10
+J<sub>DAPO</sub>(θ) = E[ 1/(Σ<sub>i</sub>|o<sub>i</sub>|) · Σ<sub>i</sub> Σ<sub>t</sub> min( ρ<sub>i,t</sub> Â<sub>i,t</sub>, clip(ρ<sub>i,t</sub>, 1−ε<sub>low</sub>, 1+ε<sub>high</sub>) Â<sub>i,t</sub> ) ] &nbsp; s.t. &nbsp; 0 &lt; |{ o<sub>i</sub> : correct }| &lt; G
+@@ 11
+<strong>Clip-Higher.</strong> PPO's symmetric clip ε = 0.2 caps how fast a rare token can grow: a token at probability 0.01 can reach at most 0.012 in one update, while a token at 0.9 can move to 1.0. DAPO decouples the bounds, ε<sub>low</sub> = 0.2 and ε<sub>high</sub> = 0.28, so low-probability tokens get room and entropy stays up. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 12
+<strong>Dynamic sampling.</strong> Drop prompts whose G = 16 samples are all right or all wrong (zero advantage, zero gradient) and keep sampling until the batch is full of informative prompts. That is the constraint under the expectation. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 13
+<strong>Token-level loss.</strong> GRPO averages per response then across responses, so a 10,000-token answer and a 100-token answer weigh the same and each token in the long one barely counts. DAPO divides by the total token count Σ|o<sub>i</sub>| instead, so long reasoning is weighted in proportion and long rambling gets penalised in proportion. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 14
+<strong>Overlong reward shaping.</strong> Truncated answers used to get the same −1 as wrong ones, which is noise. Soft punishment: a 4,096-token buffer before the 16,384-token expected maximum (20,480 total) in which the penalty grows with length; first they simply masked truncated samples out of the loss. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 15
+<strong>Setup.</strong> No KL term, because a long-CoT policy legitimately drifts far from its initialisation; rule-based reward on the DAPO-Math-17K dataset, whose answers were rewritten as integers so a string match is the verifier; prompt batch 512, learning rate 1×10<sup>−6</sup>; built on verl. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 16 attr
+DAPO loop: prompt batch feeds a policy that samples 16 responses; a rule verifier grades them; groups with all-equal rewards are discarded by dynamic sampling; the rest get group-relative advantages and a token-level clipped update with asymmetric bounds; no KL term, no critic
+@@ 17
+Prompts
+@@ 18
+17K, int answers
+@@ 19
+Policy π_θ
+@@ 20
+G = 16 samples
+@@ 21
+Rule verifier
+@@ 22
+r = 1 / −1 / soft
+@@ 23
+Group stats → Â_i
+@@ 24
+all-same group? resample
+@@ 25
+Token-level clipped update, ε_low 0.2 / ε_high 0.28, no KL
+@@ 26
+Value model and reference model: removed
+@@ 27
+The DAPO loop. Compared with RLHF-PPO (<a href="#p-instructgpt">InstructGPT</a>) the critic and the reference model are gone; compared with GRPO, the dashed box of discarded parts grows by the KL term and the two filters (dynamic sampling, overlong shaping) are new.
+@@ 28
+Table 1, all on AIME 2024 avg@32 with Qwen2.5-32B: naive GRPO 30; + overlong filtering 36; + Clip-Higher 38; + soft overlong punishment 41; + token-level loss 42; + dynamic sampling 50. The biggest single step is the last one. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> The 50 beats DeepSeek-R1-Zero-Qwen-32B's 47 using "50% of the training steps". <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> The training-dynamics section shows entropy staying higher with Clip-Higher and response length growing steadily; the case study shows checking behaviour appearing during RL that the base model did not produce. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 29 attr
+AIME 2024 accuracy against gradient update steps: DAPO rises to 50, with a horizontal line at 47 for DeepSeek-R1-Zero-Qwen-32B reached in twice as many steps
+@@ 30
+<a class="src" href="https://arxiv.org/abs/2503.14476">Figure 1, Yu 2025</a> AIME 2024 avg@32 versus gradient steps. DAPO on Qwen2.5-32B crosses the R1-Zero-Qwen-32B line (47) and reaches 50 at about half the steps.
+@@ 31
+DAPO was the first complete, reproducible RLVR system at the 32B scale: algorithm, verl training code and the DAPO-Math-17K dataset, released together in March 2025. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a> Its four fixes spread quickly. Hugging Face TRL made the token-level loss its default <code>loss_type</code> and recommends ε<sub>high</sub> = 0.28; <a class="src" href="https://huggingface.co/docs/trl/grpo_trainer">Hugging Face 2026</a> ProRL kept dynamic sampling and Clip-Higher (with ε<sub>high</sub> = 0.4) for 2,000+ steps; <a class="src" href="https://arxiv.org/abs/2505.24864">Liu 2025</a> and the ScaleRL study (<a href="#p-scalerl">review</a>) used DAPO as a named baseline recipe and kept zero-variance filtering, its cousin of dynamic sampling. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a>
+@@ 32
+There is no limitations section. The evaluation is maths only, on one base model, with one metric; the authors say the method "can be readily transferred to other tasks" but do not test it, and they leave the study of emerging reflective behaviour to future work. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> Removing the KL term is asserted, not ablated. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> A month later a value-based counterpoint from the same lab, VAPO, reached 60.4 on the same setup in 5,000 steps with a critic and no crashes, so the critic is expensive rather than useless. <a class="src" href="https://arxiv.org/abs/2504.05118">Yue 2025</a> And ScaleRL found that DAPO's loss reached a lower asymptote than CISPO or GSPO when compute was scaled. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 33
+Read Figure 1 and Table 1 first; they are the paper. Then Sections 3.1–3.4, one page each, with the entropy and length plots in Section 4.3. Section 2 is a compact restatement of PPO and GRPO worth skimming if <a href="#p-deepseek-r1">the R1 review</a> was unclear. Skip Appendix A. About 25 minutes.
+@@ 34
+Q1. Which single change gave the largest jump in the ablation ladder?
+@@ 35
+Clip-Higher (36 → 38)
+@@ 36
+Token-level loss (41 → 42)
+@@ 37
+Dynamic sampling (42 → 50)
+@@ 38
+Overlong filtering (30 → 36)
+@@ 39
+Removing all-right and all-wrong groups added 8 points, more than any other step.
+@@ 40
+Q2. Why raise only the upper clip bound to 0.28?
+@@ 41
+So rare tokens can increase in probability faster, keeping entropy from collapsing
+@@ 42
+To make training faster on GPUs
+@@ 43
+To penalise long answers
+@@ 44
+Because the reward is in [0, 1]
+@@ 45
+With a symmetric 0.2, a token at p = 0.01 can only reach 0.012 per step; the asymmetric bound gives exploration headroom.
+@@ 46
+Q3. "DAPO keeps the KL penalty to the reference model." True or false?
+@@ 47
+True, with β = 0.001
+@@ 48
+False; it is removed because long-CoT policies legitimately drift far from the start
+@@ 49
+True, but only in the first 100 steps
+@@ 50
+False; it is replaced by a value model
+@@ 51
+Section 2.3 removes it without an ablation; there is no critic either.
+@@ 52
+Yu, Zhang, Zhu, Yuan, Zuo et al. (ByteDance Seed, Tsinghua AIR). DAPO: An Open-Source LLM Reinforcement Learning System at Scale. 2025. <a href="https://arxiv.org/abs/2503.14476">arXiv 2503.14476</a> · <a href="https://arxiv.org/html/2503.14476">full text</a>
+@@ 53
+DeepSeek-AI. DeepSeek-R1. 2025. <a href="https://arxiv.org/abs/2501.12948">arXiv 2501.12948</a>
+@@ 54
+Yue et al. VAPO: Efficient and Reliable Reinforcement Learning for Advanced Reasoning Tasks. 2025. <a href="https://arxiv.org/abs/2504.05118">arXiv 2504.05118</a>
+@@ 55
+Khatri, Madaan et al. The Art of Scaling Reinforcement Learning Compute for LLMs. 2025. <a href="https://arxiv.org/abs/2510.13786">arXiv 2510.13786</a>

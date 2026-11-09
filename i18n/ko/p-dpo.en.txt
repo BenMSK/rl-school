@@ -1,0 +1,96 @@
+@@ 1
+<span class="eyebrow">2023 · Rafailov et al. · Stanford (NeurIPS 2023)</span>
+@@ 2
+DPO: Direct Preference Optimization, your language model is secretly a reward model
+@@ 3
+The RLHF objective has a closed-form optimum, and substituting it into the preference loss gives a plain classification loss on the policy, with no reward model and no sampling, that matched or beat PPO-RLHF on sentiment control, summarisation and dialogue at up to 6B parameters. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a>
+@@ 4
+Taught in <a href="#d12">Day 12</a> · Read time of the original: ~40 min
+@@ 5
+Because the best KL-regularised policy for any reward can be written as the reference policy times exp(reward/β), you can run the equation backwards, read the reward off the policy, and train the policy directly to rank the human-preferred answer above the rejected one. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a>
+@@ 6
+In <a href="#p-instructgpt">InstructGPT</a> you first build a robot judge that copies the real judge, then practise against the robot. DPO skips the robot. It reads the judge's old scorecards ("this answer beat that one") and nudges you straight toward the winners and away from the losers, a little harder on the pairs you currently have backwards.
+@@ 7
+RLHF with PPO is expensive and fiddly. Four copies of a large model sit in memory (policy, value model, reference, reward model), the loop needs fresh samples from the policy at every step, and PPO is sensitive to hyperparameters. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a> The paper's abstract calls the standard pipeline "complex and often unstable". <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a> Most of that machinery exists only to turn a dataset of pairwise preferences into a policy.
+@@ 8
+Start from the RLHF objective (Eq. 3): maximise expected reward minus β times the KL divergence from the reference π<sub>ref</sub>. Its optimum is known in closed form (Eq. 4):
+@@ 9
+π<sub>r</sub>(y|x) = (1/Z(x)) · π<sub>ref</sub>(y|x) · exp( r(x,y) / β )
+@@ 10
+Z(x) sums over every possible response, so it cannot be computed. Invert it (Eq. 5):
+@@ 11
+r(x,y) = β·log( π<sub>r</sub>(y|x) / π<sub>ref</sub>(y|x) ) + β·log Z(x)
+@@ 12
+Plug this into the Bradley–Terry preference model. Both answers in a pair share the prompt x, so they share Z(x), and it <strong>cancels</strong> in the difference r(x,y<sub>w</sub>) − r(x,y<sub>l</sub>). The reward model has vanished; what is left is a loss on the policy. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a>
+@@ 13
+<strong>Data.</strong> A fixed dataset of (prompt x, preferred y<sub>w</sub>, rejected y<sub>l</sub>) triples, usually produced by sampling from an SFT model and asking humans to choose. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a>
+@@ 14
+<strong>Two models.</strong> The trainable policy π<sub>θ</sub>, initialised from the SFT model, and a frozen copy π<sub>ref</sub>.
+@@ 15
+<strong>Loss</strong> (Eq. 7), minimised by ordinary gradient descent:
+@@ 16
+L<sub>DPO</sub>(π<sub>θ</sub>; π<sub>ref</sub>) = −E<sub>(x,y<sub>w</sub>,y<sub>l</sub>)~D</sub>[ log σ( β·log π<sub>θ</sub>(y<sub>w</sub>|x)/π<sub>ref</sub>(y<sub>w</sub>|x) − β·log π<sub>θ</sub>(y<sub>l</sub>|x)/π<sub>ref</sub>(y<sub>l</sub>|x) ) ]
+@@ 17
+<strong>Read the gradient.</strong> Each β·log(π<sub>θ</sub>/π<sub>ref</sub>) is an <strong>implicit reward</strong> r̂<sub>θ</sub>. The gradient raises log π<sub>θ</sub>(y<sub>w</sub>|x), lowers log π<sub>θ</sub>(y<sub>l</sub>|x), and weights the pair by σ(r̂<sub>θ</sub>(x,y<sub>l</sub>) − r̂<sub>θ</sub>(x,y<sub>w</sub>)): how wrongly the implicit reward currently ranks it. The paper notes an unweighted version degenerates. <a class="src" href="https://arxiv.org/html/2305.18290v3">Rafailov 2023</a>
+@@ 18
+<strong>Check by hand.</strong> β = 0.1, winner log-ratio +0.5, loser log-ratio −0.3: argument 0.1·0.8 = 0.08, σ(0.08) = 0.520, loss 0.654. Far from zero, so DPO keeps pushing until the margin is large. <a class="src" href="https://arxiv.org/html/2305.18290v3">Rafailov 2023</a>
+@@ 19 attr
+Left: RLHF pipeline with preference data, reward model, sampling and RL. Right: DPO pipeline with preference data and a single maximum-likelihood step on the policy
+@@ 20
+<a class="src" href="https://arxiv.org/abs/2305.18290">Figure 1, Rafailov 2023</a> Left, the RLHF loop: fit a reward model, then sample and run RL. Right, DPO: the same preference data, one classification-style loss, no sampling.
+@@ 21
+Three tasks. Controlled sentiment on IMDb with GPT-2-large: DPO reaches a strictly better reward-vs-KL frontier than PPO, even PPO given the ground-truth reward. Summarisation on Reddit TL;DR: about 61% win rate against human reference summaries at temperature 0, versus about 57% for PPO at its best temperature, judged by GPT-4. Single-turn dialogue on Anthropic HH with Pythia-2.8B: the only method to beat the preferred completions in the dataset. The paper did not meaningfully tune β for DPO and evaluates models "up to 6B parameters". <a class="src" href="https://arxiv.org/html/2305.18290v3">Rafailov 2023</a>
+@@ 22 attr
+Left: expected reward against KL to the reference policy for DPO, PPO and baselines on sentiment; right: TL;DR win rate versus sampling temperature for DPO, PPO, SFT and others
+@@ 23
+<a class="src" href="https://arxiv.org/abs/2305.18290">Figure 2, Rafailov 2023</a> Left: for a given KL budget DPO reaches higher reward than PPO. Right: TL;DR win rate against human summaries; DPO stays above PPO across sampling temperatures.
+@@ 24
+DPO made preference tuning cheap enough for anyone with two copies of a model and a preference file, and became the default alignment step in open-weight releases through 2023–24. It also sharpened the vocabulary: "RLHF" is a KL-regularised objective, and DPO showed that solving it does not require RL. The counter-move came within a year: on-policy methods that do sample, such as RLOO (February 2024), beat DPO on TL;DR 77.9 vs 66.6 win rate with k = 4 samples. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> And the 2024–25 reasoning wave needed a verifier's 0/1 on fresh samples, which DPO cannot use (<a href="#p-deepseek-r1">the DeepSeek-R1 review</a>).
+@@ 25
+Section 7 lists them: how DPO policies generalise out of distribution compared with an explicit reward model "needs more study"; whether the late-training decline in Figure 3 is reward over-optimisation; whether it works "orders of magnitude" beyond 6B; and that GPT-4 win rates depend on the judging prompt. <a class="src" href="https://arxiv.org/html/2305.18290v3">Rafailov 2023</a> The structural limit is that DPO is <strong>off-policy</strong>: it only ever sees the pairs in the file, so it cannot explore, cannot improve on its data, and cannot use a programmatic reward (<a href="#d12">Day 12</a>).
+@@ 26
+Read the abstract and Figure 1, then Section 4 slowly (Eqs. 3–7 and the gradient paragraph); that is the whole paper. Look at Figure 2 and Section 6.1–6.2, then Section 7. Skip Section 5 and Appendix A unless you want the proof that the reparameterisation loses nothing. About 30 minutes.
+@@ 27
+Q1. Why does the intractable normaliser Z(x) not matter in DPO?
+@@ 28
+It is approximated by sampling
+@@ 29
+It equals 1 for language models
+@@ 30
+Both answers in a pair share the prompt, so it cancels in the difference
+@@ 31
+The reference model computes it
+@@ 32
+Z(x) depends only on x; the Bradley–Terry loss uses r(x,y<sub>w</sub>) − r(x,y<sub>l</sub>), so it drops out.
+@@ 33
+Q2. How many model copies does DPO need in memory?
+@@ 34
+Two: policy and frozen reference
+@@ 35
+One: just the policy
+@@ 36
+Three: policy, reference, reward model
+@@ 37
+Four, like PPO-RLHF
+@@ 38
+No reward model and no value model; only π<sub>θ</sub> and π<sub>ref</sub>.
+@@ 39
+Q3. Which statement about DPO is true?
+@@ 40
+It samples new responses during training
+@@ 41
+It learns only from pairs already in the dataset
+@@ 42
+It can use a unit-test verifier as reward
+@@ 43
+It was tested on models above 70B
+@@ 44
+DPO is off-policy and offline; experiments stop at 6B.
+@@ 45
+Rafailov, Sharma, Mitchell, Ermon, Manning, Finn. Direct Preference Optimization: Your Language Model is Secretly a Reward Model. 2023 (v3 July 2024). <a href="https://arxiv.org/abs/2305.18290">arXiv 2305.18290</a> · <a href="https://arxiv.org/html/2305.18290v3">full text</a>
+@@ 46
+Ouyang et al. Training language models to follow instructions with human feedback. 2022. <a href="https://arxiv.org/abs/2203.02155">arXiv 2203.02155</a>
+@@ 47
+Ahmadian et al. Back to Basics: Revisiting REINFORCE-Style Optimization for Learning from Human Feedback in LLMs (RLOO). 2024. <a href="https://arxiv.org/abs/2402.14740">arXiv 2402.14740</a>
+@@ 48
+DeepSeek-AI. DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning. 2025. <a href="https://arxiv.org/abs/2501.12948">arXiv 2501.12948</a>

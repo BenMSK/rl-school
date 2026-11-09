@@ -1,0 +1,96 @@
+@@ 1
+<span class="eyebrow">2021 · Chen, Lu et al. · arXiv 2106.01345 (Berkeley / Facebook AI / Google)</span>
+@@ 2
+Decision Transformer: RL via sequence modelling
+@@ 3
+A causal GPT trained to predict actions given the return it should achieve: no value function, no policy gradient, yet 74.7 average on D4RL to CQL's 63.9 and 94.6% on Key-to-Door where CQL reached 13.3%.
+@@ 4
+Taught in <a href="#d10">Day 10</a> · Read time of the original: ~35 min
+@@ 5
+Decision Transformer turns offline RL into supervised sequence modelling: feed a Transformer the trajectory as (return-to-go, state, action) tokens, train it to predict the action, and at test time ask for a high return and let it autocomplete the actions that would earn it.
+@@ 6
+Your phone's autocomplete has read millions of game recordings where every move is labelled with "how many points were still to come". Now you type "this game ends with 1,000 points, the board looks like this, next move is…" and it fills in the move. It never learned what "good" means; it learned what players who went on to score 1,000 did next.
+@@ 7
+Offline RL methods of 2020 fight extrapolation error with conservatism or constraints and inherit the machinery of temporal-difference learning: bootstrapped targets, target networks, instability (<a href="#p-cql">the CQL review</a>). <a class="src" href="https://arxiv.org/abs/2006.04779">Kumar 2020</a> GPT-style Transformers, meanwhile, were scaling smoothly on language. Can the supervised recipe replace TD learning when the data is fixed?
+@@ 8
+Condition on the outcome you want. Replace rewards with the <strong>return-to-go</strong> R̂<sub>t</sub> = Σ<sub>t'≥t</sub> r<sub>t'</sub>, the reward still to come, and model the sequence (R̂<sub>1</sub>, s<sub>1</sub>, a<sub>1</sub>, R̂<sub>2</sub>, s<sub>2</sub>, a<sub>2</sub>, …) with a causally masked Transformer. The abstract puts it directly: "by conditioning an autoregressive model on the desired return (reward), past states, and actions, our Decision Transformer model can generate future actions that achieve the desired return". <a class="src" href="https://arxiv.org/abs/2106.01345">Chen 2021</a>
+@@ 9
+<strong>Tokens.</strong> Each timestep contributes three tokens, return-to-go, state and action, so the last K timesteps give 3K tokens. Each modality has its own linear embedding (a convolutional encoder for images) and a learned <em>per-timestep</em> embedding is added to all three tokens of a step. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 10
+<strong>Model and loss.</strong> A GPT with a causal mask; the output at the state token predicts the action, with mean-squared error for continuous actions or cross-entropy for discrete ones. Predicting states or returns did not improve performance. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 11
+R̂<sub>t</sub> = Σ<sub>t'=t</sub><sup>T</sup> r<sub>t'</sub>;  loss = Σ<sub>t</sub> ‖ a<sub>t</sub> − DT(R̂<sub>≤t</sub>, s<sub>≤t</sub>, a<sub>&lt;t</sub>) ‖²
+@@ 12
+<strong>Rollout.</strong> Set a target return (for example the dataset's best, or more), generate an action, step the environment, subtract the reward received from the target, append the new tokens and repeat until the episode ends. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 13
+<strong>Sizes.</strong> Atari: 6 layers, 8 heads, embedding 128, context K = 30 (50 for Pong). Gym: 3 layers, 1 head, embedding 128, K = 20 (5 for Reacher). <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 14 attr
+Decision Transformer architecture: a row of return-to-go, state and action tokens for several timesteps, each passed through its own linear embedding plus a timestep embedding, into a causal Transformer whose outputs at the state positions predict the next actions
+@@ 15
+<a class="src" href="https://arxiv.org/abs/2106.01345">Figure 1, Chen 2021</a> States, actions and returns are fed into modality-specific linear embeddings and a positional episodic timestep encoding is added; a GPT predicts actions autoregressively under a causal mask.
+@@ 16 attr
+Decision Transformer token stream: for three timesteps, return-to-go, state and action tokens enter a causal Transformer; the output above each state token is the predicted action; at test time the return-to-go is set by the user and decremented by observed rewards
+@@ 17
+Causal Transformer (GPT): each token attends only to earlier tokens
+@@ 18
+Atari: 6 layers, 8 heads, d=128, K=30 · Gym: 3 layers, 1 head, K=20
+@@ 19
+Train: predict aₜ from the output above sₜ (MSE or cross-entropy).
+@@ 20
+Test: set R̂₁ = target return; after each step R̂ₜ₊₁ = R̂ₜ − rₜ; one timestep embedding is shared by its three tokens.
+@@ 21
+Three tokens per timestep; the next action is written above each state token. Nothing here estimates a value: the return is an input the user chooses.
+@@ 22
+On Atari with 1% of the DQN-replay data (gamer-normalised), DT beat CQL on Breakout (267.5 vs 211.1) and Seaquest (2.5 vs 1.7), lost on Qbert (15.4 vs 104.2) and roughly tied on Pong (106.1 vs 111.9). <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> On D4RL gym it averaged 74.7 to CQL's 63.9 without Reacher and 69.2 to 54.2 over all settings. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> On Key-to-Door, a task that needs credit for an early pickup to reach a late reward, DT succeeded 71.8% of the time with 1K random trajectories and 94.6% with 10K, against 13.1% and 13.3% for CQL. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> Context matters: with K = 1, Breakout fell from 267.5 to 73.9 and Pong from 106.1 to 2.5. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> Figure 4 shows achieved return tracking the requested return, and on Seaquest the model could be asked for more than the dataset's best and sometimes delivered it. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a>
+@@ 23
+DT and the Trajectory Transformer, posted one day apart in June 2021, made "RL as sequence modelling" a research programme and gave offline RL a method that scales the way language models do. <a class="src" href="https://arxiv.org/abs/2106.02039">Janner 2021</a> The habit of writing actions as tokens in a Transformer stream is now the default in robot foundation models: RT-2 (July 2023) emits actions as 8 integer tokens in the same vocabulary as text. <a class="src" href="https://arxiv.org/abs/2307.15818">Brohan 2023</a> In <a href="#d10">Day 10</a> DT is the counterpoint to CQL: outcome conditioning instead of value estimation.
+@@ 24
+There is no value function, so DT cannot in general stitch together sub-trajectories that never co-occurred; in the paper's shortest-path example only 15.8% of generated paths were stitched from suboptimal segments, and the Qbert result shows TD methods winning when the data is poor. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> The target return is a knob the user must set, and asking for the impossible can produce arbitrary behaviour. The authors flag stochastic environments as a weakness (future work on return distributions) and warn that "reward design by nefarious actors can potentially generate unintended behaviors". <a class="src" href="https://ar5iv.labs.arxiv.org/html/2106.01345">Chen 2021</a> Later work found IQL and other TD methods ahead on the stitching-heavy AntMaze tasks. <a class="src" href="https://arxiv.org/abs/2110.06169">Kostrikov 2021</a>
+@@ 25
+Figure 1 and Section 3 (one page, with pseudocode) are the whole method. Then Tables 1–2 and Figure 4, and the Section 5 discussions: is it just behaviour cloning, long-term credit assignment, context length. Skip Section 6. About 35 minutes.
+@@ 26
+Q1. What are the three tokens per timestep in a Decision Transformer?
+@@ 27
+State, action, reward
+@@ 28
+State, action, value estimate
+@@ 29
+Return-to-go, state, action
+@@ 30
+Observation, advantage, action
+@@ 31
+Return-to-go (the reward still to come), state and action; no values or advantages are ever estimated.
+@@ 32
+Q2. On Key-to-Door with 10K trajectories, DT vs CQL success rates were:
+@@ 33
+94.6% vs 13.3%
+@@ 34
+71.8% vs 13.1%
+@@ 35
+74.7 vs 63.9
+@@ 36
+267.5 vs 211.1
+@@ 37
+94.6% vs 13.3% at 10K; 71.8% vs 13.1% at 1K. The other pairs are D4RL averages and Breakout scores.
+@@ 38
+Q3. "Decision Transformer learns a value function implicitly." Which statement is accurate?
+@@ 39
+Yes: the return-to-go head is a value estimate
+@@ 40
+No: return-to-go is an input chosen by the user, not a prediction, which is why stitching is unreliable
+@@ 41
+Yes: it uses TD targets internally
+@@ 42
+No: it does not use returns at all
+@@ 43
+DT conditions on the desired return; predicting returns was tried and did not help. Without a learned value, combining never-seen fragments is not guaranteed.
+@@ 44
+Chen, Lu, Rajeswaran, Lee, Grover, Laskin, Abbeel, Srinivas, Mordatch. Decision Transformer: Reinforcement Learning via Sequence Modeling. Jun 2021. <a href="https://arxiv.org/abs/2106.01345">arXiv 2106.01345</a>
+@@ 45
+Janner, Li, Levine. Offline RL as One Big Sequence Modeling Problem (Trajectory Transformer). 2021. <a href="https://arxiv.org/abs/2106.02039">arXiv 2106.02039</a>
+@@ 46
+Kumar, Zhou, Tucker, Levine. Conservative Q-Learning for Offline RL. 2020. <a href="https://arxiv.org/abs/2006.04779">arXiv 2006.04779</a>
+@@ 47
+Kostrikov, Nair, Levine. Offline RL with Implicit Q-Learning. 2021. <a href="https://arxiv.org/abs/2110.06169">arXiv 2110.06169</a>
+@@ 48
+Brohan et al. RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control. 2023. <a href="https://arxiv.org/abs/2307.15818">arXiv 2307.15818</a>

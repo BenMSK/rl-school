@@ -1,0 +1,450 @@
+@@ 1
+<span class="eyebrow">2주차 · Day 12</span>
+@@ 2
+언어 모델과 agent를 위한 RL: RLHF → RLVR → agentic RL
+@@ 3
+오늘 레슨을 마치면 reward model이 어떻게 학습되는지 설명할 수 있고, RLHF-PPO, DPO, GRPO의 objective를 적고 각각이 무엇을 포기하는지 말할 수 있습니다. DeepSeek-R1이 0/1 reward만으로 추론을 배운 과정과 2025–26년의 후속 연구들이 advantage를 바꾼 이유를 설명하고, RL compute의 scaling curve를 읽고, multi-turn tool-use episode를 RL 문제로 설정할 수 있습니다.
+@@ 4
+약 90분 · Day 8 필요
+@@ 5
+언어 모델은 이미 policy입니다. next-token distribution이 바로 그 policy입니다. 오늘 내용은 전부 하나의 레시피를 세 번 적용한 것입니다. 응답을 sampling하고, 점수를 매기고(사람의 선호를 흉내 낸 모델로, verifier로, 또는 과제의 결과로), baseline을 이긴 응답 쪽으로 확률을 밀어 줍니다. 단, 점수가 계속 의미를 갖도록 시작 모델에서 너무 멀어지지 않게 합니다.
+@@ 6
+1. MDP로 본 언어
+@@ 7
+<a href="#d8">Day 8</a>의 PPO를 가져와 로봇 자리에 Transformer를 넣어 봅시다. <strong>state</strong>는 prompt에 지금까지 생성한 모든 token을 붙인 것입니다. <strong>action</strong>은 다음 token입니다. transition은 그 token을 뒤에 붙이는 일입니다. <strong>reward</strong>는 응답이 끝날 때 한 번만 주어지고 그 밖에서는 모두 0입니다. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> (<a href="https://benmsk.github.io/llm-school/#d8">LLM School Day 8</a>에서 같은 이야기를 LLM 쪽에서 다룹니다.)
+@@ 8
+이렇게 적어 놓고 보면 고약한 RL 문제입니다. discrete action이 50,000개에서 150,000개, horizon은 최대 10,000 token, 그리고 trace 전체에 sparse한 숫자 하나뿐입니다. 1주차에서 이 조합은 "학습이 안 된다"는 뜻이었습니다.
+@@ 9
+이 문제를 살리는 것은 출발점입니다. SFT를 마친 Llama 모델은 확률의 약 60%를 top token 하나에, 90% 이상을 top 16개에 두므로 gradient 분산이 낮습니다. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> reward가 끝에만 떨어지기 때문에 <em>completion 전체</em>를 action 하나로 취급할 수도 있습니다. 그렇게 해도 token 단위 모델링만큼 잘 작동합니다. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a>
+@@ 10
+세 시대, 하나의 레시피, 세 명의 심판. <strong>RLHF</strong>(2017–2023): 심판은 사람의 취향을 흉내 내도록 학습한 모델입니다. <strong>RLVR</strong>, 즉 RL with verifiable rewards(2024–): 심판은 프로그램, 곧 수학책 뒤에 실린 정답지입니다. <strong>Agentic RL</strong>(2025–): 심판은 세상입니다. 여러 turn에 걸쳐 tool을 쓰는 episode가 목표에 도달했는지를 봅니다. 시대가 바뀔 때마다 속일 수 있는 심판이 더 속이기 어려운 심판으로 교체되었습니다.
+@@ 11
+=
+@@ 12
+사람의 쌍별 비교에서 reward를 학습하는 방법은 2017년에 나왔습니다. <a class="src" href="https://arxiv.org/abs/1706.03741">Christiano 2017</a> InstructGPT(2022년 3월)는 이를 GPT-3에 세 단계로 적용했습니다. 먼저 labeler가 작성한 demonstration 약 13k개로 SFT를 합니다. 다음은 <strong>reward model</strong>(보상 모델)입니다. 약 33k개의 prompt에 대해 labeler가 sampling된 출력 K = 4~9개의 순위를 매기고, 6B 모델이 scalar r<sub>θ</sub>(x, y)를 학습합니다(policy가 175B일 때도 6B입니다). 마지막으로 약 31k개의 prompt에서 SFT 모델에 대한 KL penalty를 붙여 PPO를 돌립니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 13
+reward model은 <strong>Bradley–Terry loss</strong>로 학습합니다. 사람이 y<sub>l</sub>보다 y<sub>w</sub>를 선호했을 확률을 점수 차이의 sigmoid로 두고, 그 음의 로그를 loss로 씁니다.
+@@ 14
+=
+@@ 15
+1/C(K,2)는 K개의 순위에서 나오는 쌍의 수로 나누는 항이어서, 모든 prompt가 같은 비중을 갖습니다. 손으로 계산해 봅시다. 점수가 2.0과 0.5이면 σ(1.5) = 0.818이고 loss는 −ln 0.818 = 0.201입니다. 순서가 뒤집히면 σ(−1.5) = 0.182이고 loss는 1.70입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a> RL objective(PPO-ptx)는 다음과 같습니다.
+@@ 16
+=
+@@ 17
+첫 항은 reward에서 <strong>KL penalty</strong>를 뺀 것입니다. 이 penalty는 policy를 고정된 SFT 모델 쪽으로 당기며, 그 가중치가 <strong>β</strong>입니다. β가 클수록 reward hacking은 줄지만 개선 폭도 줄어듭니다. γ 항은 "alignment tax"를 막기 위해 pretraining loss를 섞습니다. 일반 PPO는 γ = 0입니다. <a class="src" href="https://ar5iv.labs.arxiv.org/html/2203.02155">Ouyang 2022</a>
+@@ 18
+신경망 수를 세어 봅시다. <strong>policy</strong>(학습), 고정된 <strong>reference</strong>, 고정된 <strong>reward model</strong>, 그리고 PPO의 <strong>value model</strong>(학습)입니다. 큰 모델이 네 벌이고, 그중 둘은 optimizer state까지 가집니다. OpenRLHF는 "Actor, Reward, Reference, Critic 모델을 서로 다른 GPU에" 둡니다. <a class="src" href="https://github.com/OpenRLHF/OpenRLHF">OpenRLHF 2026</a> 그렇게 해서 얻은 결과는 이렇습니다. "1.3B 파라미터 InstructGPT 모델의 출력이, 파라미터가 100배 적은데도 175B GPT-3의 출력보다 선호된다". <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> <a href="#p-instructgpt">InstructGPT 논문 리뷰</a>를 참고하세요.
+@@ 19
+직접 해 보기: RLHF 한 사이클을 한 단계씩 넘겨 보세요. 단계마다 일하고 있는 모델에 불이 들어오고 해당 숫자가 표시됩니다.
+@@ 20
+눈여겨볼 점: reward model은 RL을 시작하기 전에 한 번만 학습됩니다. 그리고 RL 도중 token마다 주어지는 신호는 KL penalty뿐입니다. reward는 마지막 token에 떨어지고, value model이 그것을 앞쪽으로 퍼뜨립니다.
+@@ 21
+영어 철자 맞히기 대회의 심판을 떠올려 보세요. 이 심판은 정답을 알려 주지는 못하지만, 두 번의 시도 중 어느 쪽이 더 낫게 들렸는지는 언제나 말해 줄 수 있어요. 먼저 심판의 취향을 그대로 따라 하는 로봇을 만들어요. 그다음 그 로봇을 상대로 수천 번 연습하면서 로봇이 좋아하는 걸 더 많이 해요. 규칙이 하나 있어요. 실력이 느는 건 괜찮지만, 하룻밤 사이에 완전히 다른 아이가 되어서는 안 돼요. 이 규칙이 바로 KL 목줄이에요.
+@@ 22
+3. DPO: reward model 건너뛰기
+@@ 23
+<strong>Direct Preference Optimization</strong>(2023년 5월)은 같은 objective, 즉 max<sub>π</sub> E[r(x,y)] − β·KL(π ‖ π<sub>ref</sub>)에서 출발합니다. 이 objective의 optimum에는 closed form이 있습니다. π<sub>r</sub>(y|x) = π<sub>ref</sub>(y|x)·exp(r(x,y)/β) / Z(x)이고, 여기서 Z(x)는 가능한 모든 응답에 대한 합이라 계산할 수 없습니다. 이 식을 거꾸로 읽으면 r = β·log(π<sub>r</sub>/π<sub>ref</sub>) + β·log Z(x)입니다. 이것을 Bradley–Terry loss에 넣습니다. 한 쌍의 두 응답은 prompt가 같으므로 Z(x)도 같고, 그래서 Z(x)는 <strong>상쇄</strong>됩니다. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a>
+@@ 24
+=
+@@ 25
+각각의 β·log(π<sub>θ</sub>/π<sub>ref</sub>)가 <strong>implicit reward</strong>(암묵적 reward)입니다. "your language model is secretly a reward model"(당신의 언어 모델은 알고 보면 reward model이다)이라는 말 그대로입니다. β = 0.1이고 승자의 log-ratio가 +0.5, 패자가 −0.3이면 sigmoid에 들어가는 값은 0.08, σ(0.08) = 0.520, loss는 0.654입니다. DPO는 margin이 커질 때까지 계속 밀어냅니다. <a class="src" href="https://arxiv.org/html/2305.18290v3">Rafailov 2023</a> 모델은 넷이 아니라 둘이고, sampling이 없으며, 감성 생성·요약·대화에서 PPO-RLHF와 같거나 더 나은 결과를 냅니다. <a class="src" href="https://arxiv.org/abs/2305.18290">Rafailov 2023</a>
+@@ 26
+DPO가 포기한 것은 DPO를 값싸게 만든 바로 그것입니다. DPO는 <strong>off-policy</strong>입니다. 주어진 쌍에서만 배우고 탐색할 수 없습니다. 실험은 6B에서 멈추며, 논문은 일반화와 과최적화를 열린 문제로 남겨 둡니다. <a class="src" href="https://arxiv.org/html/2305.18290v3">Rafailov 2023</a> 2024년에는 on-policy REINFORCE 변형(RLOO)이 TL;DR 요약에서 win rate 77.9 대 66.6으로 DPO를 이겼습니다. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> 그리고 DPO로는 다음 절의 내용을 할 수 없습니다. verifier는 쌍이 아니라 새로 뽑은 sample 하나에 0/1을 주기 때문입니다. <a href="#p-dpo">DPO 논문 리뷰</a>를 참고하세요.
+@@ 27
+4. RLVR과 reasoning model
+@@ 28
+OpenAI의 o1(2024년 9월)은 "chain of thought로 추론하도록 대규모 강화학습으로 학습"되었고, system card가 말해 주는 것은 그것이 전부입니다. <a class="src" href="https://arxiv.org/abs/2412.16720">OpenAI 2024</a> 레시피는 2025년 1월 DeepSeek-R1과 함께 공개되었습니다(<a href="https://benmsk.github.io/llm-school/#d9">LLM School Day 9</a>에서 reasoning model을 사용자 관점에서 다룹니다). <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a>
+@@ 29
+<strong>DeepSeek-R1-Zero</strong>는 DeepSeek-V3 base model에 순수하게 RL만 적용한 것입니다. SFT도, 사람이 쓴 reasoning trace도 없습니다. 알고리즘은 <strong>GRPO</strong>(Group Relative Policy Optimization)로, 2024년 2월 DeepSeekMath에서 메모리를 아끼는 "PPO의 변형"으로 소개되었습니다. <a class="src" href="https://arxiv.org/abs/2402.03300">Shao 2024</a> 질문 q마다 old policy에서 출력 G개를 sampling해 각각 점수를 매기고, 그 그룹 자체의 평균과 표준편차를 baseline으로 씁니다.
+@@ 30
+=
+@@ 31
+=
+@@ 32
+=
+@@ 33
+clip된 ratio는 PPO의 것 그대로입니다. 새로운 것은 A<sub>i</sub>입니다. <strong>group-relative advantage</strong>가 value model을 대체합니다. 코드에서는 ratio를 token마다 적용하고 응답마다 1/|o<sub>i</sub>|로 평균합니다(5절). R1-Zero는 G = 16, β = 0.001을 썼습니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> reward는 <strong>규칙</strong>입니다. 정확도(box 안의 답이 일치하거나 코드가 테스트를 통과)에 형식(추론이 <code>&lt;think&gt;…&lt;/think&gt;</code> 태그 안에 있는지)을 더합니다. 신경망 기반 process reward model도 시도했지만 버렸습니다. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2026</a>
+@@ 34
+직접 해 보기: "17 × 23은 얼마인가요?"(정답 391)에 대한 답 네 개입니다. 정답 여부와 형식을 켜고 끄고, G를 바꾸면서 advantage가 어떻게 변하는지 보세요.
+@@ 35
+눈여겨볼 점: reward [2, 1, 1, 0]은 평균 1.0, 모집단 std 0.7071이므로 GRPO는 [+1.414, 0, 0, −1.414]를 줍니다. 답 2와 답 3은 하나는 맞고 하나는 틀렸는데도 gradient가 0입니다. 이 그룹 안에서는 평균이기 때문입니다. 모든 답을 정답으로 만들면 advantage가 전부 0이 됩니다. 그런 prompt는 아무것도 가르쳐 주지 않으며, DAPO의 dynamic sampling이 버리는 것이 바로 이런 경우입니다. (TRL은 표본 std를 써서 ±1.225가 됩니다. R1 논문은 어느 쪽인지 밝히지 않습니다.) <a class="src" href="https://huggingface.co/docs/trl/grpo_trainer">Hugging Face 2026</a>
+@@ 36
+학습이 진행되면서 R1-Zero의 AIME 2024 pass@1은 15.6%에서 71.0%로 올랐고(64개 sample의 majority vote로는 86.7%), 응답은 꾸준히 길어졌습니다. 더 오래 생각하는 법을 배운 것입니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> Nature 판은 다른 평가 방식으로 77.9%를 보고합니다. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2026</a> <strong>"aha moment"</strong>는 중간 checkpoint 하나가 풀이 도중에 "Wait, wait. Wait. That's an aha moment I can flag here"(잠깐, 잠깐. 잠깐만. 여기가 짚어 둘 만한 aha moment다)라고 쓰고 다시 유도하는 장면입니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 37
+R1-Zero의 trace는 읽기 어려웠고 여러 언어가 섞여 있었습니다. 그래서 공개된 <strong>DeepSeek-R1</strong>은 <strong>cold start</strong>를 추가합니다. 사람이 다듬은 긴 reasoning 예시 수천 개로 SFT를 하고, language-consistency reward를 넣어 reasoning RL을 하고, rejection sampling을 거쳐 약 800k개 sample로 SFT를 한 뒤, helpfulness와 harmlessness를 위한 마지막 RL 단계를 거칩니다. R1은 AIME 2024에서 79.8, MATH-500에서 97.3을 기록합니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> 671B 모델을 갖고 있지 않다면 숫자 하나가 더 중요합니다. R1의 800k sample을 일반 SFT로 Qwen-32B에 distillation하면 AIME 72.6이 나오고, R1-Zero 방식의 RL을 Qwen-32B에 직접 돌리면 47.0이 나옵니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> <a href="#p-deepseek-r1">DeepSeek-R1 논문 리뷰</a>를 참고하세요.
+@@ 38
+5. 2025–26년의 GRPO 수정들
+@@ 39
+<strong>Dr. GRPO</strong>("GRPO Done Right", 2025년 3월)는 두 가지 bias를 짚습니다. 1/|o<sub>i</sub>| normaliser는 길고 틀린 답에 짧은 답보다 작은 token당 penalty를 주므로, policy가 더 긴 오답 쪽으로 흘러갑니다. std로 나누면 한쪽으로 쏠린 그룹에 과도한 가중치가 실립니다. reward [1, 0, 0, 0]은 std가 0.433이고 advantage가 [+1.73, −0.58, −0.58, −0.58]인 반면, [1, 1, 0, 0]은 std가 0.5이고 [+1, +1, −1, −1]을 받습니다. raw reward 차이는 각각 0.75와 0.5인데도 그렇습니다. 해법은 두 항을 모두 없애는 것입니다. normaliser는 상수로 두고, A<sub>i</sub> = r<sub>i</sub> − mean으로 씁니다. 이 최소 레시피는 7B base로 A100 8장에서 하루 정도 만에 AIME 2024 43.3%에 도달합니다. 또한 DeepSeek-V3-Base가 RL을 전혀 하기 전에도 이미 "aha" 식의 self-reflection을 만들어 낸다는 것을 발견했습니다. <a class="src" href="https://arxiv.org/abs/2503.20783">Liu 2025</a>
+@@ 40
+<strong>DAPO</strong>(ByteDance Seed, 2025년 3월)는 네 가지 변경으로 이루어진 공개 레시피이며, 각 변경을 Qwen2.5-32B로 AIME 2024에서 ablation했습니다. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 41
+변경
+@@ 42
+하는 일
+@@ 43
+=
+@@ 44
+=
+@@ 45
+baseline, KL 항 제거
+@@ 46
+=
+@@ 47
+잘린 sample의 loss를 mask
+@@ 48
+=
+@@ 49
+ε<sub>low</sub> = 0.2, ε<sub>high</sub> = 0.28: 드문 token이 커질 수 있게 해 entropy collapse를 막음
+@@ 50
+=
+@@ 51
+상한 16,384 앞의 4,096-token buffer에서 단계적으로 커지는 penalty
+@@ 52
+=
+@@ 53
+sample별이 아니라 batch의 전체 token 수로 정규화
+@@ 54
+=
+@@ 55
+전부 맞거나 전부 틀린 그룹은 버리고, 다시 sampling해 batch를 채움
+@@ 56
+마지막 단계의 효과가 가장 큽니다. 위젯에서 본 zero-variance 경우를 아예 규칙으로 만든 것입니다. DAPO는 G = 16에 KL 항 없이, DeepSeek의 R1-Zero-Qwen-32B가 기록한 47에 비해 절반의 step으로 50에 도달합니다. KL 항을 뺀 이유는 길게 추론하는 policy라면 출발점에서 멀리 벗어나는 것이 당연하기 때문입니다. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a> <a href="#p-dapo">DAPO 논문 리뷰</a>를 참고하세요.
+@@ 57
+<strong>GSPO</strong>(Qwen, 2025년 7월)는 대신 ratio를 고칩니다. "optimization objective의 단위는 reward의 단위와 맞아야 한다"는 것입니다. 그래서 sequence마다 길이로 정규화한 ratio 하나, s<sub>i</sub> = (π<sub>θ</sub>(y<sub>i</sub>|x)/π<sub>old</sub>(y<sub>i</sub>|x))<sup>1/|y<sub>i</sub>|</sup>를 쓰고 한 번만 clip합니다. mixture-of-experts 구조인 Qwen3-30B-A3B에서는 update마다 활성화되는 expert의 약 10%가 바뀌어 token별 ratio가 크게 튑니다. GRPO에는 "Routing Replay"라는 패치가 필요했지만 GSPO에는 필요 없습니다. <a class="src" href="https://arxiv.org/abs/2507.18071">Zheng 2025</a> 사촌이 둘 있습니다. <strong>RLOO</strong>(2024)는 나머지 k−1개 sample의 평균 reward를 baseline으로 쓰며, PPO의 clip이 실제로 걸리는 경우가 전체의 5% 미만임을 확인했습니다. <a class="src" href="https://arxiv.org/abs/2402.14740">Ahmadian 2024</a> <strong>REINFORCE++</strong>(2025)는 PPO의 token별 clip과 KL은 유지하되 advantage를 batch 전체에 대해 정규화합니다. <a class="src" href="https://arxiv.org/abs/2501.03262">Hu 2025</a> 그리고 critic은 죽지 않았습니다. <strong>VAPO</strong>(2025년 4월)는 value model을 쓰는 PPO에 길이 문제와 sparse reward 문제의 수정을 더한 것으로, Qwen 32B base로 AIME 2024에서 60.4에 도달해 DAPO보다 10점 높습니다. <a class="src" href="https://arxiv.org/abs/2504.05118">Yue 2025</a>
+@@ 58
+advantage의 baseline
+@@ 59
+ratio 단위
+@@ 60
+reference에 대한 KL
+@@ 61
+=
+@@ 62
+학습된 value model (GAE)
+@@ 63
+=
+@@ 64
+있음, β
+@@ 65
+=
+@@ 66
+그룹 평균, ÷ 그룹 std; 응답마다 1/|o<sub>i</sub>|
+@@ 67
+있음, β = 0.001
+@@ 68
+=
+@@ 69
+그룹 평균, std 없음; 상수 normaliser
+@@ 70
+없음
+@@ 71
+=
+@@ 72
+그룹 평균, ÷ std; dynamic sampling; batch-token normaliser
+@@ 73
+=
+@@ 74
+=
+@@ 75
+그룹 평균, ÷ std
+@@ 76
+=
+@@ 77
+선택
+@@ 78
+=
+@@ 79
+나머지 k−1개의 평균
+@@ 80
+없음 (REINFORCE)
+@@ 81
+있음
+@@ 82
+=
+@@ 83
+batch 평균, ÷ batch std
+@@ 84
+<strong>"GRPO에는 reference model이 없다."</strong> R1 논문은 β = 0.001을 씁니다. DAPO와 TRL의 기본값(β = 0, reference를 로드하지 않음)은 이를 없앱니다. 둘 다 GRPO라고 불립니다. <a class="src" href="https://huggingface.co/docs/trl/grpo_trainer">Hugging Face 2026</a>
+@@ 85
+<strong>"advantage는 어디서나 (r − mean)/std다."</strong> Dr. GRPO는 std를 빼고, REINFORCE++는 batch 전체로 정규화하며, RLOO는 leave-one-out 평균을 씁니다.
+@@ 86
+<strong>"aha moment는 RL이 만들어 냈다."</strong> 그 어휘는 이미 DeepSeek-V3-Base 안에 있었고, RL은 그 빈도를 높였습니다. <a class="src" href="https://arxiv.org/abs/2503.20783">Liu 2025</a>
+@@ 87
+<strong>"답이 길수록 추론이 더 좋다."</strong> 길이는 잘 알려진 RLHF의 reward hack이자, GRPO의 정규화가 만들어 낸 부산물입니다.
+@@ 88
+6. RL compute를 scaling하면 벌어지는 일
+@@ 89
+pretraining에는 scaling law가 있습니다. 반면 RL post-training에는 2025년 말까지 입에서 입으로 전해지는 경험칙뿐이었습니다. "The Art of Scaling Reinforcement Learning Compute for LLMs"(2025년 10월, 2026년 4월 25일 ICLR 2026 oral)는 8B dense 모델과 Llama-4 Scout에서 400,000 GPU-hour가 넘는 ablation을 돌려 곡선 하나를 fit했습니다. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> <a class="src" href="https://iclr.cc/virtual/2026/oral/10010608">ICLR 2026</a>
+@@ 90
+=
+@@ 91
+R<sub>C</sub>는 compute C를 쓴 뒤의 pass rate, R<sub>0</sub>는 시작값, <strong>A</strong>는 <strong>asymptote</strong>(점근선, 이 레시피가 도달할 수 있는 천장), <strong>B</strong>는 지수(천장에 얼마나 빨리 도달하는가), C<sub>mid</sub>는 절반 지점에 이르는 compute입니다. power law가 아니라 sigmoid를 쓴 이유는 낮은 compute에서도 fit이 안정적이기 때문입니다. 쓸모 있는 발견은 어떤 조절 손잡이가 무엇을 움직이는지입니다. <strong>A를 움직이는 것</strong>: loss 종류(CISPO와 GSPO가 DAPO보다 낫습니다), LM head의 FP32 logit(A가 약 0.52에서 0.61로 올랐습니다), 더 큰 batch, 더 긴 생성 길이, zero-variance filtering. <strong>주로 B를 움직이는 것</strong>: 비동기 생성(PipelineRL 대 PPO-off-policy: 천장은 같고 더 빠릅니다), loss aggregation, advantage 정규화 방식, curriculum. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 92
+<strong>ScaleRL</strong> 레시피는 다음과 같습니다. 여덟 step off-policy로 돌리는 비동기 PipelineRL, CISPO loss, FP32 head, prompt 단위 loss aggregation, batch 단위 advantage 정규화, zero-variance filtering, 과거 pass rate가 ≥ 0.9인 prompt 제외, 그리고 길이를 제어하기 위해 생각을 끝내는 문구를 강제로 넣는 것입니다. 100,000 GPU-hour 규모의 실행으로 이를 검증했습니다. 초반 구간에 fit한 곡선이 이후의 점들을 예측했습니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a> 실전에서 얻을 교훈은 먼저 작은 실행들로 A를 찾으라는 것입니다. compute를 아무리 쏟아도 레시피를 그 천장 너머로 올릴 수는 없기 때문입니다. <a href="#p-scalerl">ScaleRL 논문 리뷰</a>를 참고하세요.
+@@ 93
+7. RL은 능력을 더하는가, 다듬는가? 그리고 무엇이 hack당하는가
+@@ 94
+Yue et al.(2025년 4월)은 base 모델과 RLVR 모델을 <strong>pass@k</strong>, 즉 k개 sample 중 적어도 하나가 맞을 확률로 k = 1,024까지 비교했습니다. k = 1에서는 RLVR이 이기고, k가 크면 base가 이깁니다. AIME 2024의 k = 1,024에서 base만 푼 문제가 13.3%, RL 모델만 푼 문제가 0.0%였고, RLVR 알고리즘 여섯 개가 모두 비슷하게 행동했습니다. 이들의 해석은 이렇습니다. RLVR은 base가 이미 할 수 있던 것의 sampling efficiency를 높이고, 새로운 추론 패턴을 더하는 것은 더 강한 teacher로부터의 distillation입니다. <a class="src" href="https://arxiv.org/abs/2504.13837">Yue 2025</a> Ni et al.(2025년 10월)은 이론을 제공합니다. GRPO는 "base model의 분포에 묶인 보수적인 reweighting 방식"이며, base가 확률 0을 주는 해는 찾을 수 없습니다. <a class="src" href="https://arxiv.org/abs/2510.15990">Ni 2025</a>
+@@ 95
+반론은 <strong>ProRL</strong>(NVIDIA, 2025년 5월)입니다. verifiable한 문제 136k개에서 2,000 RL step 넘게, KL penalty를 두고 reference policy와 optimizer를 주기적으로 reset하며 학습하자, 1.5B 모델이 모든 k에서 pass@k 기준으로 출발점을 넘어섰습니다. pass@1 향상은 수학의 +14.7%에서 논리 퍼즐의 +54.8%에 이르렀습니다. <a class="src" href="https://arxiv.org/abs/2505.24864">Liu 2025</a> 단서가 있습니다. 시작 모델 자체가 distillation으로 만든 모델이었고, 가장 큰 향상은 그 모델의 학습 분포에서 먼 과제에서 나왔습니다. 2026년 10월 기준으로 정직하게 요약하면 이렇습니다. 짧은 RL은 다듬습니다. reset을 곁들인 길고 다양한 RL이 모델이 할 수 있는 일을 정말로 넓히는지는 아직 논쟁 중입니다.
+@@ 96
+심판이 무엇이든 policy는 그 심판의 마음에 드는 법을 배웁니다. <strong>Sycophancy</strong>(아첨): 실제 서비스 중인 assistant 다섯 개 모두에서 사용자의 견해에 맞춘 응답이 선호될 가능성이 더 높았고, "사람과 preference model 모두 때로는 올바른 응답보다 설득력 있는 sycophantic 응답을 선호한다". <a class="src" href="https://arxiv.org/abs/2310.13548">Sharma 2023</a> <strong>길이</strong>: RLHF에서 얻는 reward 향상의 대부분은 더 긴 출력에서 나오며, 순전히 길이만으로 만든 reward로도 SFT 대비 개선의 대부분을 되찾을 수 있습니다. <a class="src" href="https://arxiv.org/abs/2310.03716">Singhal 2023</a> RLVR에서는 여기에 format gaming과 verifier 악용이 더해집니다. 2026년 9월 Anthropic의 Opus 5.5 게시글은 회사가 "강화학습에 쓰는 environment를 걸러 내는 방식을 강화하고 있다"고 밝히며, 결함 있는 environment를 misaligned behaviour와 연결했습니다. <a class="src" href="https://www.anthropic.com/news/claude-opus-5-5">Anthropic 2026</a>
+@@ 97
+더 깊이 (선택): process reward 대 outcome reward
+@@ 98
+<strong>outcome reward model</strong>(ORM)은 최종 답에 점수를 매기고, <strong>process reward model</strong>(PRM)은 모든 단계에 점수를 매깁니다. "Let's Verify Step by Step"(2023)은 MATH에서 process supervision이 outcome supervision을 유의미하게 앞선다는 것을 보였습니다. 사람이 단 step label 800k개(PRM800K)를 사용했고, PRM이 안내하는 search가 test subset의 78%를 풀었습니다. <a class="src" href="https://arxiv.org/abs/2305.20050">Lightman 2023</a> DeepSeek-R1은 대규모에서는 정반대라고 보고합니다. 단계는 정의하기도 label을 달기도 어렵고, policy가 PRM을 hack한다는 것입니다. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2026</a> 2025년의 reasoning 흐름은 압도적으로 outcome을 검증하는 방식입니다. 정확한 checker가 없는 영역에 대해 DeepSeek-V4의 보고서는 generative reward model, 즉 판정문을 써 내는 LLM을 듭니다. <a class="src" href="https://arxiv.org/abs/2606.19348">DeepSeek-AI 2026</a>
+@@ 99
+8. Agentic RL: episode가 대화일 때
+@@ 100
+<strong>agent episode</strong>는 tool이 딸린 대화입니다. policy가 token을 내놓고, 그중 일부가 tool call을 이룹니다. environment(sandbox, API, 브라우저, 시뮬레이션된 사용자)가 observation을 돌려주면 그것이 context 뒤에 붙고, policy가 이어서 생성합니다. 마지막에 environment가 목표가 달성되었는지 알려 줍니다. 모든 시스템이 공유하는 세부 사항이 하나 있습니다. <strong>tool 출력과 user turn은 loss에서 mask됩니다</strong>. 이들은 action이 아니라 observation이기 때문입니다. 또한 trainer는 policy가 만든 token을 정확히 그대로 보아야 합니다. verl의 agent loop가 텍스트로 바꿨다가 되돌리는 대신 token 수준에서 생성하는 이유가 여기에 있습니다. <a class="src" href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html">verl 2026</a>
+@@ 101
+reward를 정의하는 것은 벤치마크입니다. <strong>τ-bench</strong>(2024년 6월): 시뮬레이션된 사용자, 도메인 API, 지켜야 할 업무 규정으로 구성되며, 최종 데이터베이스 state가 목표와 일치하면 성공입니다. GPT-4o는 과제의 50% 미만에서 성공했고, k번의 시도가 모두 성공할 확률인 <strong>pass^k</strong>는 retail 도메인의 k = 8에서 25% 아래였습니다. <a class="src" href="https://arxiv.org/abs/2406.12045">Yao 2024</a> <strong>τ²-bench</strong>(2025년 6월)는 사용자에게도 tool을 주어 agent가 사람을 안내해야 하게 만들었고, 그 결과 "성능이 크게 떨어집니다". <a class="src" href="https://arxiv.org/abs/2506.07982">Barres 2025</a> <strong>SWE-RL</strong>(Meta, 2025년 2월)은 오픈소스 소프트웨어 이력으로 학습하며, 실제 patch와의 유사도라는 규칙 기반 reward를 써서 Llama3-70B를 SWE-bench Verified 41.0%까지 끌어올립니다. <a class="src" href="https://arxiv.org/abs/2502.18449">Wei 2025</a> <strong>Agent World Model</strong>(2026년 2월, ICML 2026)은 코드로 구동되고 데이터베이스에 기반한 합성 environment 1,000개를 만듭니다. state를 들여다볼 수 있어 reward를 신뢰할 수 있고, 이 environment들에서만 학습해도 held-out 벤치마크 세 개로 일반화되었습니다. <a class="src" href="https://arxiv.org/abs/2602.10090">Wang 2026</a> <strong>ToolVerse</strong>(2026년 7월)는 실제 MCP 서버 약 400개, tool 약 4,500개를 environment로 바꾸고, tool-dependency graph에서 long-horizon 과제를 생성합니다. <a class="src" href="https://arxiv.org/abs/2607.15660">Zhou 2026</a>
+@@ 102
+아직 풀리지 않은 문제는 <strong>credit assignment</strong>입니다. 20~50 turn, 10,000+ token에 걸쳐 terminal reward는 하나뿐입니다. GRPO는 trajectory의 모든 token에 같은 부호를 주므로, 성공한 episode 안의 잘못된 tool call 하나도 함께 reward를 받습니다. ToolVerse의 답은 turn마다 달라지는 <strong>Turn-Aware Relative Advantage</strong>이고, <a class="src" href="https://arxiv.org/abs/2607.15660">Zhou 2026</a> Agent World Model의 답은 데이터베이스에서 읽어 낸 step별 reward이며, <a class="src" href="https://arxiv.org/abs/2602.10090">Wang 2026</a> VAPO의 답은 value model입니다.
+@@ 103
+직접 해 보기: 여섯 turn짜리 episode를 한 step씩 넘겨 보고, terminal reward를 뒤집어 보고, 그 reward를 turn들에 나눠 주는 세 가지 방법을 비교해 보세요.
+@@ 104
+눈여겨볼 점: "모든 turn에 균등"은 일반 GRPO 그대로입니다. 첫 번째 thought와 최종 답이 똑같은 credit을 받습니다. tool 결과가 회색으로 표시되는 이유는 loss에 절대 들어가지 않기 때문입니다.
+@@ 105
+2026년 10월 25일 기준으로 frontier lab들이 공개적으로 밝힌 내용은 빈약합니다. DeepSeek-V4(2026년 4월 24일 공개)는 도메인 expert들을 "SFT와 GRPO를 쓴 RL로" 학습한 뒤 on-policy distillation으로 하나의 모델로 합칩니다. 이때 student는 teacher들에 대한 reverse KL을 최소화합니다. <a class="src" href="https://arxiv.org/abs/2606.19348">DeepSeek-AI 2026</a> <a class="src" href="https://deepseek.com/en/transparency/">DeepSeek 2026</a> DeepSeek-V3.2(2025년 12월)는 GPT-5와 대등해진 요인으로 "견고한 RL protocol과 post-training compute의 scaling"을 꼽습니다. <a class="src" href="https://huggingface.co/deepseek-ai/DeepSeek-V3.2">DeepSeek 2025</a> Anthropic의 발언은 위에서 본 environment filtering 문장이고, OpenAI의 발언은 여전히 o1 system card뿐입니다. <a class="src" href="https://arxiv.org/abs/2412.16720">OpenAI 2024</a>
+@@ 106 attr
+왼쪽: 모델 네 개로 이루어진 RLHF 파이프라인. prompt가 학습되는 policy로 들어가고, policy의 rollout을 고정된 reward model이 채점하고, KL penalty를 위해 고정된 reference model과 비교하고, 학습되는 value model이 value를 매깁니다. reward와 KL이 PPO update가 되어 policy와 value로 되돌아갑니다. 오른쪽: GRPO. prompt가 policy로 들어가고 policy가 응답 G개를 sampling합니다. 규칙 verifier가 각각 채점하고, 그룹의 mean과 std로 advantage를 구합니다. clipped update가 policy로 돌아가며, reference model에 대한 KL은 선택 사항입니다. value model에는 X 표시가 되어 있습니다.
+@@ 107
+RLHF-PPO: 모델 네 개
+@@ 108
+=
+@@ 109
+=
+@@ 110
+policy π (학습)
+@@ 111
+=
+@@ 112
+=
+@@ 113
+고정, 6B
+@@ 114
+=
+@@ 115
+고정 SFT
+@@ 116
+=
+@@ 117
+학습
+@@ 118
+끝에서 r(x,y)
+@@ 119
+token별 −β·KL
+@@ 120
+=
+@@ 121
+=
+@@ 122
+메모리에 4벌, 2벌은 optimizer state 포함
+@@ 123
+RL 이전: 쌍 (y_w, y_l) → Bradley–Terry loss → RM
+@@ 124
+=
+@@ 125
+sample G = 16개 o_1 … o_G
+@@ 126
+verifier (규칙)
+@@ 127
+정답 일치 + 형식 태그
+@@ 128
+=
+@@ 129
+=
+@@ 130
+β·KL, 선택
+@@ 131
+critic 없음: 그룹이 baseline
+@@ 132
+학습 모델 1벌; β &gt; 0이면 2벌; reward가 모델이면 3벌
+@@ 133
+왼쪽: InstructGPT 방식의 RLHF. 큰 모델이 네 개이고, reward model은 preference 쌍으로 미리 학습해 둔 것입니다. 오른쪽: DeepSeek-R1의 GRPO. G개 sample로 이루어진 그룹이 value model을 대체하고, 규칙이 reward model을 대체합니다.
+@@ 134
+왼쪽 절반, 위에서 아래로: prompt가 학습되는 policy로 들어가고 policy가 rollout을 생성합니다. 세 채점자가 각 rollout을 봅니다. 고정된 reward model은 마지막 token에서 숫자 하나를, 고정된 reference는 KL penalty에 쓸 token별 log-probability를, 학습되는 value model은 token별 value를 돌려줍니다. GAE가 이것들을 advantage로 바꾸고, PPO clipped update가 학습되는 두 모델로 되돌아갑니다. 오른쪽 절반에서는 상자 두 개가 사라집니다. policy가 응답 G = 16개를 sampling하고, 규칙이 각각 채점하고, 그룹의 mean과 std가 advantage를 줍니다. reference는 β &gt; 0일 때만 남으며, DAPO와 TRL의 기본값에서는 남지 않습니다.
+@@ 135 attr
+학습 시스템. 왼쪽: vLLM 또는 SGLang inference worker로 이루어진 rollout pool. agent loop가 tool을 호출하고 observation을 덧붙입니다. token, log-probability, loss mask, reward로 이루어진 trajectory를 queue로 내보냅니다. 오른쪽: FSDP 또는 Megatron을 돌리는 trainer pool이 GRPO, DAPO 또는 CISPO loss를 계산하고 가중치를 update합니다. weight sync over NCCL이라고 적힌 화살표가 새 가중치를 rollout pool로 돌려보냅니다. 두 pool 사이의 staleness 조절값은 rollout이 몇 step까지 오래되어도 되는지를 정합니다.
+@@ 136
+=
+@@ 137
+=
+@@ 138
+=
+@@ 139
+tool: sandbox, API, 가상 user
+@@ 140
+생성 ≈ wall-clock의 80%
+@@ 141
+=
+@@ 142
+=
+@@ 143
+=
+@@ 144
+=
+@@ 145
+=
+@@ 146
+=
+@@ 147
+선택: reference, critic, RM
+@@ 148
+logprob 재계산, clip, step
+@@ 149
+weight sync (NCCL): 새 policy → 모든 rollout worker
+@@ 150
+async: staleness_threshold = rollout이 뒤처져도 되는 update 수 (0 = 동기)
+@@ 151
+verl 방식의 학습 시스템. 생성과 학습은 서로 다른 GPU pool과 서로 다른 엔진에서 돌아가며, update가 끝날 때마다 trainer의 가중치가 모든 rollout worker로 전달됩니다.
+@@ 152
+왼쪽에서 오른쪽으로: inference worker가 생성합니다. agentic한 경우에는 그 위의 agent loop가 tool call을 실행하고, observation을 덧붙이고, 어떤 token이 policy의 것이었는지 기록합니다. trajectory(token, log-probability, loss mask, reward)는 queue로 들어갑니다. trainer pool은 log-probability를 다시 계산하고, advantage를 만들고, clip된 step을 한 번 밟은 뒤 새 가중치를 돌려보냅니다. 동기 방식에서는 두 pool이 번갈아 일하므로 각각 절반의 시간을 놉니다. 비동기 방식에서는 둘이 겹쳐 돌아가고, rollout이 update 몇 번만큼 오래될 수 있으며, ratio ρ와 그 clip(또는 truncated importance weight)이 off-policy update가 어긋나지 않게 잡아 줍니다.
+@@ 153
+생성이 "RLHF 시간의 약 80%를 차지"하므로 엔진이 둘입니다. <a class="src" href="https://github.com/OpenRLHF/OpenRLHF">OpenRLHF 2026</a> verl은 HybridFlow(2024년 9월)를 구현한 것입니다. HybridFlow의 3D-HybridEngine은 추가 복사본 없이 actor를 학습용 레이아웃과 생성용 레이아웃 사이에서 reshard하여 처리량을 1.53×에서 20.57×까지 높입니다. <a class="src" href="https://arxiv.org/abs/2409.19256">Sheng 2024</a> verl의 fully asynchronous 모드는 rollouter와 trainer를 별도의 GPU pool에 두고 staleness_threshold를 둡니다(0은 동기, 약 1은 한 step off-policy). NCCL weight sync는 Qwen3-30B-A3B에서 step당 15.76 s에서 4.38 s로, Qwen3-235B-A22B에서 58.57 s에서 23.70 s로 줄었습니다. end-to-end 속도 향상은 GPU 128개(rollout 64, 학습 64)를 쓴 Qwen2.5-Math-7B에서 2.35×~2.67×, multi-turn tool calling에서 약 1.55×였습니다. <a class="src" href="https://verl.readthedocs.io/en/latest/advance/fully_async.html">verl 2026</a> PipelineRL(2025년 9월)은 생성 도중에 가중치를 update하고, 반쯤 생성된 sequence를 새 policy로 이어 갑니다. H100 128개에서 거의 on-policy를 유지하면서 약 2× 빠르게 학습합니다. <a class="src" href="https://arxiv.org/abs/2509.19128">Piché 2025</a> TRL의 단일 머신용 GRPOTrainer는 기본값이 G = 8, β = 0, DAPO의 token-level loss입니다. <a class="src" href="https://huggingface.co/docs/trl/grpo_trainer">Hugging Face 2026</a>
+@@ 154
+Q1. InstructGPT에서 labeler들은 175B GPT-3의 출력보다 무엇을 더 선호했습니까?
+@@ 155
+6B reward model이 직접 낸 출력
+@@ 156
+γ를 0으로 둔 175B SFT 모델
+@@ 157
+파라미터가 100× 적은, PPO로 학습한 1.3B 모델
+@@ 158
+없음. 선호는 파라미터 수를 따라갔다
+@@ 159
+abstract의 대표 결과입니다. 6B reward model은 응답에 점수를 매길 뿐, 응답을 쓰지는 않습니다.
+@@ 160
+Q2. DPO는 왜 reward model을 뺄 수 있습니까?
+@@ 161
+한 prompt에 대한 두 응답의 Z(x)가 같아서 Bradley–Terry 차이에서 상쇄된다
+@@ 162
+DPO는 새 응답을 sampling해 verifier로 채점한다
+@@ 163
+KL penalty가 없어지므로 reference가 필요 없다
+@@ 164
+6B reward model이 policy의 head에 흡수된다
+@@ 165
+closed-form optimum을 뒤집으면 r = β·log(π/π_ref) + β·log Z(x)가 되고, 공통인 Z(x)가 상쇄됩니다. DPO에는 여전히 reference가 필요하고, sampling은 전혀 하지 않습니다.
+@@ 166
+Q3. 어떤 GRPO 그룹의 점수가 [2, 1, 1, 0]입니다. 1점을 받은 두 답의 advantage는 얼마입니까?
+@@ 167
+맞은 답은 +0.707, 틀린 답은 −0.707
+@@ 168
+각각 +1. 1이 0보다 크므로
+@@ 169
+각각 +1.414
+@@ 170
+0: 그룹 평균과 같으므로 gradient가 없다
+@@ 171
+평균 1.0, std 0.7071, A = [+1.414, 0, 0, −1.414]. advantage는 정답 여부가 아니라 그룹에 대해 상대적입니다.
+@@ 172
+Q4. DAPO의 ablation에서 AIME 2024 점수를 가장 크게 올린 단일 변경은 무엇입니까?
+@@ 173
+=
+@@ 174
+=
+@@ 175
+=
+@@ 176
+KL 항 제거, 30 → 50
+@@ 177
+전부 맞거나 전부 틀린 그룹을 버리자 점수가 42에서 50으로 올랐습니다. KL 제거는 30점짜리 baseline에 이미 포함된 것이지, 따로 측정한 단계가 아닙니다.
+@@ 178
+Q5. "RLVR은 모델에게 새로운 방식의 추론을 가르친다." Yue et al.은 k가 클 때 무엇을 발견했습니까?
+@@ 179
+RL 모델이 base가 푼 것을 모두 풀고 13.3%를 더 풀었다
+@@ 180
+k = 1,024에서 base와 RL 모델이 똑같은 문제 집합을 풀었다
+@@ 181
+AIME 2024 문제의 13.3%는 base만 풀었고, RL 모델만 푼 문제는 0.0%였다
+@@ 182
+distillation한 모델이 모든 k에서 base보다 낮았다
+@@ 183
+k = 1,024에서는 base가 더 많은 문제를 풀었습니다. RLVR은 base가 이미 찾을 수 있던 해에 확률을 집중시켰고, distillation은 모든 k에서 base 위에 머물렀습니다.
+@@ 184
+Q6. agentic RL에서 tool 결과를 loss에서 mask하는 이유는 무엇입니까?
+@@ 185
+policy가 고른 action이 아니라 environment에서 온 observation이기 때문에
+@@ 186
+너무 길어서 token 수의 대부분을 차지하게 되기 때문에
+@@ 187
+항상 옳아서 gradient가 없기 때문에
+@@ 188
+reward model이 JSON을 읽지 못하기 때문에
+@@ 189
+policy 자신의 token만 action입니다. tool 출력으로 학습하면 모델은 environment 안에서 행동하는 법이 아니라 environment를 예측하는 법을 배우게 됩니다.
+@@ 190
+언어는 token action space, 긴 horizon, terminal reward 하나를 가진 MDP입니다. SFT 모델이 이미 강한 policy이기 때문에 다룰 수 있습니다.
+@@ 191
+RLHF = Bradley–Terry loss로 reward model을 학습한 뒤, SFT reference에 β·KL 목줄을 매고 그 reward model을 상대로 PPO를 돌리는 것. 메모리에 모델 네 개. 1.3B가 175B를 이겼습니다.
+@@ 192
+DPO는 Z(x)가 상쇄되므로 reward model을 없애고, GRPO는 그룹 평균이 baseline이므로 value model을 없앱니다. DPO는 탐색할 수 없고, GRPO의 std normaliser와 길이 normaliser는 update에 bias를 넣습니다.
+@@ 193
+규칙 reward가 R1-Zero를 AIME 2024에서 15.6에서 71.0으로 끌어올렸고, DAPO의 네 가지 수정이 30을 50으로 올렸습니다. 작은 모델에서는 distillation이 RL을 72.6 대 47.0으로 이겼습니다.
+@@ 194
+RL compute는 sigmoid를 따릅니다. 어떤 조절 손잡이(FP32 head, loss 종류)는 천장을 높이고, 나머지는 천장에 더 빨리 닿게 할 뿐입니다. 짧은 RL은 다듬습니다. 긴 RL이 능력을 넓히는지는 2026년 10월 기준으로 논쟁 중입니다.
+@@ 195
+Ouyang et al. (OpenAI), Training language models to follow instructions with human feedback, 2022. <a href="https://arxiv.org/abs/2203.02155">arXiv:2203.02155</a> · <a href="https://ar5iv.labs.arxiv.org/html/2203.02155">전문</a>
+@@ 196
+=
+@@ 197
+=
+@@ 198
+=
+@@ 199
+=
+@@ 200
+=
+@@ 201
+DeepSeek-AI, DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via RL, 2025 (v2 2026, Nature 판). <a href="https://arxiv.org/abs/2501.12948">arXiv:2501.12948</a> · <a href="https://arxiv.org/html/2501.12948v1">v1</a> · <a href="https://arxiv.org/html/2501.12948">v2</a>
+@@ 202
+=
+@@ 203
+=
+@@ 204
+=
+@@ 205
+=
+@@ 206
+=
+@@ 207
+=
+@@ 208
+=
+@@ 209
+=
+@@ 210
+=
+@@ 211
+=
+@@ 212
+=
+@@ 213
+=
+@@ 214
+=
+@@ 215
+=
+@@ 216
+=
+@@ 217
+=
+@@ 218
+=
+@@ 219
+=
+@@ 220
+verl 문서: <a href="https://verl.readthedocs.io/en/latest/start/agentic_rl.html">agentic RL</a> · <a href="https://verl.readthedocs.io/en/latest/advance/fully_async.html">fully async trainer</a>
+@@ 221
+=
+@@ 222
+=
+@@ 223
+Hugging Face TRL, GRPOTrainer 문서. <a href="https://huggingface.co/docs/trl/grpo_trainer">huggingface.co/docs/trl/grpo_trainer</a>
+@@ 224
+DeepSeek-AI, DeepSeek-V4 technical report, 2026. <a href="https://arxiv.org/abs/2606.19348">arXiv:2606.19348</a> · <a href="https://deepseek.com/en/transparency/">공개 일정</a> · <a href="https://huggingface.co/deepseek-ai/DeepSeek-V3.2">DeepSeek-V3.2 model card</a>
+@@ 225
+Anthropic, Introducing Claude Opus 5.5, 2026년 9월 22일. <a href="https://www.anthropic.com/news/claude-opus-5-5">anthropic.com</a>

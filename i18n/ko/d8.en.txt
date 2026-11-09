@@ -1,0 +1,345 @@
+@@ 1
+<span class="eyebrow">Week 2 · Day 8</span>
+@@ 2
+Trust regions: TRPO, PPO, and SAC
+@@ 3
+After today you can explain why an unconstrained policy step can wreck training, write down PPO's clipped objective and fill in its worked table, list the implementation details that make PPO work, contrast it with maximum-entropy SAC for continuous control, and pick between them for a given problem.
+@@ 4
+About 90 min · Needs Day 7
+@@ 5
+A policy gradient is only a local direction: the data that produced it were collected by the policy you are about to change. Step too far and the next batch comes from a worse policy, and the loop can collapse. TRPO fixes this with a hard KL constraint and second-order machinery; PPO gets most of the benefit with a one-line clip. For continuous control with expensive samples, a different family (DDPG, TD3, SAC) reuses old data from a replay buffer and, in SAC, pays the agent for staying random.
+@@ 6
+1. Why big policy steps collapse
+@@ 7
+On <a href="#d7">Day 7</a> the update was θ ← θ + α ĝ. Nothing told you how big α could be. In supervised learning a too-large step costs you one bad batch; the data do not care. In on-policy RL the data are the policy's own behaviour. A step that overshoots changes which states the agent visits, the next batch is collected by that worse policy, its advantages are estimated by a critic trained on the old states, and the following step can be worse still. One number from the PPO paper shows the size of the effect: on seven MuJoCo tasks, scored so that 0 is a random policy and 1 is the best result seen, the plain surrogate objective with no clipping or penalty averaged <strong>−0.39</strong>, worse than random, while the same code with clipping at ε = 0.2 averaged <strong>0.82</strong>. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 8
+The TRPO paper gives the theory. Let L<sub>π</sub>(π̃) be the <strong>surrogate objective</strong>: the expected advantage of a new policy π̃ measured on states visited by the old policy π. Its Theorem 1 says the true performance of π̃ is bounded below by
+@@ 9
+η(π̃) ≥ L<sub>π</sub>(π̃) − C · D<sub>KL</sub><sup>max</sup>(π, π̃), &nbsp; C = 4εγ / (1−γ)²
+@@ 10
+where ε is the largest advantage in absolute value. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> Plain words: the surrogate is a good proxy for real improvement only while the new policy stays close to the old one, as measured by KL divergence. Move far and the penalty term swallows any surrogate gain. The region where you may trust the surrogate is the <strong>trust region</strong>.
+@@ 11
+Learning to ride a bike, you lean a little at a time and see what happens. If you lean a lot at once you fall over, and now you are learning from the ground instead of from the bike. PPO is a rule that says "never change what you would do by more than a little bit per practice session". SAC, later today, is a different rule: "you get points for treasure, and also points for trying new paths".
+@@ 12
+2. TRPO: a KL leash, and what it costs
+@@ 13
+<strong>Trust Region Policy Optimization</strong>, submitted in February 2015, turns the bound into an algorithm. With the probability ratio r(θ) = π<sub>θ</sub>(a|s) / π<sub>θ<sub>k</sub></sub>(a|s), the surrogate is L(θ<sub>k</sub>,θ) = E[r(θ) · A<sup>π<sub>θk</sub></sup>(s,a)], and the update is
+@@ 14
+θ<sub>k+1</sub> = argmax<sub>θ</sub> L(θ<sub>k</sub>,θ) &nbsp; subject to &nbsp; D̄<sub>KL</sub>(θ ‖ θ<sub>k</sub>) ≤ δ
+@@ 15
+using the <em>average</em> KL over visited states rather than the theory's per-state maximum, which is impractical, and a hard constraint rather than a penalty because the theoretically justified penalty coefficient gives "very small steps". The paper used δ = 0.01 for all experiments. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a>
+@@ 16
+Solving that constrained problem is where the cost lives. Expand L to first order (gradient g) and the KL to second order (Hessian H, the Fisher information matrix). The solution is the <strong>natural gradient</strong> step θ<sub>k+1</sub> = θ<sub>k</sub> + √(2δ / gᵀH⁻¹g) · H⁻¹g. H has as many rows as the network has parameters, so it is never formed or inverted; instead Hx = g is solved with conjugate gradient using Hessian-vector products (the paper ran 10 CG iterations and computed Fisher-vector products on 10% of the batch), and a backtracking line search shrinks the step by a factor α<sup>j</sup> until the KL constraint holds and the surrogate actually improves. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Achiam 2018</a>
+@@ 17
+<strong>A step by hand.</strong> With δ = 0.01 and gᵀH⁻¹g = 4, the scale is √(2 × 0.01 / 4) = √0.005 ≈ 0.0707 along H⁻¹g. If the resulting KL came out at 0.013, above δ, the line search would try 0.8 × 0.0707, then 0.64 × 0.0707, until KL ≤ 0.01 and the surrogate is positive.
+@@ 18
+TRPO worked: it learned swimming, hopping and walking in MuJoCo where natural gradient without the trust region failed to produce hopping or walking, and it played seven Atari games from pixels with a 33.5k-parameter convolutional policy. <a class="src" href="https://arxiv.org/abs/1502.05477">Schulman 2015</a> But every update needs a conjugate-gradient solve and a line search, it does not sit naturally with shared actor–critic networks, noisy architectures or dropout, and it is a lot of code. The <a href="#p-trpo">TRPO review</a> has the details. The question that produced PPO was: can a first-order method get the same stability?
+@@ 19
+3. PPO's clipped objective, with a worked table
+@@ 20
+<strong>Proximal Policy Optimization</strong> (July 2017) keeps TRPO's ratio r<sub>t</sub>(θ) = π<sub>θ</sub>(a<sub>t</sub>|s<sub>t</sub>) / π<sub>θ<sub>old</sub></sub>(a<sub>t</sub>|s<sub>t</sub>), which equals 1 at the old parameters, and replaces the constraint with a clipped objective:
+@@ 21
+L<sup>CLIP</sup>(θ) = Ê<sub>t</sub>[ min( r<sub>t</sub>(θ) Â<sub>t</sub>, &nbsp;clip(r<sub>t</sub>(θ), 1−ε, 1+ε) Â<sub>t</sub> ) ]
+@@ 22
+with ε a hyperparameter, "say, ε = 0.2". The paper's own description: clipping "removes the incentive for moving r<sub>t</sub> outside of the interval [1−ε, 1+ε]", and taking the minimum makes the result "a lower bound (i.e., a pessimistic bound) on the unclipped objective". Around θ<sub>old</sub> the clipped and unclipped objectives agree to first order, so the gradient at the start of an update is the ordinary policy gradient. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 23
+Work through one sample at a time with ε = 0.2, so the band is [0.8, 1.2]:
+@@ 24
+clip(r) · Â
+@@ 25
+L<sub>t</sub> = min
+@@ 26
+Gradient w.r.t. r?
+@@ 27
+yes (the starting point)
+@@ 28
+no: clipped flat, stop pushing this action up
+@@ 29
+yes: the unclipped term is the minimum, and it pulls r back up
+@@ 30
+yes: unclipped, keeps pushing the probability down
+@@ 31
+no: already made it unlikely enough
+@@ 32
+yes (inside the band)
+@@ 33
+The pattern to memorise: the objective goes flat exactly when the update would move r <em>further</em> in the direction the advantage already favours, beyond the band. It is never flat when the move would hurt. That asymmetry is what "pessimistic bound" means in practice, and it is why PPO can take several gradient steps on the same batch without running away.
+@@ 34
+Try it: the widget draws one term of L<sup>CLIP</sup> as a function of r. Set Â = +2 and drag r past 1.2, then set Â = −2 and drag it below 0.8.
+@@ 35
+Notice the plateau appears on one side only, and which side flips with the sign of Â. Inside the band the solid line sits on the dashed one: ordinary policy gradient. Outside the band on the "harmful" side the solid line still follows the dashed one, so a step that lowered the probability of a good action is corrected at full strength. The paper's Figure 1 is this plot for Â &gt; 0 and Â &lt; 0. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 36
+The paper also tried an <strong>adaptive KL penalty</strong>, L<sup>KLPEN</sup> = Ê<sub>t</sub>[r<sub>t</sub>Â<sub>t</sub> − β KL[π<sub>old</sub>, π<sub>θ</sub>]], halving β when the measured KL fell below d<sub>targ</sub>/1.5 and doubling it above 1.5 d<sub>targ</sub>. It scored 0.74 against clipping's 0.82 and the paper says it "performed worse than the clipped surrogate objective". <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> The KL idea did not die, though: it returns as the per-token KL penalty in RLHF in section 5.
+@@ 37
+<strong>"PPO enforces a trust region."</strong> It removes the <em>incentive</em> to move r outside the band for each sample. Nothing bounds the KL between old and new policy; implementations that want a bound add early stopping on an approximate KL (Spinning Up stops at 0.01) as a separate mechanism. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/ppo.html">Achiam 2018</a>
+@@ 38
+<strong>"ε = 0.2 means the policy can change by at most 20%."</strong> Only each sample's ratio is clipped, only in the direction its advantage favours, and the minimum keeps the full gradient when a move is harmful. The policy as a whole can drift further.
+@@ 39
+<strong>"TD3's and SAC's twin critics average their two estimates."</strong> They take the minimum. Pessimism is the whole point.
+@@ 40
+<strong>"Off-policy always beats on-policy."</strong> Only per environment step. With cheap, parallel simulators PPO often wins on wall-clock, and it handles discrete actions, which SAC as published does not.
+@@ 41
+4. PPO in practice: the details that matter
+@@ 42
+The full PPO loss adds a value term and an entropy bonus, which matters when policy and value share a network:
+@@ 43
+L<sub>t</sub> = Ê<sub>t</sub>[ L<sub>t</sub><sup>CLIP</sup>(θ) − c<sub>1</sub> (V<sub>θ</sub>(s<sub>t</sub>) − V<sub>t</sub><sup>targ</sup>)² + c<sub>2</sub> H[π<sub>θ</sub>](s<sub>t</sub>) ]
+@@ 44
+Advantages are the truncated GAE from <a href="#d7">Day 7</a>, computed over each T-step segment and bootstrapped with V at the segment's end. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> Algorithm 1 is the whole method: N actors each run π<sub>θold</sub> for T steps and compute Â; then optimise L for K epochs over minibatches of size M ≤ NT; then set θ<sub>old</sub> ← θ and throw the batch away. The MuJoCo settings were T = 2048, Adam at 3 × 10⁻⁴, 10 epochs, minibatch 64, γ = 0.99, λ = 0.95. The Atari settings were T = 128 with 8 actors, 3 epochs, minibatches of 32 × 8, ε = 0.1, c<sub>1</sub> = 1, c<sub>2</sub> = 0.01, with both the learning rate (2.5 × 10⁻⁴) and ε annealed linearly to 0 over training. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 45
+Those equations are a small part of why PPO works. In March 2022 Huang, Dossa, Raffin, Kanervisto and Wang published "The 37 Implementation Details of Proximal Policy Optimization" in the ICLR Blog Track, reverse-engineering OpenAI's reference <code>ppo2</code> code. Their 13 core details include: a vectorised architecture that learns from N × M samples per rollout; orthogonal weight initialisation with gain √2 in hidden layers, 0.01 for the policy head and 1 for the value head; Adam's ε set to 10⁻⁵ rather than the default 10⁻⁸; linear learning-rate annealing to zero; GAE with λ = 0.95 and value bootstrapping; shuffled minibatch updates (4 minibatches × 4 epochs on Atari, 32 × 10 on MuJoCo); <strong>advantage normalisation</strong> per minibatch; the clipped surrogate (ε 0.1 Atari, 0.2 MuJoCo); clipping the value loss around the old value; one combined loss with entropy coefficient 0.01 on Atari and 0 on MuJoCo; a global gradient-norm clip of 0.5; and separate 64-unit tanh networks for policy and value on simple tasks. <a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a> Nine more details are Atari preprocessing (no-op resets, frame skip 4, 84×84 grayscale, sign-clipped rewards, 4-frame stacks) and nine are continuous-control specifics (state-independent log-std initialised to 0, observation normalisation and clipping at ±10, reward scaling by a running standard deviation).
+<a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a>
+@@ 46
+Not every detail earns its place. The blog notes that Engstrom et al. (2020) "find no evidence that the value function loss clipping helps" and Andrychowicz et al. (2021) "suggest value function loss clipping even hurts performance", yet it ships in the reference code. <a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a> The lesson for you: when a PPO run fails, check the code-level details (initialisation, normalisation, Adam ε, gradient clipping) before touching the objective.
+@@ 47
+TRPO is a surveyor who measures the exact distance to the cliff edge before every step: safe, but slow and heavy with instruments. PPO is a hiker with a rule of thumb: "never take a step you would not be happy to retrace", enforced per footfall by the clip. SAC, in section 6, is a different hiker altogether: one who is paid by the metre of new ground covered as well as by the view at the end.
+@@ 48
+5. Why PPO became the default
+@@ 49
+PPO's paper results were good rather than spectacular. On the seven MuJoCo tasks it beat TRPO, cross-entropy method, vanilla policy gradient and A2C at one million steps; on 49 Atari games with three seeds it "won" 30 games on average reward across training versus 18 for ACER and 1 for A2C, while on final-100-episode reward ACER won 28 to PPO's 19. So PPO learned fastest, and ACER finished slightly higher; the abstract's claim is that PPO is "much simpler". <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> Simplicity won. Three practical reasons: PPO is first-order only, so it works with any network and any optimiser; it has one clip knob instead of a constrained solver; and its rollout–update loop parallelises across as many environments as you can afford. Two systems proved the last point at scale.
+@@ 50
+<strong>OpenAI Five.</strong> The Dota 2 agent that beat the world champions OG 2–0 on 13 April 2019 was trained with PPO and GAE. Its policy was a single-layer LSTM with 4096 units holding about 84% of the parameters; the optimisers consumed batches of around two million frames every two seconds; training ran for the equivalent of 180 days spread over 10 months because of restarts and reverts, consuming roughly 770 ± 50 petaflop/s-days through the April 2019 match, on 480 to 1,536 optimiser GPUs, 500 to 1,440 rollout GPUs and 80,000 to 172,800 rollout CPUs. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> An algorithm that needed a Hessian-vector solve per update would not have survived that pipeline.
+@@ 51
+<strong>RLHF.</strong> InstructGPT (March 2022) fine-tuned a supervised model with PPO against a learned reward model, adding "a per-token KL penalty from the SFT model at each token to mitigate over-optimization of the reward model", and optionally mixing in pretraining gradients (PPO-ptx). The 1.3-billion-parameter InstructGPT was preferred by human raters over the 175-billion-parameter GPT-3. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> Here the "environment" is a language model emitting tokens, actions are discrete, rollouts are cheap in parallel, and the policy is a Transformer with billions of parameters: PPO's conditions exactly. The <a href="#p-instructgpt">InstructGPT review</a> follows this story into the second week.
+@@ 52
+6. Off-policy continuous control: DDPG → TD3 → SAC
+@@ 53
+PPO discards every batch after K epochs. If each environment step is expensive, a real robot, a slow physics simulator, you want to keep the data. That is the off-policy family, which extends Q-learning from <a href="#d6">Day 6</a> to continuous actions and learns from a replay buffer.
+@@ 54
+<strong>DDPG</strong> (September 2015) is "deep Q-learning extended to continuous actions": a deterministic actor μ<sub>θ</sub>(s) and a critic Q<sub>φ</sub>(s,a). The critic minimises the squared Bellman error against the target r + γ(1−d) Q<sub>targ</sub>(s', μ<sub>targ</sub>(s')); the actor maximises Q<sub>φ</sub>(s, μ<sub>θ</sub>(s)) by back-propagating through the critic; target networks move by Polyak averaging; exploration comes from adding noise to the actions. One architecture and one hyperparameter set solved more than 20 simulated physics tasks, some from pixels. <a class="src" href="https://arxiv.org/abs/1509.02971">Lillicrap 2015</a> <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/ddpg.html">Achiam 2018</a> Its weakness is overestimation: the actor hunts for whatever action the critic over-rates.
+@@ 55
+<strong>TD3</strong> (February 2018) makes three fixes. <strong>Clipped double-Q</strong>: train two critics and use the smaller of the two target values, y = r + γ(1−d) min<sub>i=1,2</sub> Q<sub>targ,i</sub>(s', a'). <strong>Delayed policy updates</strong>: update the actor and targets once per d = 2 critic updates. <strong>Target policy smoothing</strong>: add clipped noise to the target action, a' = clip(μ<sub>targ</sub>(s') + clip(ε, −c, c), a<sub>low</sub>, a<sub>high</sub>) with ε ∼ N(0, 0.2) and c = 0.5, so the critic cannot exploit a sharp spike. <a class="src" href="https://arxiv.org/abs/1802.09477">Fujimoto 2018</a> On HalfCheetah at one million steps TD3 reached 9636.95 against 3305.60 for DDPG and 1795.43 for PPO. <a class="src" href="https://arxiv.org/abs/1802.09477">Fujimoto 2018</a>
+@@ 56
+<strong>SAC</strong> (January 2018; the version with automatic temperature, December 2018) changes the objective itself. <strong>Maximum-entropy RL</strong> asks the agent to maximise reward plus a bonus for the entropy of its own policy:
+@@ 57
+The <strong>temperature</strong> α "determines the relative importance of the entropy term against the reward". <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> This is not the entropy regulariser of A3C or PPO. Those add entropy to the loss; SAC puts it in the <em>reward</em>, so it changes Q and V themselves through a soft Bellman equation, Q(s,a) = E[r + γ(Q(s',a') − α log π(a'|s'))]. The policy that maximises this objective at one state is π(a|s) ∝ exp(Q(s,a)/α), and the actor is trained to match it by minimising a KL divergence. <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/sac.html">Achiam 2018</a> SAC keeps TD3's twin critics (the paper: "two Q-functions significantly speed up training, especially on harder tasks"), uses a stochastic tanh-squashed Gaussian actor sampled with the reparameterisation trick, and in the 2018 follow-up learns α automatically by holding the policy's entropy near a target H̄ = −dim(A), for example −6 on HalfCheetah; the same follow-up dropped the separate state-value network as unnecessary. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a>
+@@ 58
+Try it: the widget below has a one-dimensional action with two rewarding regions, Q = 1.0 near a = +0.6 and Q = 0.7 near a = −0.5. Slide the temperature.
+@@ 59
+Notice that at α = 0.05 virtually all the mass (99.6%) sits on the right peak and the entropy is −1.75 nats, a near-deterministic policy. At α = 0.2 the second peak is alive with about a quarter of the mass. By α = 1.0 the density is nearly flat and the entropy approaches ln 2 = 0.693, the maximum for actions in [−1, 1]. Automatic temperature tuning is a controller on this slider: if the policy's entropy is above the target, α falls; below it, α rises.
+@@ 60
+<strong>The α gradient by hand.</strong> With H̄ = −6 and a policy whose current entropy is −4 (more random than the target), the temperature loss J(α) = E[−α log π(a|s) − α H̄] has derivative E[−log π] − H̄ = (−4) − (−6) = +2, so gradient descent lowers α: less reward for randomness. At entropy −8 the derivative is −2 and α rises. <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> Why bother? The January 2018 SAC needed a hand-tuned reward scale per task (5 for Hopper, Walker, HalfCheetah and Ant; 20 for Humanoid-v1) because scaling the reward is the same as changing α, and Figure 3 of that paper showed SAC "is sensitive to reward scaling since it is related to the temperature". Automatic α removes the knob. <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a>
+@@ 61
+Results: in the 2018 benchmarks DDPG "fails to make any progress on Ant-v1, Humanoid-v1, and Humanoid (rllab)", while SAC "performs consistently across all tasks" and "learns considerably faster than PPO". <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> On real hardware, SAC taught a Minitaur quadruped to walk from 160,000 environment steps (about 400 episodes, roughly two hours of real time), with the gait generalising to slopes, obstacles and stairs; a Dynamixel claw learned to rotate a valve in about three hours from joint angles and about 20 hours (300k steps) from 32×32 images. <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> The <a href="#p-sac">SAC review</a> covers both papers.
+@@ 62
+Going deeper (optional): why "stochastic" helps SAC beyond exploration
+@@ 63
+The January 2018 paper's Figure 2 compares SAC with a deterministic variant on Humanoid (rllab): the deterministic version is unstable across seeds while the stochastic one trains smoothly, which the authors read as "stochasticity can stabilize training". <a class="src" href="https://arxiv.org/abs/1801.01290">Haarnoja 2018</a> The entropy term smooths Q, so the actor cannot climb a narrow erroneous spike the way DDPG does (TD3's target smoothing is a hand-built version of the same idea), and a policy that keeps a second mode alive, as the widget shows at moderate α, can still switch to it if the critic later finds it was underrated.
+@@ 64
+7. Choosing PPO versus SAC
+@@ 65
+As of October 2026 these two are the workhorses of model-free deep RL, and the choice is mostly about where your samples come from.
+@@ 66
+Question
+@@ 67
+Favours PPO
+@@ 68
+Favours SAC (or TD3)
+@@ 69
+Are actions discrete?
+@@ 70
+Yes: PPO handles discrete and continuous actions, including language tokens
+@@ 71
+SAC as published is continuous-only
+@@ 72
+Are environment steps cheap and parallel?
+@@ 73
+Yes: game engines, physics farms, LLM rollouts; OpenAI Five pushed ~2M frames per 2 s
+@@ 74
+No: real robots, slow simulators; Minitaur walked after 160k steps
+@@ 75
+What matters more, wall-clock or sample count?
+@@ 76
+Wall-clock with many envs; on-policy data are used K times and discarded
+@@ 77
+Samples; a 10⁶-transition replay buffer is reused for many updates
+@@ 78
+What are the stability knobs?
+@@ 79
+ε, epochs, minibatch size, entropy coefficient, LR annealing, grad clip
+@@ 80
+α (automatic in modern SAC), τ = 0.005, reward scale (removed by auto-α)
+@@ 81
+Does it parallelise?
+@@ 82
+Natively: N actors × T steps per update
+@@ 83
+The reference design takes one gradient step per environment step and "does not support parallelization"
+@@ 84
+Sources for the table: PPO paper and Dota report for the PPO column, SAC papers and Spinning Up for the SAC column. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/sac.html">Achiam 2018</a> Rule of thumb: PPO when simulation is cheap or actions are discrete; SAC or TD3 for continuous control when every sample costs real time. The HalfCheetah numbers make the sample-efficiency gap concrete: at one million steps TD3's 9637 against PPO's 1795 in the TD3 paper's Table 1. <a class="src" href="https://arxiv.org/abs/1802.09477">Fujimoto 2018</a> But if you can run ten thousand HalfCheetahs at once, those million steps take minutes and the comparison flips to wall-clock, where PPO is hard to beat.
+@@ 85 attr
+Top band, PPO: N vectorised environments on CPU send observations, actions, rewards, old log-probabilities and values into a rollout buffer of N times T samples; GAE computes advantages; a GPU learner runs K epochs of minibatch updates with the clipped loss, value loss and entropy; the new parameters go back to the environments as theta old, and the buffer is discarded. Bottom band, SAC: an actor samples an action for the environment; transitions enter a replay buffer of one million; batches feed two critics whose targets are two slowly updated target critics; the critics' minimum and the alpha-weighted log-probability flow back into the actor; alpha is adjusted from the entropy target.
+@@ 86
+PPO: on-policy loop (data used K times, then discarded)
+@@ 87
+N envs (CPU)
+@@ 88
+run π_old for T steps
+@@ 89
+8 Atari · 1 MuJoCo
+@@ 90
+s, a, r, log π_old, V
+@@ 91
+rollout buffer
+@@ 92
+N·T samples
+@@ 93
+128·8 or 2048·1
+@@ 94
+GAE
+@@ 95
+Â, R̂ from V
+@@ 96
+learner (GPU)
+@@ 97
+K epochs × minibatches
+@@ 98
+L^CLIP − c₁L^VF + c₂H
+@@ 99
+Adam, grad-norm 0.5
+@@ 100
+θ_old ← θ; empty the buffer
+@@ 101
+SAC: off-policy, one gradient step per environment step
+@@ 102
+actor π_θ
+@@ 103
+μ, log σ → tanh
+@@ 104
+replay buffer D
+@@ 105
+10⁶ transitions
+@@ 106
+batch 256
+@@ 107
+critics Q_φ1, Q_φ2
+@@ 108
+MSE to target y
+@@ 109
+targets Q_targ,1,2
+@@ 110
+Polyak τ = 0.005
+@@ 111
+y = r + γ(1−d)(min Q_targ − α log π)
+@@ 112
+actor gradient of min Q_φ(s,ã) − α log π(ã|s),
+@@ 113
+taken through the critics
+@@ 114
+temperature α
+@@ 115
+H(π) → H̄ = −dim(A)
+@@ 116
+α into y and actor loss
+@@ 117
+Top: PPO's synchronous rollout → GAE → K-epoch update loop; the arrow back is the only state carried between iterations. Bottom: SAC's five flows: act, store, critic update from the twin targets, actor update through the critics, and the α controller; targets trail the critics by Polyak averaging.
+@@ 118
+Read the PPO band left to right. N environments, usually on CPU, run the frozen policy π<sub>θold</sub> for T steps and record states, actions, rewards, the old log-probabilities and the critic's values. The rollout buffer holds N × T samples (8 × 128 on Atari, 1 × 2048 on MuJoCo in the paper). GAE turns rewards and values into advantages and return targets, bootstrapping with V at each segment's end. The learner then runs K epochs over shuffled minibatches: ratio from the stored log-probabilities, clipped loss, value loss, entropy, one Adam step per minibatch with the gradient norm clipped at 0.5. Finally θ<sub>old</sub> ← θ, the buffer is emptied, and the loop repeats. The data are used K times (3 to 10) and never again. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> <a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a>
+@@ 119
+The SAC band has more boxes but a steadier rhythm. The actor outputs a mean and log-standard-deviation, samples a tanh-squashed action, and the transition goes into a replay buffer of 10⁶ transitions. Each update samples a batch of 256: the actor proposes ã' at s', the two target critics are evaluated there, and the smaller value minus α log π(ã'|s') forms the target y for both critics' squared-error losses. The actor update samples ã at s with the reparameterisation trick and climbs min<sub>j</sub> Q<sub>φj</sub>(s,ã) − α log π(ã|s), with gradients flowing through the critics into θ. α is nudged toward holding the policy entropy at H̄, and the target critics follow the critics with τ = 0.005. Networks are two 256-unit ReLU layers, Adam at 3 × 10⁻⁴, γ = 0.99, one gradient step per environment step. <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/sac.html">Achiam 2018</a>
+@@ 120
+PPO's loop separates cleanly into rollout workers (CPU, or rollout GPUs when the policy is a 4096-unit LSTM) and an optimiser (GPU). OpenAI Five ran 480 to 1,536 optimiser GPUs, 500 to 1,440 rollout GPUs and 80,000 to 172,800 rollout CPUs, consuming about two million frames every two seconds, for the equivalent of 180 training days spread over 10 months. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> SAC's loop is serial by design: one environment step, one gradient step, so a single GPU or even a CPU keeps up with a real robot; the Minitaur learned to walk in about two hours of real time (160k steps), and the valve task took about three hours from joint angles and about 20 hours from pixels. <a class="src" href="https://arxiv.org/abs/1812.05905">Haarnoja 2018b</a> The replay buffer at 10⁶ transitions is the only large memory structure in either method, and PPO does not have one.
+@@ 121
+Q1. In the PPO paper's MuJoCo comparison (0 = random, 1 = best), what did the unclipped surrogate score, and what did clipping at ε = 0.2 score?
+@@ 122
+0.39 and 0.82
+@@ 123
+−0.39 and 0.82
+@@ 124
+0.74 and 0.76
+@@ 125
+−0.39 and 0.70
+@@ 126
+Answer 2. The unconstrained surrogate averaged −0.39, below a random policy, while ε = 0.2 clipping scored 0.82. The adaptive KL penalty scored 0.74 and ε = 0.3 scored 0.70.
+@@ 127
+Q2. With ε = 0.2, Â = +2 and r<sub>t</sub> = 1.5, what is the clipped objective term and its gradient with respect to r?
+@@ 128
+3.0, gradient 2
+@@ 129
+1.6, gradient 0
+@@ 130
+3.0, gradient 0
+@@ 131
+2.4, gradient 0
+@@ 132
+Answer 4. r·Â = 3.0 but clip(1.5) = 1.2 gives 2.4; the minimum is 2.4, a constant in r, so the gradient is zero: no incentive to push this action further up.
+@@ 133
+Q3. Which statement about PPO's clipping is correct?
+@@ 134
+It removes the incentive to move each sample's ratio outside [1−ε, 1+ε] but does not bound the KL between old and new policy
+@@ 135
+It guarantees the new policy's KL from the old is at most ε
+@@ 136
+It limits every action probability to change by at most 20%
+@@ 137
+It makes the gradient zero whenever the ratio leaves the band, regardless of the sign of the advantage
+@@ 138
+Answer 1. Clipping is per-sample and one-sided; nothing bounds the overall KL, which is why some implementations add early stopping on approximate KL. On the harmful side of the band the unclipped term is the minimum and the gradient stays active.
+@@ 139
+Q4. How does SAC's entropy term differ from the entropy bonus in A3C or PPO?
+@@ 140
+It does not; both add c · H(π) to the loss
+@@ 141
+SAC uses the entropy of the critic rather than the actor
+@@ 142
+SAC puts α · H(π) into the reward, so it changes Q and V through a soft Bellman equation
+@@ 143
+SAC's entropy term is only used during the first 10% of training
+@@ 144
+Answer 3. In maximum-entropy RL the objective is Σ E[r + α H(π)]; the entropy is part of what the critic estimates, giving the soft Bellman equation and the target y = r + γ(min Q_targ − α log π). A3C and PPO add entropy as a regulariser on the policy loss only.
+@@ 145
+Q5. TD3 and SAC use two critics. How do they combine the two estimates when forming the target?
+@@ 146
+They average them
+@@ 147
+They take the minimum
+@@ 148
+They alternate between them each update
+@@ 149
+They use the one with the lower training loss
+@@ 150
+Answer 2. Clipped double-Q takes min<sub>i</sub> Q<sub>targ,i</sub>, a deliberately pessimistic estimate that counters the overestimation DDPG suffers when the actor exploits critic errors.
+@@ 151
+Q6. You must train a controller for a physical quadruped where each hour of experience costs an engineer's afternoon. Which choice does today's lesson support?
+@@ 152
+PPO with thousands of parallel actors, because it scales best
+@@ 153
+TRPO, because its trust region makes it the most sample-efficient
+@@ 154
+A2C, because it needs no replay buffer
+@@ 155
+SAC with automatic temperature, because it reuses every transition from a replay buffer and walked a Minitaur in about 160k steps
+@@ 156
+Answer 4. Expensive, serial, continuous-action samples are SAC's home ground; the Minitaur learned to walk from 160k environment steps in about two hours of real time. PPO's strength is cheap, parallel simulation, and TRPO and A2C are on-policy too.
+@@ 157
+On-policy data go stale the moment θ changes, so an unconstrained policy step can collapse training: the unclipped surrogate scored −0.39 against 0.82 for PPO's clipping on MuJoCo.
+@@ 158
+TRPO maximises the surrogate E[r·A] under an average-KL constraint δ = 0.01, solved with conjugate gradient and a line search; correct but second-order and heavy.
+@@ 159
+PPO's L<sup>CLIP</sup> = E[min(r·Â, clip(r, 1−ε, 1+ε)·Â)] is a pessimistic bound that goes flat only when a step would push a ratio further in the direction its advantage already favours; it allows K epochs of minibatch updates on one batch. Code-level details (init, Adam ε, normalisation, grad clipping) carry much of its performance.
+@@ 160
+PPO became the default because it is first-order, has one knob, and parallelises: OpenAI Five (up to 172,800 rollout CPUs, 180 training days) and InstructGPT's RLHF both used it.
+@@ 161
+DDPG → TD3 → SAC is the off-policy continuous-control line: replay buffer, twin critics with a minimum, target smoothing, and in SAC an entropy term inside the reward with an automatically tuned temperature. Choose PPO for cheap parallel simulation or discrete actions, SAC or TD3 when samples are expensive.
+@@ 162
+<a href="https://arxiv.org/abs/1707.06347">Proximal Policy Optimization Algorithms</a> — Schulman, Wolski, Dhariwal, Radford &amp; Klimov, OpenAI, 2017. Equations 6–12, Algorithm 1, Tables 1–5; Figure 1 is the plot the widget reproduces.
+@@ 163
+<a href="https://arxiv.org/abs/1502.05477">Trust Region Policy Optimization</a> — Schulman, Levine, Moritz, Jordan &amp; Abbeel, ICML 2015. Theorem 1, the practical algorithm with δ = 0.01, and the MuJoCo and Atari results.
+@@ 164
+<a href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">The 37 Implementation Details of Proximal Policy Optimization</a> — Huang, Dossa, Raffin, Kanervisto &amp; Wang, ICLR Blog Track, 2022. Read this before writing your own PPO.
+@@ 165
+<a href="https://spinningup.openai.com/en/latest/algorithms/trpo.html">Trust Region Policy Optimization</a> and <a href="https://spinningup.openai.com/en/latest/algorithms/ppo.html">Proximal Policy Optimization</a> — OpenAI Spinning Up, 2018. Natural-gradient step, conjugate gradient and line search; PPO-Clip pseudocode and the approximate-KL early stop.
+@@ 166
+<a href="https://arxiv.org/abs/1912.06680">Dota 2 with Large Scale Deep Reinforcement Learning</a> — Berner et al., OpenAI, 2019. PPO at scale: the LSTM, the GPU and CPU counts, and the 180-day training run.
+@@ 167
+<a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback</a> — Ouyang et al., OpenAI, 2022. PPO with a per-token KL penalty for RLHF.
+@@ 168
+<a href="https://arxiv.org/abs/1509.02971">Continuous control with deep reinforcement learning</a> — Lillicrap et al., DeepMind, 2015. DDPG.
+@@ 169
+<a href="https://arxiv.org/abs/1802.09477">Addressing Function Approximation Error in Actor-Critic Methods</a> — Fujimoto, van Hoof &amp; Meger, ICML 2018. TD3's three fixes and Table 1.
+@@ 170
+<a href="https://arxiv.org/abs/1801.01290">Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor</a> — Haarnoja, Zhou, Abbeel &amp; Levine, ICML 2018. The maximum-entropy objective, twin critics, and the reward-scale sensitivity.
+@@ 171
+<a href="https://arxiv.org/abs/1812.05905">Soft Actor-Critic Algorithms and Applications</a> — Haarnoja et al., 2018. Automatic temperature with H̄ = −dim(A), the dropped V network, and the Minitaur and valve experiments.
+@@ 172
+<a href="https://spinningup.openai.com/en/latest/algorithms/ddpg.html">DDPG</a>, <a href="https://spinningup.openai.com/en/latest/algorithms/td3.html">TD3</a> and <a href="https://spinningup.openai.com/en/latest/algorithms/sac.html">SAC</a> — OpenAI Spinning Up, 2018. Clean pseudocode and the soft Bellman equation in the form used above.

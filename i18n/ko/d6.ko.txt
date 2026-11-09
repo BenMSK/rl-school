@@ -1,0 +1,310 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 6</span>
+@@ 2
+Q-learning, SARSA, 그리고 Deep Q-Network
+@@ 3
+오늘 레슨을 마치면 SARSA와 Q-learning의 update 식을 외워서 쓸 수 있고, on-policy 학습과 off-policy 학습의 차이와 deadly triad를 설명할 수 있으며, DQN 논문의 아키텍처와 결과 표를 도움 없이 읽을 수 있습니다.
+@@ 4
+약 90분 · Day 5 필요
+@@ 5
+state만이 아니라 각 <em>action</em>의 value를 학습하면 세계에 대한 모델 없이도 greedy하게 행동할 수 있습니다. 한 줄짜리 update 두 개가 이 일을 합니다. SARSA는 실제로 따르고 있는 policy의 value를 학습하고, Q-learning은 그보다 못한 policy를 따르면서도 가장 좋은 policy의 value를 학습합니다. Q-learning을 convolutional network 위에 올리고, replay memory와 target 계산용으로 고정해 둔 network 복사본을 더하면 DQN이 됩니다. 2015년에 픽셀만 보고 Atari 게임 49개를 학습한 바로 그 시스템입니다.
+@@ 6
+1. V에서 Q로: 모델 없이 행동하기
+@@ 7
+<a href="#d5">Day 5</a>에서는 TD(0)로 <strong>state value</strong>(상태 가치) V(s)를 추정하는 법을 배웠습니다. 그런데 이 값으로 행동하려고 하면 걸리는 점이 있습니다. V에서 greedy action을 고르려면 action마다 "이 action은 나를 어디로 데려가고 무엇을 주는가?"를 물어야 하고, 그러려면 transition 확률 p(s′, r | s, a)에 대해 합을 구해야 합니다. 이것이 바로 모델인데, 대개는 모델이 없습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 8
+해결책은 <strong>action value</strong>(행동 가치) Q(s, a)를 학습하는 것입니다. s에서 a를 고르고 그 뒤로는 policy를 따를 때의 기대 return입니다. 이제 greedy 선택은 표에서 값을 찾아보는 일이 됩니다.
+@@ 9
+=
+@@ 10
+state가 |S|개, action이 |A|개이면 Q는 |S| × |A|칸짜리 표입니다. optimal action value도 자신만의 Bellman equation을 만족하는데, policy가 있던 자리에 max가 들어갑니다.
+@@ 11
+=
+@@ 12
+오늘 배우는 것은 모두 <a href="#d4">Day 4</a>의 generalised policy iteration을 Q에 적용한 것입니다. TD update로 평가하고, 새 Q에 대해 ε-greedy로 행동해 개선하며, 이 과정을 매 step 반복합니다.
+@@ 13
+2. SARSA: on-policy TD control
+@@ 14
+TD(0) update에서 V(s)를 Q(s, a)로 바꾸고, 다음에 실제로 고르는 action에서 bootstrap합니다. 이것이 <strong>SARSA</strong>입니다. update가 건드리는 다섯 가지, 곧 S<sub>t</sub>, A<sub>t</sub>, R<sub>t+1</sub>, S<sub>t+1</sub>, A<sub>t+1</sub>에서 딴 이름입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 15
+한 step을 손으로 확인해 봅시다. Q(s, a) = −5이고, r = −1을 받아 s′에 도착했으며, ε-greedy policy가 Q(s′, a′) = −3인 a′을 골랐습니다. γ = 1이면 target은 −4, TD error는 −4 − (−5) = +1이고, α = 0.5이면 새 값은 <strong>−4.5</strong>입니다. terminal state에서는 Q = 0이므로, episode의 마지막 update는 reward만 씁니다.
+@@ 16
+SARSA는 <strong>on-policy</strong>입니다. SARSA가 학습하는 Q는 데이터를 만들어 내는 바로 그 policy의 value이며, exploration까지 포함합니다. ε-greedy로 행동한다면 Q(s, a)는 "a를 고른 뒤에도 계속 ε-greedy로 행동한다"는 뜻이고, 비틀거리는 순간까지 모두 들어 있습니다. 모든 state–action 쌍을 무한히 자주 방문하고 policy가 극한에서 greedy해지면(예: ε = 1/t) q<sub>*</sub>로 수렴합니다. Rummery와 Niranjan이 1994년에 "modified connectionist Q-learning"이라는 이름으로 처음 내놓았고, SARSA라는 이름은 Sutton이 붙였습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 17
+3. Q-learning: off-policy, 그리고 max
+@@ 18
+기호 하나만 바꿉니다. 앞으로 고를 action에서 bootstrap하는 대신, s′에서 고를 수 있는 <em>가장 좋은</em> action에서 bootstrap합니다.
+@@ 19
+=
+@@ 20
+이것이 <strong>Q-learning</strong>입니다. Chris Watkins의 1989년 박사 학위 논문에서 나왔고, 수렴 증명은 1992년에 Watkins와 Dayan이 완성했습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 앞의 손 계산 예제를 그대로 쓰되, 이번에는 s′의 값 네 개를 모두 봅니다. 예를 들어 [−3, −6, −2, −9]라고 합시다. max는 −2, target은 −3, error는 +2이고, 새 값은 −5 + 0.5 × 2 = <strong>−4</strong>입니다. ε-greedy policy는 다음에 −3짜리 action을 고를 수도 있지만, Q-learning은 개의치 않습니다.
+@@ 21
+바로 그 무관심이 핵심입니다. Q-learning은 <strong>off-policy</strong>입니다. <strong>target policy</strong>(목표 정책), 곧 greedy policy에 대해 학습하면서, 데이터는 그와 다른 <strong>behaviour policy</strong>(행동 정책)가 만든 것을 씁니다. behaviour policy는 ε-greedy여도 되고, 모든 쌍을 계속 방문하기만 하면 무엇이든 됩니다. 학습된 Q는 "따르고 있는 policy와 무관하게 optimal action-value function인 q<sub>*</sub>를 직접 근사합니다." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 여기서 나오는 결과 하나가 7절에서 중요해집니다. update가 action을 누가 골랐는지에 의존하지 않으므로, Q-learning은 agent의 옛 버전이 기록해 둔 transition으로도 학습할 수 있습니다. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro2.html">OpenAI 2018</a>
+@@ 22
+두 target이 일치하는 것은 완전히 greedy하게 행동할 때뿐입니다. exploration이 조금이라도 있으면 둘은 서로 다른 것을 학습합니다.
+@@ 23
+등산객 두 명이 능선 길을 익힙니다. SARSA 등산객은 각 걸음을 그 뒤에 이어진 걸음들에서 실제로 일어난 일로 평가합니다. 돌풍(ε)에 휘청거린 때도 포함되므로 가장자리는 나쁜 점수를 받고, 등산객은 점점 안쪽으로 옮겨 갑니다. Q-learning 등산객은 각 걸음을 존재하는 가장 좋은 다음 걸음으로 평가합니다. 앞으로의 모든 걸음이 완벽할 것처럼 보는 셈이라 가장자리는 좋은 점수를 받습니다. 가장 짧은 길이기 때문입니다. 둘 다 자기가 던진 질문에는 옳게 답합니다. 하지만 자신이 실제로 걷는 방식에 맞는 질문을 던지는 쪽은 하나뿐입니다.
+@@ 24
+4. Cliff walking: 격자 하나, 답 둘
+@@ 25
+Sutton과 Barto의 <strong>cliff-walking</strong> 과제는 4 × 12 격자입니다. 출발점은 왼쪽 아래, 목표는 오른쪽 아래이고, 그 사이의 열 칸이 절벽입니다. 한 step마다 −1을 받고, 절벽에 발을 디디면 −100을 받고 출발점으로 돌아갑니다. discounting은 없고, ε = 0.1인 ε-greedy를 씁니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> optimal 경로는 절벽 가장자리에 바짝 붙어 갑니다. 13step, return −13입니다.
+@@ 26
+Q-learning은 정확히 그 경로를 학습합니다. 하지만 agent는 학습하는 동안에도 여전히 ε-greedy이므로, 가장자리에서 마흔 번에 한 번꼴로 무작위 "아래" action이 나와 100을 잃습니다. 그래서 online return은 episode당 −50 근처에 머뭅니다. SARSA는 위쪽 행들을 지나는 더 길고 안전한 경로를 학습합니다. 거기서는 무작위 action이 나와도 다칠 일이 드물어서 return이 −25 근처에 머뭅니다. "Q-learning은 실제로 optimal policy의 value를 학습하지만, online 성능은 Sarsa보다 나쁩니다." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> α = 0.5로 50번 실행해 재현하면 episode 100–500 구간에서 SARSA는 −27.4, Q-learning은 −50.9가 나옵니다. 책에는 곡선만 실려 있습니다. ε을 0까지 줄여 가면 둘 다 결국 가장자리 경로에 이릅니다.
+@@ 27
+직접 해 보기: "500 실행"을 누른 뒤 "표시할 경로" 선택 메뉴를 바꿔 보세요. 그다음 ε을 0.3으로 올리고 다시 실행해 보세요. SARSA가 절벽에서 더 멀리 물러나므로 격차가 더 벌어집니다.
+@@ 28
+눈여겨볼 점: Q-learning의 경로(절벽을 따라가는 화살표 13개)는 몇백 episodes 안에 나타나 그 뒤로 바뀌지 않습니다. 그런데도 reward 곡선은 SARSA보다 아래에 있고 더 뾰족뾰족합니다. 뾰족한 골 하나하나가 ε step 때문에 절벽에서 떨어진 순간입니다. SARSA의 경로는 맨 윗줄을 지나며 약 17step입니다(500 episodes 뒤에도 조금씩 흔들릴 수 있으니 더 실행해 보세요). 곡선은 더 높고 매끄럽습니다. Q-learning은 optimal policy에 대해 옳고, SARSA는 지금 실제로 실행 중인 policy에 대해 옳습니다.
+@@ 29
+낭떠러지 옆 담장 위를 걷고 있는데, 친구가 장난으로 자꾸 쿡쿡 찔러요. 한 아이는 "아무도 안 찌르면 가장자리로 바짝 붙어 가는 게 제일 빠르지"라고 생각하고 가장자리로 걷다가, 찔릴 때마다 떨어져요. 다른 아이는 "어차피 찔릴 테니까 가장자리에서 조금 떨어져서 걸어야지"라고 생각하고, 몇 걸음 더 걷는 대신 한 번도 떨어지지 않아요. 첫 번째 아이는 완벽한 길을 알아요. 두 번째 아이는 멍이 덜 든 채로 집에 도착해요.
+@@ 30
+5. Expected SARSA와 maximisation bias
+@@ 31
+SARSA의 target은 sampling한 다음 action 하나를 쓰기 때문에 noise가 더해집니다. <strong>Expected SARSA</strong>는 policy가 고를 수 있는 action 전체에 대해 평균을 냅니다.
+@@ 32
+그 분산을 없애면 step size를 훨씬 크게 잡을 수 있습니다. cliff walking에서는 α = 1에서도 동작하고, 시험한 모든 α에서 SARSA를 앞섭니다. target policy가 greedy이고 behaviour policy가 탐색한다면 합이 max가 되어 Expected SARSA는 "정확히 Q-learning"이 됩니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 33
+max에는 대가가 따릅니다. noise가 낀 추정값 여러 개의 최댓값을 참값의 최댓값에 대한 추정값으로 쓰면 양의 bias가 생깁니다. 이것이 <strong>maximisation bias</strong>(최대화 편향)입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 아주 작은 경우로 확인해 봅시다. action이 두 개이고 둘 다 참값은 0이며, 각 추정값에는 +1 또는 −1의 noise가 같은 확률로 붙습니다. 두 추정값의 max는 둘 다 −1일 때만 빼고 +1인데, 둘 다 −1인 경우는 네 번에 한 번입니다. 따라서 기댓값은 0.75 × 1 + 0.25 × (−1) = <strong>+0.5</strong>인데, 참값의 max는 0입니다. Q-learning은 이렇게 부풀려진 숫자를 모든 target에 넣습니다. 책에 나오는 state 두 개짜리 예제에서는 한 action이 평균 −0.1인 noise 낀 하위 action 여러 개로 이어집니다. 여기서 ε-greedy Q-learning은 그 나쁜 action을 exploration만으로 설명되는 5%보다 훨씬 자주 고르고, 많은 episodes가 지난 뒤에도 여전히 너무 자주 고릅니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 34
+<strong>Double Q-learning</strong>은 Hado van Hasselt가 2010년에 제안한 방법으로, 표를 두 개 두고 하나로는 고르고 다른 하나로는 평가합니다. <a class="src" href="https://proceedings.neurips.cc/paper/2010/hash/091d584fced301b442654dd8c23b3fc9-Abstract.html">van Hasselt 2010</a>
+@@ 35
+=
+@@ 36
+확률 0.5로 이 update를 실행하고, 나머지 경우에는 두 표의 역할을 맞바꾼 update를 실행합니다. 행동은 Q<sub>1</sub> + Q<sub>2</sub>에 대해 ε-greedy로 합니다. 앞의 작은 예에서 Q<sub>1</sub>이 추정값이 우연히 +1로 나온 action을 고르더라도, 그 action에 대한 Q<sub>2</sub>의 독립적인 추정값은 여전히 평균이 0입니다. bias가 사라진 것입니다. 메모리는 두 배가 되지만 계산량은 그대로이며, state 두 개짜리 예제에서는 bias의 영향을 "사실상 받지 않습니다". <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 37
+6. Function approximation과 deadly triad
+@@ 38
+표는 48칸일 때는 통합니다. 하지만 Atari 화면은 8절의 전처리를 거친 뒤에도 84 × 84 × 4 = 28,224개의 숫자이고, 숫자마다 256가지 값을 가질 수 있습니다. 그런 표에서는 같은 행을 두 번 방문할 일이 없습니다. 그래서 표를 신경망 Q(s, a; θ)로 바꾸고, update를 TD error 제곱에 대한 gradient step으로 바꿉니다. 이때 target은 상수로 취급합니다.
+@@ 39
+=
+@@ 40
+이것은 <strong>semi-gradient</strong> 방법입니다. target도 θ에 의존하지만 gradient는 그 점을 무시합니다. 여기서 표에는 없던 새로운 문제가 나타납니다. Sutton과 Barto는 세 가지 요소를 <strong>deadly triad</strong>라고 부릅니다. <strong>function approximation</strong>(함수 근사), <strong>bootstrapping</strong>, <strong>off-policy training</strong>입니다. 셋을 모두 결합하면 추정값이 무한대로 발산할 수 있습니다. "deadly triad의 세 요소 중 어느 둘이 있더라도 셋이 다 있지 않다면 불안정성을 피할 수 있습니다." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Tabular Q-learning은 off-policy로 bootstrap하지만 근사를 쓰지 않으므로 안전합니다. 신경망을 쓰는 Monte Carlo는 bootstrap하지 않으므로 안전합니다. 신경망 Q-learner에는 셋이 다 있습니다.
+@@ 41
+DQN 논문은 같은 위험을 실무자의 눈으로 설명합니다. 연속한 프레임은 서로 상관된 sample이고, Q가 조금만 바뀌어도 policy가 바뀌어 데이터 분포가 달라지며, Q와 그 target이 파라미터를 공유하므로 update가 자신이 쫓는 대상을 움직입니다. <a class="src" href="https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf">Mnih 2015</a> 8절의 두 해결책인 experience replay와 target network는 정확히 이 문제들을 겨냥합니다.
+@@ 42
+<strong>"ε-greedy exploration을 쓰는 Q-learning과 SARSA는 같은 알고리즘이다."</strong> 데이터는 같지만 target이 다릅니다. 실제 다음 action이냐 max냐의 차이입니다. cliff walking에서 둘은 서로 다른 경로에 이르고, 점수는 25점 차이가 납니다.
+@@ 43
+<strong>"Off-policy는 불안정하다는 뜻이다."</strong> Tabular Q-learning은 off-policy이지만 수렴이 증명되어 있습니다. 불안정해지려면 triad의 세 다리가 모두 있어야 합니다.
+@@ 44
+<strong>"Target network는 따로 학습되는 두 번째 신경망이다."</strong> Target network는 online network의 복사본이고, C step마다 덮어씁니다. 이것을 학습시키는 것은 아무것도 없습니다.
+@@ 45
+<strong>"Reward clipping과 error clipping은 같은 기법이다."</strong> Reward clipping은 신호 자체를 바꿉니다(모든 reward가 −1, 0, +1 중 하나가 됩니다). 그래서 agent는 큰 점수와 작은 점수를 구별하지 못합니다. Error clipping은 loss의 gradient 크기를 제한할 뿐 reward는 건드리지 않습니다.
+@@ 46
+<strong>"DQN은 신경망 하나로 49개 게임을 모두 플레이했다."</strong> 아키텍처도 하나, 하이퍼파라미터 세트도 하나였지만, 가중치는 게임마다 초기화해 따로 학습했습니다.
+@@ 47
+7. DQN: 2013년 preprint에서 Nature 표지까지
+@@ 48
+2013년 12월 DeepMind의 Volodymyr Mnih와 동료들이 "Playing Atari with Deep Reinforcement Learning"을 공개했습니다. convolutional network가 원본 픽셀을 읽어 Q-value를 출력하고, Q-learning이 replay memory에서 뽑은 데이터로 이 신경망을 학습시키며, 같은 방법을 일곱 개 게임에 각각 1,000만 프레임씩 돌립니다. 일곱 게임 중 여섯에서 이전의 모든 RL 방법을 이겼고, 세 게임에서는 인간 전문가도 이겼습니다. Breakout(168점 대 인간 31점), Enduro(470 대 368), Pong(20 대 −3)입니다. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> 이 신경망은 필터가 16개와 32개인 convolutional layer 두 개와 256-unit hidden layer로 이루어졌고, target network는 없었습니다.
+@@ 49
+2015년 2월 26일의 <em>Nature</em> 논문은 규모를 키웠습니다. 게임 49개, 게임당 5,000만 프레임(약 38일 분량의 플레이), 세 번째 convolutional layer, 512-unit layer, 그리고 target network를 썼고, 처음부터 끝까지 아키텍처 하나와 하이퍼파라미터 세트 하나를 유지했습니다. 점수는 <strong>human-normalised score</strong>(인간 기준 정규화 점수), 즉 100 × (DQN − random) / (human − random)으로 보고합니다. 여기서 human은 약 두 시간 연습한 전문 테스터입니다. DQN은 49개 게임 중 43개에서 기존의 가장 좋은 RL 방법을 이겼고, 29개에서 인간 점수의 75% 이상에 도달했습니다. <a class="src" href="https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf">Mnih 2015</a> 게임별 편차는 큽니다. Breakout은 401.2점으로, 인간 31.8점과 random 1.7점에 비추면 인간의 약 1,327%입니다. Pong은 132%입니다. 첫 reward를 받기까지 긴 exploration이 필요한 Montezuma's Revenge는 0.0점으로 random 플레이와 같습니다. <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> (게임별 숫자는 Double DQN 논문에 다시 실린 Nature 결과입니다. Nature의 표는 이미지로 되어 있습니다.)
+@@ 50 attr
+49개 Atari 게임에서 DQN의 human-normalised score를 보여 주는 가로 막대 차트. 맨 위 Video Pinball부터 맨 아래 Montezuma's Revenge까지 정렬되어 있고, 75% 선과 비교용 best linear learner가 함께 표시됨
+@@ 51
+<a class="src" href="https://www.nature.com/articles/nature14236">Figure 3, Mnih 2015</a> 게임마다 막대 하나이며, human-normalised score 순으로 정렬되어 있습니다. 75% 선 위의 29개 게임을 인간 수준으로 봅니다. Video Pinball이 2,539%로 맨 위에 있고 Montezuma's Revenge는 0%입니다.
+@@ 52
+그 뒤 3년 안에 같은 연구소에서 나온 논문 네 편이 가장 뚜렷한 약점들을 고쳤고, 모두 같은 Atari 게임 모음에서 측정했습니다.
+@@ 53
+날짜
+@@ 54
+바꾼 것 하나
+@@ 55
+결과
+@@ 56
+=
+@@ 57
+2015년 9월
+@@ 58
+Online network가 argmax를 고르고 target network가 그것을 평가: 이미 가지고 있는 복사본을 활용한 Double Q-learning
+@@ 59
+49개 게임에서 human-normalised score 중앙값 93.5% → 114.7%, 모든 게임에서 overestimation 확인 <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a>
+@@ 60
+=
+@@ 61
+2015년 11월
+@@ 62
+transition을 ∝ |TD error| 확률로 sampling하고, importance weight로 bias를 보정
+@@ 63
+49개 게임 중 41개에서 uniform replay를 앞섬. DQN baseline 기준 중앙값 48% → 106% <a class="src" href="https://arxiv.org/abs/1511.05952">Schaul 2015</a>
+@@ 64
+=
+@@ 65
+head를 V(s) stream과 A(s, a) stream으로 나눈 뒤 Q = V + A − mean(A)로 다시 합침
+@@ 66
+57개 게임에서 중앙값 172.1% (Nature DQN은 79.1%), prioritised replay 사용 <a class="src" href="https://arxiv.org/abs/1511.06581">Wang 2015</a>
+@@ 67
+=
+@@ 68
+2017년 10월
+@@ 69
+=
+@@ 70
+중앙값 223% (DQN은 79%). 200M 프레임 중 7M 만에 DQN의 최종 점수에 도달 <a class="src" href="https://arxiv.org/abs/1710.02298">Hessel 2017</a>
+@@ 71
+Paper Bible의 <a href="#p-dqn">DQN 논문 리뷰</a>는 Nature 논문을 한 쪽씩 짚어 가며 읽습니다.
+@@ 72
+전체 구조는 다음과 같습니다. 모양이 똑같은 신경망 두 개, buffer 하나, 그리고 loop 두 개입니다. 빠른 acting loop와 그보다 느린 learning loop입니다.
+@@ 73 attr
+DQN 데이터 흐름. 위쪽은 acting loop: Atari 에뮬레이터가 프레임을 전처리 단계 phi로 보내고, phi는 84 x 84 x 4 tensor를 만들어 convolutional layer 세 개와 512-unit layer로 이루어진 online Q-network에 넣습니다. 여기서 나온 Q-value는 epsilon-greedy 선택으로 가고, 선택된 action은 다시 에뮬레이터로 돌아갑니다. Transition은 100만 개를 담는 replay memory에 기록됩니다. 아래쪽은 learning loop: 32개짜리 minibatch를 sampling하고, target network가 r 더하기 gamma 곱하기 max Q를 계산하며, online network의 Q와의 loss를 RMSProp으로 최소화해 online network를 update합니다. C step마다 online network의 가중치를 target network로 복사합니다.
+@@ 74
+acting loop (4프레임마다)
+@@ 75
+Atari 에뮬레이터
+@@ 76
+=
+@@ 77
+φ 전처리
+@@ 78
+=
+@@ 79
+=
+@@ 80
+=
+@@ 81
+=
+@@ 82
+FC 512 → action당 Q 하나
+@@ 83
+=
+@@ 84
+action a<tspan baseline-shift="sub" font-size="10">t</tspan>, 4프레임 반복
+@@ 85
+(φ<tspan baseline-shift="sub" font-size="9">t</tspan>, a<tspan baseline-shift="sub" font-size="9">t</tspan>, r<tspan baseline-shift="sub" font-size="9">t</tspan>, φ<tspan baseline-shift="sub" font-size="9">t+1</tspan>) 매 step 기록
+@@ 86
+learning loop (4step마다)
+@@ 87
+=
+@@ 88
+=
+@@ 89
+=
+@@ 90
+같은 구조, 고정
+@@ 91
+=
+@@ 92
+=
+@@ 93
+error를 ±1로 clip
+@@ 94
+=
+@@ 95
+=
+@@ 96
+gradient → θ update
+@@ 97
+C = 10,000마다 θ → θ⁻ 복사
+@@ 98
+저장 전 reward를 −1, 0, +1로 clip · γ = 0.99 · 게임당 50M 프레임
+@@ 99
+buffer 하나를 둘러싼 두 loop로 본 DQN. 위: 행동합니다. 아래: 과거에서 무작위로 뽑은 sample로, 고정해 둔 자신의 복사본을 기준 삼아 학습합니다. 점선은 두 network를 잇는 유일한 연결입니다.
+@@ 100
+윗줄을 왼쪽에서 오른쪽으로 읽습니다. <strong>에뮬레이터</strong>는 210 × 160 컬러 프레임을 60 Hz로 만들어 냅니다. <strong>전처리</strong> φ는 연속한 두 프레임에서 픽셀별 최댓값을 취해 스프라이트 깜빡임을 없애고, 휘도로 변환하고, 84 × 84로 크기를 줄인 다음, 가장 최근 프레임 네 장을 쌓습니다. 그래서 입력은 84 × 84 × 4가 되고 신경망이 움직임을 볼 수 있습니다. <strong>online network</strong>는 convolutional layer 세 개(8 × 8 필터 32개에 stride 4, 4 × 4 필터 64개에 stride 2, 3 × 3 필터 64개에 stride 1이고, feature map은 차례로 20 × 20, 9 × 9, 7 × 7), 그 뒤의 rectifier unit 512개, 그리고 허용된 action마다 unit이 하나씩 있는 linear 출력층으로 이루어집니다. 출력 unit은 게임에 따라 4개에서 18개입니다. forward pass 한 번으로 모든 action의 value를 얻고, ε-greedy가 그중 하나를 고릅니다. ε은 첫 100만 프레임 동안 1.0에서 0.1로 서서히 줄입니다. 고른 action은 4프레임 동안 반복하므로(<strong>frame skip</strong>) agent는 초당 15번 결정합니다. <a class="src" href="https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf">Mnih 2015</a> <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 101
+이제 아랫줄입니다. 모든 transition (φ<sub>t</sub>, a<sub>t</sub>, r<sub>t</sub>, φ<sub>t+1</sub>)은 reward를 −1, 0, +1 중 하나로 clip한 뒤 <strong>replay memory</strong>에 들어가고, replay memory는 가장 최근의 100만 개를 보관합니다. agent가 4step 진행할 때마다 <strong>32개짜리 minibatch</strong>를 균등 확률로 뽑습니다. 각 sample에 대해 <strong>target network</strong>가 y<sub>j</sub> = r<sub>j</sub> + γ max<sub>a′</sub> Q̂(φ<sub>j+1</sub>, a′; θ⁻)를 계산하고, episode가 끝나는 지점이면 r<sub>j</sub>만 씁니다. target network는 online network의 복사본으로, C = 10,000번의 update마다 한 번만 갱신하고 그 사이에는 고정해 둡니다. loss는 y<sub>j</sub>와 online network의 Q(φ<sub>j</sub>, a<sub>j</sub>; θ) 사이 차이의 제곱이며, error는 [−1, 1]로 clip합니다. 논문은 이것이 "안정성을 더욱 높였다"고 말합니다. <strong>RMSProp</strong>이 learning rate 0.00025, γ = 0.99로 θ에 대해 한 step 나아가고, gradient는 실제로 고른 action의 출력 unit에만 전달됩니다. <a class="src" href="https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf">Mnih 2015</a> <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> Replay는 연속한 sample 사이의 상관관계를 끊고, 경험 하나가 신경망을 여러 번 가르치게 해 줍니다. Target network는 update가 자기 자신의 target을 움직이지 못하게 막습니다. 둘 다 off-policy 학습 알고리즘이 있어야 쓸 수 있습니다. replay되는 action은 더 오래된 policy가 고른 것이기 때문입니다. DQN 안의 알고리즘이 SARSA가 아니라 Q-learning인 이유가 여기에 있습니다.
+@@ 102 attr
+DQN convolutional network의 구조도. 84 x 84 프레임 네 장을 쌓은 입력이 convolutional layer 세 개와 fully connected layer 하나를 거쳐 action마다 하나씩인 출력으로 이어짐
+@@ 103
+<a class="src" href="https://www.nature.com/articles/nature14236">Figure 1, Mnih 2015</a> 논문에 실린 신경망 그림입니다. 왼쪽에 쌓인 입력 프레임, rectifier unit을 쓰는 convolutional layer 세 개, 512-unit layer, 그리고 오른쪽에 action마다 하나씩인 Q-value가 있습니다.
+@@ 104
+직접 해 보기: 학습 반복 한 번을 단계별로 넘겨 보세요. 각 패널은 사용 중인 상자를 강조해 보여 주고, action이 세 개인 작은 예시 신경망으로 계산을 직접 해 봅니다.
+@@ 105
+눈여겨볼 점: 5단계와 6단계에서 target은 고정된 network에서 나오고 gradient는 online network로만 흘러 들어갑니다. 그리고 clip된 error(1.0)는 원래 TD error(1.285)보다 작습니다. 두 network가 맞닿는 순간은 7단계뿐입니다.
+@@ 106
+시스템 관점: 무엇이 어디서 실행되는가
+@@ 107
+아키텍처는 하나이고, 학습은 게임마다 한 번씩 49번 따로 실행합니다. 한 번의 실행은 5,000만 프레임, 게임 시간으로 약 38일을 플레이합니다. frame skip이 4이므로 결정은 1,250만 번이고, 결정 4번마다 update를 한 번 하므로 32개짜리 minibatch로 gradient step을 약 310만 번 밟습니다. 따라서 저장된 transition 하나는 100만 개짜리 buffer에서 밀려나기 전까지 대략 여덟 번 replay됩니다. target network는 한 번의 실행에서 약 310번 복사됩니다. <a class="src" href="https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf">Mnih 2015</a> <a class="src" href="https://arxiv.org/abs/1509.06461">van Hasselt 2015</a> 게임당 실제 소요 시간(wall-clock time)은 보고되어 있지 않습니다. update 빈도, target 주기, learning rate는 Double DQN 논문에 다시 적힌 Nature의 값입니다. <a href="#d7">Day 7</a>에서는 A3C가 replay memory를 버리고 CPU 코어 위의 여러 병렬 environment를 쓰게 된 과정을 봅니다.
+@@ 108
+더 깊이 (선택): target network가 반칙이 아닌 이유
+@@ 109
+두 복사 사이에는 target y<sub>j</sub>가 고정된 숫자이므로, learning loop는 평범한 지도학습 회귀입니다. 입력은 φ<sub>j</sub>, 레이블은 y<sub>j</sub>, loss는 제곱 오차입니다. 10,000번의 update마다 개선된 신경망으로 레이블을 다시 만드는데, 이것은 value iteration(<a href="#d4">Day 4</a>)을 근사적으로 한 step 밟는 것입니다. DQN은 신경망 회귀 모델을 쓰는 fitted value iteration이며, 사이사이에 데이터 수집이 끼어듭니다. deadly triad가 사라진 것은 아닙니다. 복사본이 Q에서 자신의 target으로 가는 피드백을 충분히 늦춰 준 덕분에, 실제로는 Atari에서 발산이 멈췄습니다. 이후 Double DQN은 max가 49개 게임 모두에서 여전히 과대추정한다는 것을 보였습니다.
+@@ 110
+Q1. SARSA와 Q-learning의 update에서 유일한 차이는 무엇입니까?
+@@ 111
+SARSA는 learning rate를 쓰고, Q-learning은 쓰지 않는다
+@@ 112
+SARSA는 V(s)를 학습하고, Q-learning은 Q(s, a)를 학습한다
+@@ 113
+SARSA는 실제로 고른 다음 action에서 bootstrap하고, Q-learning은 다음 action들에 대한 max에서 bootstrap한다
+@@ 114
+SARSA는 transition 모델이 필요하고, Q-learning은 필요 없다
+@@ 115
+정답 3. 둘 다 모델 없이 step size를 써서 Q(s, a)를 학습합니다. SARSA의 target은 Q(S′, A′)을 쓰는데, 여기서 A′은 behaviour policy가 고른 다음 action입니다. Q-learning의 target은 max<sub>a</sub> Q(S′, a)를 씁니다. 이 기호 하나 때문에 SARSA는 on-policy, Q-learning은 off-policy가 됩니다.
+@@ 116
+Q2. ε = 0.1인 cliff walking에서 Q-learning은 절벽 가장자리를 따르는 optimal 경로를 학습하지만, online 점수는 SARSA가 더 좋습니다(episode당 약 −25 대 −50). 왜 그럴까요?
+@@ 117
+Q-learning의 greedy 경로는 절벽 바로 옆을 지나므로 ε에 따른 무작위 action 때문에 주기적으로 100을 잃는다. SARSA의 value에는 그런 실수가 반영되어 있어 더 안전한 경로로 가게 된다
+@@ 118
+SARSA의 update는 분산이 더 작아서 더 빨리 수렴한다
+@@ 119
+max가 절벽 칸을 과대추정해서 Q-learning은 목표를 끝내 찾지 못한다
+@@ 120
+SARSA는 기본적으로 더 큰 step size를 쓴다
+@@ 121
+정답 1. Q-learning은 greedy policy를 평가하는데, greedy policy는 절벽에서 떠밀릴 일이 없습니다. 하지만 ε-greedy로 움직이는 agent는 떠밀립니다. SARSA는 ε-greedy policy 자체를 평가하므로 절벽 근처 칸이 나쁘게 보이고, 그래서 위쪽 행들로 지나갑니다. ε을 0까지 줄여 가면 둘 다 가장자리 경로를 택합니다.
+@@ 122
+Q3. 두 action 모두 참값이 0이고, 각 추정값은 같은 확률로 +1 또는 −1입니다. 두 추정값의 max의 기댓값은 얼마입니까?
+@@ 123
+정답 4. max는 두 추정값이 모두 −1일 때(확률 1/4)만 −1이고 나머지 경우에는 +1입니다. 0.75 × 1 + 0.25 × (−1) = 0.5. 이 양의 차이가 maximisation bias입니다. Double Q-learning은 한 추정값으로 고르고 다른 추정값으로 평가해서 이를 없앱니다.
+@@ 124
+Q4. 다음 중 "deadly triad"는 어느 조합입니까?
+@@ 125
+Exploration, discounting, 확률적 reward
+@@ 126
+Function approximation, bootstrapping, off-policy training
+@@ 127
+Replay memory, target network, reward clipping
+@@ 128
+큰 step size, 작은 batch, discounting 없음
+@@ 129
+정답 2. 셋 중 어느 둘이든 안전하지만, 셋이 모두 모이면 value 추정값이 발산할 수 있습니다. 3번 선택지는 병이 아니라 DQN의 치료법을 나열한 것입니다.
+@@ 130
+Q5. Nature DQN 신경망에 대한 설명으로 옳은 것은 무엇입니까?
+@@ 131
+입력 210 × 160 × 3, convolutional layer 두 개, FC 256, 출력 하나
+@@ 132
+입력 84 × 84 × 1, convolutional layer 네 개, FC 1024, 모든 게임에서 출력 18개
+@@ 133
+입력 84 × 84 × 4, conv 32@8×8/4, 64@4×4/2, 64@3×3/1, FC 512, 허용된 action마다 출력 하나
+@@ 134
+입력 84 × 84 × 4, Transformer encoder, action마다 출력 하나
+@@ 135
+정답 3. 84 × 84 프레임 네 장을 쌓은 입력이 convolutional layer 세 개와 512-unit layer를 거쳐 linear layer로 이어지고, 출력은 게임에서 허용된 action에 따라 4개에서 18개입니다. 1번 선택지는 더 작은 2013년 신경망(필터 16/32개, FC 256)과 비슷하지만 입력이 틀렸습니다.
+@@ 136
+Q6. DQN의 target network란 무엇입니까?
+@@ 137
+Online network 가중치의 복사본으로, C = 10,000번의 update마다 갱신하고 그 사이에는 고정해 두며, target 계산에만 쓴다
+@@ 138
+같은 minibatch로 더 작은 learning rate를 써서 학습하는 두 번째 신경망
+@@ 139
+정규화에 쓸 인간 플레이어의 점수를 예측하는 신경망
+@@ 140
+2013년 preprint의 신경망을 baseline으로 남겨 둔 것
+@@ 141
+정답 1. Target network를 학습시키는 것은 아무것도 없습니다. C번의 update마다 online network의 가중치로 덮어쓸 뿐입니다. 복사와 복사 사이에 고정해 두면 그 구간의 학습은 고정된 레이블에 대한 회귀가 되고, 이것이 학습을 안정시켰습니다.
+@@ 142
+Action value Q(s, a)가 있으면 모델 없이 표를 찾아보는 것만으로 greedy하게 행동할 수 있습니다. SARSA의 target은 R + γ Q(S′, A′), Q-learning의 target은 R + γ max<sub>a</sub> Q(S′, a)입니다. 차이는 이것뿐입니다.
+@@ 143
+SARSA는 on-policy로, exploration까지 포함해 지금 실행하는 policy의 value를 학습합니다. Q-learning은 off-policy로, 무엇을 실행하든 q<sub>*</sub>를 학습합니다. cliff walking에서는 약 17step의 안전한 경로(약 −25)와 13step의 optimal 가장자리 경로(online 약 −50)로 갈립니다.
+@@ 144
+noise가 낀 추정값들의 max는 위쪽으로 bias가 생깁니다(참값이 0인 ±1 추정값 두 개의 max는 평균 +0.5). Expected SARSA는 sampling 대신 평균을 내고, Double Q-learning은 한 추정값으로 고르고 다른 추정값으로 평가합니다.
+@@ 145
+Function approximation + bootstrapping + off-policy training이 deadly triad입니다. 어느 둘이든 안전하지만 셋이 모이면 발산할 수 있습니다. 신경망 Q-learner에는 셋이 다 있습니다.
+@@ 146
+DQN (Nature, 2015년 2월): 입력 84 × 84 × 4, conv 32@8×8/4, 64@4×4/2, 64@3×3/1, FC 512, action마다 출력 하나. 1M-transition replay, 32개짜리 minibatch, 10,000번의 update마다 target network 복사, reward는 ±1로 clip, 게임당 50M 프레임. 49개 게임 중 29개가 인간 점수의 ≥ 75%, Breakout 1,327%, Montezuma's Revenge 0%.
+@@ 147
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd edition</a> — Sutton &amp; Barto, MIT Press, 2018. 6.4–6.7절(SARSA, Q-learning, Example 6.6 cliff walking, Expected SARSA, maximisation bias와 Double Q-learning), 11.3절(deadly triad), 16.5절(DQN 사례 연구, feature map 크기 포함).
+@@ 148
+<a href="https://arxiv.org/abs/1312.5602">Playing Atari with Deep Reinforcement Learning</a> — Mnih et al., DeepMind, arXiv, 2013년 12월 19일. 7개 게임을 다룬 preprint입니다. Algorithm 1은 DQN을 열 줄로 적은 것이고, Table 1에 점수가 있습니다.
+@@ 149
+<a href="https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf">Human-level control through deep reinforcement learning</a> — Mnih et al., Nature 518, 2015년 2월 26일 (DeepMind가 호스팅하는 PDF. 저널 페이지는 <a href="https://www.nature.com/articles/nature14236">nature.com/articles/nature14236</a>). Methods 절에 아키텍처, 전처리, loss, 학습 세부 사항이 있고, Figure 3이 49개 게임 차트입니다.
+@@ 150
+<a href="https://proceedings.neurips.cc/paper/2010/hash/091d584fced301b442654dd8c23b3fc9-Abstract.html">Double Q-learning</a> — van Hasselt, NIPS 2010. maximisation bias에 이름을 붙이고 double estimator를 제안한 논문입니다.
+@@ 151
+<a href="https://arxiv.org/abs/1509.06461">Deep Reinforcement Learning with Double Q-learning</a> — van Hasselt, Guez &amp; Silver, arXiv, 2015년 9월 (AAAI 2016). 중앙값 93.5% → 114.7%는 Table 1에 있고, Table 3에는 위에서 쓴 Nature의 게임별 점수와 하이퍼파라미터가 다시 실려 있습니다.
+@@ 152
+<a href="https://arxiv.org/abs/1511.05952">Prioritized Experience Replay</a> — Schaul, Quan, Antonoglou &amp; Silver, arXiv, 2015년 11월 (ICLR 2016). TD error에 따른 sampling과 importance-sampling 보정을 다룹니다.
+@@ 153
+<a href="https://arxiv.org/abs/1511.06581">Dueling Network Architectures for Deep Reinforcement Learning</a> — Wang et al., arXiv, 2015년 11월 (ICML 2016). V + A 분리를 제안했고, 중앙값은 Table 1에 있습니다.
+@@ 154
+<a href="https://arxiv.org/abs/1710.02298">Rainbow: Combining Improvements in Deep Reinforcement Learning</a> — Hessel et al., DeepMind, arXiv, 2017년 10월. 여섯 가지 확장을 agent 하나에 합쳤고, Figure 3이 각각의 기여를 보여 줍니다.
+@@ 155
+<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro2.html">Spinning Up, Part 2: Kinds of RL Algorithms</a> — OpenAI, 2018. Q-learning이 policy-gradient 방법과 model-based 방법 사이에서 어디에 놓이는지 보여 주는 한 쪽짜리 지도입니다.

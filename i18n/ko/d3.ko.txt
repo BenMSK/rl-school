@@ -1,0 +1,324 @@
+@@ 1
+<span class="eyebrow">1주차 · Day 3</span>
+@@ 2
+Markov decision process와 Bellman equation
+@@ 3
+오늘 레슨을 마치면 state, action, transition, policy, 그리고 두 value function V와 Q를 정의할 수 있습니다. Bellman expectation equation과 Bellman optimality equation을 직접 쓰고, 작은 격자에서 손으로 검산할 수 있습니다.
+@@ 4
+약 90분 · Day 2 필요
+@@ 5
+상황이 바뀔 수 있게 되면 "이 action이 얼마나 좋은가"는 그 action이 나를 어디에 데려다 놓는지에 따라 달라집니다. 이것을 엄밀하게 표현한 모델이 Markov decision process이고, 거기서 한 줄로 따라 나오는 결과가 Bellman equation입니다. 어떤 state의 value는 지금 기대하는 reward에, 다음에 도착할 것으로 기대하는 곳의 value를 discount해서 더한 값과 같습니다. 이 코스의 모든 RL 알고리즘은 이 방정식을 근사적으로 푸는 방법입니다.
+@@ 6
+1. Markov property: "state"에 무엇이 들어 있어야 하는가
+@@ 7
+<a href="#d2">Day 2</a>에서는 세상이 바뀌지 않았습니다. bandit의 arm을 몇 번 당기든 늘 같은 상황이었습니다. 오늘은 상황이 움직입니다. 체스에서 한 수를 두면 판이 바뀌고, 미로에서 한 걸음 가면 서 있는 자리가 바뀝니다. "지금 이 순간의 상황"을 가리키는 말이 <strong>state</strong>(상태)이고, 이론 전체가 state에 대한 요구 조건 하나 위에 서 있습니다.
+@@ 8
+다음에 일어날 일의 확률이 오직 state S<sub>t</sub>에만 달려 있고 거기까지 온 경로와는 무관할 때, 그 state는 <strong>Markov property</strong>를 가진다고 합니다. David Silver의 표현으로는 "현재가 주어지면 미래는 과거와 독립"입니다. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a>
+@@ 9
+이 조건이 성립하면 history는 버려도 됩니다. state가 미래에 대한 <strong>sufficient statistic</strong>(충분통계량)이기 때문입니다. Sutton과 Barto는 이 책임을 설계자에게 지웁니다. "state에는 과거 agent–environment 상호작용 가운데 미래에 영향을 주는 모든 측면의 정보가 들어 있어야 한다." 이것은 "decision process에 대한 제약이 아니라 state에 대한 제약"입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 10
+구체적인 예로 확인해 봅시다. 공이 공중을 날아갑니다. state를 "위치"로 잡으면 다음 위치를 예측할 수 없습니다. 같은 지점에 있는 공이 올라가는 중일 수도, 내려가는 중일 수도 있기 때문입니다. 그래서 위치만으로는 Markov가 아닙니다. state를 "위치와 속도"로 잡으면 다음 위치를 (noise를 제외하면) 예측할 수 있고, history를 더해도 새로 알게 되는 것이 없습니다. 이 state는 Markov입니다. state를 고른다는 것은 무엇을 기억할지 고르는 일입니다.
+@@ 11
+보드게임에서 다음 수를 고를 때 지금까지 둔 수를 전부 알 필요는 없어요. 그냥 판을 보면 돼요. 이 판이 바로 "state"예요. 지나간 일 중에서 아직 중요한 것은 판에 이미 다 담겨 있거든요. 만약 "세 턴 전에 움직인 말은 움직일 수 없다"는 규칙이 있다면 판만 봐서는 부족해요. 그 기억까지 state에 넣어야 해요.
+@@ 12
+2. MDP: state, action, 그리고 p(s′, r | s, a)
+@@ 13
+<strong>Markov decision process</strong>(MDP)는 bandit 문제에, action에 따라 바뀌는 Markov state를 더한 것입니다. Richard Bellman이 1957년에 "A Markovian Decision Process"라는 짧은 논문에서 이 모델을 처음 소개했습니다. <a class="src" href="https://www.iumj.indiana.edu/IUMJ/FULLTEXT/1957/6/56038">Bellman 1957</a> <strong>finite MDP</strong>(유한 MDP)는 구성 요소 네 개와 숫자 하나로 이루어집니다.
+@@ 14
+<strong>S</strong>: state의 유한 집합.
+@@ 15
+<strong>A</strong>: action의 유한 집합 (state마다 다를 수 있습니다).
+@@ 16
+<strong>R</strong>: 가능한 reward의 유한 집합. reward는 실수입니다.
+@@ 17
+<strong>dynamics</strong> p: 현재 state와 action이 주어졌을 때 모든 (다음 state, reward) 쌍의 확률을 알려 주는 함수 하나.
+@@ 18
+0과 1 사이의 <strong>discount</strong> γ. <a href="#d1">Day 1</a>에서 다뤘습니다.
+@@ 19
+p(s′, r | s, a) ≐ Pr{ S<sub>t</sub> = s′, R<sub>t</sub> = r | S<sub>t−1</sub> = s, A<sub>t−1</sub> = a }, &nbsp; 단 &nbsp; Σ<sub>s′</sub> Σ<sub>r</sub> p(s′, r | s, a) = 1
+@@ 20
+함수 p 하나가 environment 전체입니다. 나머지는 모두 p에서 유도할 수 있습니다. transition 확률은 p(s′ | s, a) = Σ<sub>r</sub> p(s′, r | s, a)이고, 기대 reward는 r(s, a) = Σ<sub>r</sub> r Σ<sub>s′</sub> p(s′, r | s, a)입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Silver는 같은 내용을 tuple ⟨S, A, P, R, γ⟩로 쓰고, transition P<sup>a</sup><sub>ss′</sub>와 reward R<sup>a</sup><sub>s</sub>를 따로 둡니다. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a> 책의 인자 네 개짜리 형태는 reward가 도착한 곳에 따라 달라지는 경우까지 표현할 수 있습니다.
+@@ 21
+두 가지만 확인하고 넘어갑시다. bandit은 state가 하나뿐인 MDP입니다. <strong>terminal state</strong>(종료 상태, 예: 게임 종료나 목표 도달)는 어떤 action을 해도 reward 0을 받고 자기 자신으로 돌아오는 state입니다. 그래서 정의상 value가 0입니다.
+@@ 22
+3. Policy, V, Q
+@@ 23
+<strong>policy</strong>(정책)는 agent가 행동을 정하는 규칙입니다. "state에서, 가능한 각 action을 선택할 확률로 가는 mapping"이며 π(a | s) = Pr{A<sub>t</sub> = a | S<sub>t</sub> = s}로 씁니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> <strong>deterministic policy</strong>(결정론적 정책)는 state마다 한 action이 확률 1을 갖는 특수한 경우이고, 함수 a = π(s)로 쓸 수 있습니다. <strong>stochastic policy</strong>(확률적 정책)는 확률을 여러 action에 나누어 줍니다. 모든 a에 대해 π(a | s) = 1/|A|인 equiprobable random policy(모든 action을 같은 확률로 고르는 policy)가 오늘 내내 쓸 시험 사례입니다.
+@@ 24
+policy가 주어지면 두 가지 질문에 분명한 답이 생깁니다. state s에 있다가 그 뒤로 π를 따르면 얼마나 좋은가? 이것이 <strong>state-value function</strong>(상태 가치 함수) V입니다. s에서 action a를 한 다음, 그 뒤부터 π를 따르면 얼마나 좋은가? 이것이 <strong>action-value function</strong>(행동 가치 함수) Q입니다. 둘 다 기대 return입니다. 여기서 return G<sub>t</sub> = R<sub>t+1</sub> + γR<sub>t+2</sub> + γ²R<sub>t+3</sub> + …은 <a href="#d1">Day 1</a>에서 본 discount된 합입니다.
+@@ 25
+둘은 양쪽 방향으로 묶여 있습니다. V는 Q를 policy의 확률로 가중 평균한 값입니다. s에서 가장 먼저 일어나는 일이 π가 action을 고르는 것이기 때문입니다. 그리고 Q는 "reward에 다음 state의 V를 discount해서 더한 값"을 environment의 확률로 가중 평균한 값입니다. action 다음에는 environment가 (s′, r)을 고르기 때문입니다.
+@@ 26
+"action value"라는 용어는 Chris Watkins가 만들었고, <a href="#p-qlearning">Q-learning 논문 리뷰</a>의 바탕이 된 1989년 학위 논문에 나옵니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> V는 state마다 숫자 하나, Q는 state–action 쌍마다 숫자 하나를 갖습니다. 그대로 행동에 쓸 수 있는 쪽은 Q입니다. 여러 action의 q(s, a)를 비교하면 dynamics를 몰라도 무엇을 할지 알 수 있습니다.
+@@ 27
+4. Bellman expectation equation
+@@ 28
+3절의 둘째 식을 첫째 식에 대입하면 v<sub>π</sub>만 나오는 방정식이 됩니다.
+@@ 29
+v<sub>π</sub>(s) = Σ<sub>a</sub> π(a | s) Σ<sub>s′, r</sub> p(s′, r | s, a) [ r + γ v<sub>π</sub>(s′) ] &nbsp; 모든 s에 대해
+@@ 30
+이것이 <strong>Bellman expectation equation</strong>입니다. 수식 전개 없이 말로 유도해 봅시다. return에는 재귀 관계가 있습니다. 무슨 일이 일어나든 G<sub>t</sub> = R<sub>t+1</sub> + γ G<sub>t+1</sub>입니다. 오늘부터의 합에서 reward 하나를 떼어 내고 나머지를 한 번 더 discount하면 내일부터의 합이 되기 때문입니다. S<sub>t</sub> = s라는 조건에서 양변의 기댓값을 취합니다. 좌변은 v<sub>π</sub>(s)입니다. 우변에서 첫 reward의 기댓값과 다음 state의 value의 기댓값은 둘 다, 한 step 안에 일어나는 두 번의 무작위 선택에 대한 평균입니다. π가 a를 고르고, 이어서 environment가 (s′, r)을 고릅니다. 모든 가지를 그 확률로 가중하면 이중 합이 나옵니다. Sutton과 Barto는 이 식을 이렇게 읽습니다. "시작 state의 value는 기대되는 다음 state의 (discount된) value에, 그 사이에 기대되는 reward를 더한 값과 같아야 한다." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 31
+같은 대입을 반대 방향으로 하면 Q에 대한 방정식이 나옵니다. 여기서는 policy가 한 step 뒤에 등장합니다. q<sub>π</sub>(s, a) = Σ<sub>s′, r</sub> p(s′, r | s, a) [ r + γ Σ<sub>a′</sub> π(a′ | s′) q<sub>π</sub>(s′, a′) ]. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">OpenAI 2018</a>
+@@ 32 attr
+backup diagram 두 개. 왼쪽은 V: 맨 위에 state s를 나타내는 빈 원이 있고, 여기서 채워진 점 두 개(action, policy의 확률로 가중)로 갈라지며, 각 점은 다시 빈 원 두 개(다음 state, dynamics의 확률로 가중, 가지마다 reward 표시)로 갈라진다. 오른쪽은 Q: 맨 위에 (s,a) 쌍을 나타내는 채워진 점이 있고, 다음 state 원 두 개로 갈라지며, 각 원은 다시 policy가 고르는 action 점 두 개로 갈라진다.
+@@ 33
+v_π(s)의 backup
+@@ 34
+a에 대해 평균(π), 다음에 s′, r에 대해 평균(p)
+@@ 35
+q_π(s, a)의 backup
+@@ 36
+s′, r에 대해 평균(p), 다음에 a′에 대해 평균(π)
+@@ 37
+Backup diagram. 빈 원은 state, 채워진 점은 state–action 쌍입니다. 위에서 아래로 읽으면 각 층이 무작위 선택 한 번(policy의 선택 또는 environment의 선택)입니다. 방정식은 "모든 가능성을 각각의 확률로 가중해서 평균"합니다. 5절의 optimality equation에서는 policy의 층이 평균 대신 max가 됩니다.
+@@ 38
+이 방정식의 두 가지 성질이 코스의 나머지를 떠받칩니다. 첫째, 미지수 v<sub>π</sub>(s)에 대해 <strong>선형</strong>입니다. state가 n개면 미지수 n개에 대한 선형 방정식 n개가 나오고, 책은 7절의 gridworld 숫자를 바로 이렇게 구했습니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 둘째, 이 식은 절차가 아니라 <em>일관성 조건</em>입니다. v<sub>π</sub>가 무엇을 만족해야 하는지 말할 뿐, 어떻게 찾을지는 열어 둡니다. 알고리즘들은 그 "어떻게"에 대한 서로 다른 답입니다.
+@@ 39
+value는 늘 다니던 길을 계속 걸어갈 때 지금부터 모으게 될 사탕의 총합이라고 생각해 보세요. 다만 길 저 멀리 있는 사탕은 조금 덜 쳐줘요. Bellman equation은 이렇게 말해요. 여기서부터의 사탕 = 이 칸의 사탕 + 0.9 × 다음 칸부터의 사탕. value가 맞는지 확인하려고 길을 끝까지 걸어 볼 필요는 없어요. 한 칸 앞만 보면 돼요. 이렇게 한 step 앞을 보는 것을 <strong>backup</strong>이라고 불러요. 다음 state의 정보를 지금 state로 되돌려 올리기(back up) 때문이에요.
+@@ 40
+5. Bellman optimality equation
+@@ 41
+policy끼리는 비교할 수 있습니다. 모든 state에서 v<sub>π</sub>(s) ≥ v<sub>π′</sub>(s)이면 π는 π′보다 좋거나 같습니다. 이것은 partial order(부분 순서)일 뿐이어서 두 policy가 서로 다른 state에서 각각 이길 수도 있습니다. 그런데 MDP의 중심 정리는 이 순서에 항상 꼭대기가 있다고 말합니다. "다른 모든 policy보다 좋거나 같은 policy가 항상 적어도 하나 존재한다." 그것이 <strong>optimal policy</strong>(최적 정책) π*이고, 모든 optimal policy는 같은 <strong>optimal value function</strong>(최적 가치 함수)을 공유합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 42
+=
+@@ 43
+이제 핵심 단계입니다. optimal policy 아래에서 state의 value는 거기서 할 수 있는 <em>가장 좋은</em> action의 value와 같아야 합니다. optimal policy라면 더 나쁜 action을 알면서 고를 리 없기 때문입니다. 그래서 backup diagram에서 policy가 평균을 내던 층이 최댓값으로 바뀌고, <strong>Bellman optimality equation</strong>을 얻습니다.
+@@ 44
+=
+@@ 45
+=
+@@ 46
+max 때문에 이 식들은 <strong>비선형</strong>입니다. 미지수 n개에 방정식 n개이지만 행렬 연산으로는 풀 수 없습니다. 그래도 finite MDP에서는 이 연립방정식의 해 v*가 유일하고, 일단 v*를 얻으면 잘 행동하기는 쉽습니다. v*에 대해 <strong>greedy</strong>(탐욕적)한 policy, 즉 위 식의 대괄호 부분을 최대로 만드는 action을 고르는 policy는 모두 optimal입니다. "한 step 앞만 탐색해도 장기적으로 optimal인 action이 나온다"는 것입니다. q*가 있으면 한 step 탐색조차 필요 없습니다. 가장 좋은 action을 표에서 바로 읽으면 됩니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> Silver는 <em>deterministic</em>한 optimal policy가 항상 존재한다는 점을 덧붙입니다. a = argmax<sub>a</sub> q*(s, a)일 때 π*(a | s) = 1입니다. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a>
+@@ 47
+그렇다면 RL은 왜 그냥 "optimality equation을 푸는 일"이 아닐까요? 정확히 풀려면 dynamics를 알아야 하고, state가 Markov여야 하고, 계산 자원이 충분해야 합니다. 이 가운데 계산 자원이 가장 먼저 바닥납니다. backgammon의 state는 약 10<sup>20</sup>개이고, 그 Bellman equation을 정확히 풀려면 "수천 년이 걸릴 것"입니다. 그래서 RL 방법들은 근사해에 만족합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> 이 코스의 나머지는 그 근사에 관한 이야기입니다.
+@@ 48
+<strong>"Markov라는 말은 environment가 단순하거나 deterministic하다는 뜻이다."</strong> Markov는 state가 미래를 예측하는 데 필요한 모든 것을 담고 있다는 뜻일 뿐입니다. 주사위, noise, 거대한 state space 모두 허용됩니다. 이것은 process가 아니라 state에 대한 제약입니다.
+@@ 49
+<strong>"v*(s)는 s에서 받는 reward다."</strong> v*(s)는 가장 좋은 행동을 했을 때 앞으로 받을 모든 reward를 discount해서 더한 합의 기댓값입니다. 7절의 optimal gridworld에서 state A는 reward가 10인데도 value가 24.4입니다. 다섯 step마다 +10을 다시 받을 수 있기 때문입니다.
+@@ 50
+<strong>"Bellman equation은 알고리즘이다."</strong> Bellman equation은 v<sub>π</sub>가 만족하는 조건입니다. dynamic programming, temporal-difference learning, Q-learning은 이 조건을 정확하게 또는 근사적으로 푸는 서로 다른 알고리즘입니다.
+@@ 51
+<strong>"optimal policy는 유일하다."</strong> 유일한 것은 optimal <em>value</em>입니다. 그 value를 달성하는 policy는 여러 개일 수 있습니다. 책의 optimal gridworld에는 똑같이 좋은 화살표가 두세 개인 칸이 있습니다.
+@@ 52
+<strong>"reward와 다음 state는 독립이다."</strong> 책의 인자 네 개짜리 p(s′, r | s, a)는 일부러 둘을 함께 모델링합니다. 아래의 3-state MDP에서 risky action의 reward는 어디에 도착하느냐에 따라 달라집니다.
+@@ 53
+6. 손으로 푸는 3-state MDP
+@@ 54
+종이 위에서 풀 수 있을 만큼 작은 MDP입니다. terminal이 아닌 state가 Start와 Mid 둘, terminal state가 Goal 하나, 어느 state에서나 action은 둘이고, γ = 0.9입니다.
+@@ 55
+=
+@@ 56
+=
+@@ 57
+결과
+@@ 58
+=
+@@ 59
+=
+@@ 60
+→ Mid, reward 0, 확률 1
+@@ 61
+=
+@@ 62
+→ Goal, reward +10, 확률 0.5; → Start, reward −1, 확률 0.5
+@@ 63
+=
+@@ 64
+→ Goal, reward +5, 확률 1
+@@ 65
+→ Goal, reward +8, 확률 0.8; → Start, reward 0, 확률 0.2
+@@ 66
+optimal policy가 "두 state 모두에서 risky"라고 추측하고, 그 추측 아래에서 각 state의 optimality equation을 써 봅시다. Goal은 terminal이므로 v*(Goal) = 0입니다.
+@@ 67
+=
+@@ 68
+=
+@@ 69
+이제 q*(s, a) = Σ p [r + γ v*(s′)]로 q* 표를 만들어 추측을 검증합니다.
+@@ 70
+=
+@@ 71
+=
+@@ 72
+=
+@@ 73
+=
+@@ 74
+두 state 모두에서 greedy action이 우리가 가정한 action과 같으므로 이 값들은 optimality equation을 만족합니다. max(7.09, 8.18) = 8.18이고 max(5.00, 7.87) = 7.87입니다. 해는 유일하므로 이 값들이 v*와 q*이고, "항상 risky"가 optimal입니다. 비교해 보면 equiprobable random policy에서는 v<sub>π</sub>(Start) = 6.56, v<sub>π</sub>(Mid) = 6.29입니다. partial order가 보장하는 대로 모든 state에서 v*보다 낮습니다.
+@@ 75
+직접 해 보기: 아래에서 policy를 골라 보세요. 위젯은 방정식 두 개짜리 선형 연립방정식을 풀어 v<sub>π</sub>를 구하고, state–action 쌍 네 개 모두의 q<sub>π</sub>를 계산한 뒤, q<sub>π</sub>에 대해 greedy한 action을 강조해서 보여 줍니다.
+@@ 76
+눈여겨볼 점: "random"과 "항상 safe"에서는 적어도 한 state에서 greedy action이 policy와 어긋납니다. 더 나은 policy가 있다는 신호입니다. "항상 risky"에서는 greedy action이 policy 자신이고, 이것이 위에서 손으로 한 검증입니다. "항상 safe"는 Start에서 4.50입니다. Start → Mid → Goal로 걸어가면 0을 받고 이어서 +5를 받으며, 0.9 × 5 = 4.5이기 때문입니다.
+@@ 77
+컴퓨터는 아무것도 바뀌지 않을 때까지 optimality backup을 반복하는 방식으로 같은 검증을 합니다. 이것이 <strong>value iteration</strong>이고, <a href="#d4">Day 4</a>에서 제대로 다룹니다.
+@@ 78
+7. Sutton과 Barto의 5×5 gridworld
+@@ 79
+책의 Example 3.5는 이 레슨의 모든 내용을 시험해 볼 수 있는 표준 사례입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a> state는 25개 칸 가운데 하나입니다. action 네 개는 북, 동, 남, 서로 한 칸 움직이며 reward는 0입니다. 격자 밖으로 나가려는 이동은 위치를 그대로 두고 −1을 받습니다. A(맨 윗줄, 둘째 열)에서는 어떤 action을 하든 +10을 받고 같은 열 맨 아래의 A′으로 순간이동합니다. B(맨 윗줄, 넷째 열)에서는 어떤 action을 하든 +5를 받고 두 줄 아래의 B′으로 순간이동합니다. terminal state는 없고, 게임은 γ = 0.9로 끝없이 이어집니다.
+@@ 80
+equiprobable random policy에 대해 선형 expectation equation 25개를 풀면 다음 값이 나옵니다 (행은 위에서 아래 순서).
+@@ 81
+1열
+@@ 82
+2열 (A/A′)
+@@ 83
+3열
+@@ 84
+4열 (B/B′)
+@@ 85
+5열
+@@ 86
+1행
+@@ 87
+2행
+@@ 88
+3행
+@@ 89
+4행
+@@ 90
+5행
+@@ 91
+여기서 세 가지를 읽을 수 있습니다. A의 value는 8.8로, 즉시 받는 reward 10보다 작습니다. 순간이동이 agent를 맨 아래 가장자리의 A′에 떨어뜨리는데, 거기서 무작위로 걷는 agent는 벽에 계속 부딪혀 그때마다 −1을 받기 때문입니다. B의 value는 5.3으로, +5보다 큽니다. B′이 value가 양수인 격자 한가운데에 있기 때문입니다. 그리고 어느 칸이든 expectation equation으로 손으로 검산할 수 있습니다. 가운데 칸(3행 3열, 값 0.7)을 봅시다. 이웃 칸의 값은 북쪽 2.3, 동쪽 0.4, 남쪽 −0.4, 서쪽 0.7이고 네 reward가 모두 0이므로 다음과 같습니다.
+@@ 92
+표에 나온 소수 첫째 자리까지 일치합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 93
+Example 3.8은 같은 격자에서 v*를 구합니다. optimal agent는 A까지 걸어가 +10을 받고, A′으로 순간이동한 뒤, 그 열을 따라 네 칸을 다시 올라가기를 반복합니다.
+@@ 94
+A에서 optimality equation을 확인해 봅시다. A에서는 모든 action의 결과가 같으므로 max는 따질 것이 없습니다. v*(A) = 10 + 0.9 · v*(A′) = 10 + 0.9 · 16.0 = 24.4입니다. B도 같은 방법으로 확인하면 5 + 0.9 · 16.0 = 19.4입니다. A 아래의 열에서는 discount가 작동하는 모습이 보입니다. 24.4 × 0.9 = 22.0, × 0.9 = 19.8, × 0.9 = 17.8, × 0.9 = 16.0이므로 v*(A′) = 0.9⁴ · v*(A)입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 95
+직접 해 보기: 모든 칸은 0에서 시작합니다. "backup 한 번"을 누르면 25개 칸 전체에 Bellman equation을 동시에 한 번 적용합니다. 계속 누르거나 "수렴할 때까지 실행"을 눌러 보세요. random policy(expectation equation)와 optimal policy(optimality equation)를 바꿔 가며 비교해 보세요. 아무 칸이나 누르면 그 칸의 backup이 이웃 네 칸의 값과 함께 풀어서 표시됩니다.
+@@ 96
+눈여겨볼 점: backup을 한 번 한 뒤에는 A, B와 가장자리 칸만 0이 아닙니다. 정보는 backup 한 번에 한 칸씩 이동합니다. random policy 격자는 synchronous backup을 약 220번 해야 소수점 아래 열두 자리까지 수렴하고, optimal 격자는 약 285번이 필요합니다. 하지만 둘 다 그보다 훨씬 전에 책의 표와 소수 첫째 자리까지 일치합니다. 가운데 칸의 backup은 위에서 본 이웃 네 칸의 합을 보여 줍니다 (반올림하지 않은 값으로는 0.67, 책의 반올림된 값으로는 0.675). optimal 모드의 A는 10 + 0.9 · 16.0을 보여 줍니다.
+@@ 97
+더 깊이 (선택): backup을 반복하면 왜 수렴하는가
+@@ 98
+Bellman equation의 우변은 value 표에 작용하는 연산자입니다. γ &lt; 1이므로, 서로 다른 두 표에 이 연산자를 적용하면 두 표 사이의 가장 큰 차이가 적어도 γ배로 줄어듭니다 (이런 연산자를 contraction이라고 합니다). contraction에는 fixed point가 정확히 하나 있고, 어디서 출발하든 반복 적용하면 거기에 도달합니다. 이것이 5절에서 말한 해의 유일성이고, "수렴할 때까지 실행"을 안심하고 눌러도 되는 이유입니다. γ = 1이고 terminal state가 없으면 이 논증은 성립하지 않습니다. 끝나지 않는 gridworld에서 value가 유한하려면 γ &lt; 1이어야 하는 이유가 이것입니다.
+@@ 99
+8. Partial observability: state를 볼 수 없을 때
+@@ 100
+지금까지는 agent가 S<sub>t</sub>를 본다고 가정했습니다. 실제로는 단서만 보는 경우가 많습니다. <strong>partially observable MDP</strong>(POMDP, 부분 관측 MDP)는 Silver의 표현으로 "숨겨진 state가 있는 MDP이며, action이 있는 hidden Markov model"입니다. tuple에 observation 집합 O와 observation 함수 Z가 추가됩니다. Z는 실제 다음 state와 action이 주어졌을 때 각 observation의 확률을 알려 줍니다. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a> Sutton과 Barto는 같은 설정을 "state가 아니라 observation만 내보내는" environment로 설명하고, agent의 state를 agent가 유지하는 history의 요약, 곧 S<sub>t</sub> = f(H<sub>t</sub>)로 정의합니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 101
+깔끔한 해법은 <strong>belief state</strong>(신념 상태)입니다. 지금까지 관측한 모든 것이 주어졌을 때 숨겨진 state에 대한 확률분포입니다. "belief state b(H<sub>t</sub>)는 Markov property를 만족"하므로, POMDP는 belief를 state로 하는 보통의 MDP입니다. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a> 대가는 belief가 연속적이고 고차원이라는 점입니다. 그래서 실제로는 agent가 더 값싼 요약을 씁니다. "실제 agent의 state는 Markov가 아니겠지만, 이상적인 목표로서 Markov에 가까워질 수는 있다." <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 102
+가장 유명한 값싼 요약은 2013년 DQN 논문에 있습니다. Atari 화면 한 장은 공이 어디 있는지는 보여 주지만 어느 쪽으로 움직이는지는 보여 주지 않습니다. 저자들은 "이 task는 부분적으로만 관측되며 많은 emulator state가 지각적으로 구별되지 않는다. 즉 현재 화면만으로는 현재 상황을 완전히 이해할 수 없다"고 말합니다. 이들의 해법은 최근 history를 state로 삼는 것입니다. 전처리를 "history의 마지막 4 프레임에" 적용하고, 그 프레임들을 쌓아 "Q-function의 입력을 만든다"고 합니다. <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> 프레임 네 장에는 위치, 속도, 가속도가 담기므로 Pong과 Breakout에서는 Markov에 충분히 가깝습니다. 신경망이 이 입력으로 무엇을 했는지는 <a href="#p-dqn">DQN 논문 리뷰</a>에서 다룹니다.
+@@ 103
+MDP는 노드가 두 종류인 그래프입니다. 6절의 3-state MDP를 그렇게 그리고 optimal action을 강조했습니다.
+@@ 104 attr
+그래프로 그린 3-state MDP: Start, Mid, Goal은 빈 원(Goal은 terminal이라 이중 원), state–action 쌍 네 개는 채워진 점, 각 action 점에서 다음 state로 가는 화살표에는 확률과 reward 표시. risky action이 optimal로 강조되어 있다.
+@@ 105
+=
+@@ 106
+=
+@@ 107
+=
+@@ 108
+=
+@@ 109
+=
+@@ 110
+원은 state(이중 원은 terminal state), 점은 state–action 쌍입니다. 점에서 나가는 화살표 하나하나가 p의 (s′, r) 결과 하나이며 그 확률이 적혀 있습니다. policy는 state → 점 연결선 위에 있고, dynamics는 점 → state 화살표 위에 있습니다. 강조 표시: 각 state의 optimal action과 그 결과.
+@@ 111
+왼쪽에서 오른쪽으로 읽습니다. state 노드는 action마다 점 하나씩으로 갈라집니다. 어느 점으로 갈지는 policy가 정합니다. 각 점은 다시 여러 결과로 갈라집니다. 어느 결과가 일어날지는 environment가 p의 확률에 따라 정합니다. 이 레슨의 모든 value는 노드에 붙은 숫자입니다. V는 원에, Q는 점에 붙습니다. backup diagram(4절)은 이 그래프에서 노드 하나의 주변을 잘라 내 한 층 아래까지 읽은 것입니다.
+@@ 112
+두 번째 그림은 각 방정식이 어떤 대상들을 서로 연결하는지 보여 줍니다.
+@@ 113 attr
+나란히 놓인 상자 세 개: 왼쪽은 policy π(a|s), 가운데는 environment p(s′,r|s,a), 오른쪽은 value function V와 Q. 화살표: policy가 environment로 action을 보내고, environment가 다음 state와 reward를 돌려준다. Bellman expectation equation은 π와 p를 결합해 V와 Q를 정의하고, greedy 규칙은 Q를 읽어 다시 policy로 만든다.
+@@ 114
+=
+@@ 115
+=
+@@ 116
+Bellman expectation: π와 p가 함께 v<tspan baseline-shift="sub" font-size="10">π</tspan>, q<tspan baseline-shift="sub" font-size="10">π</tspan>를 결정
+@@ 117
+greedy: a = argmax<tspan baseline-shift="sub" font-size="10">a</tspan> q(s, a)로 π 개선. fixed point에서 Bellman optimality 성립
+@@ 118
+각 방정식이 연결하는 대상. policy와 environment는 action과 (s′, r)을 주고받습니다. Bellman expectation equation은 고정된 π와 p를 받아 v<sub>π</sub>와 q<sub>π</sub>를 결정합니다. greedy 규칙은 q를 다시 policy로 바꿉니다. Bellman optimality equation은 이 순환이 더 이상 아무것도 바꾸지 않는다는 조건입니다.
+@@ 119
+오늘은 두 화살표를 모두 정확하게 계산합니다. p를 알고 있고 state 표가 작기 때문입니다. <a href="#d4">Day 4</a>부터는 한쪽 또는 양쪽이 근사가 됩니다. dynamic programming은 p를 그대로 쓰되 반복 계산을 합니다. temporal-difference 방법은 p를 버리고 대신 sample을 뽑습니다. deep RL은 value 표를 신경망으로 바꿉니다. 그림은 바뀌지 않고, 각 상자를 얼마나 충실하게 계산하느냐만 달라집니다.
+@@ 120
+오늘 다룬 것은 모두 휴대폰 CPU에서 마이크로초 단위로 돌아갑니다. 5×5 gridworld에는 state 25개와 state–action 쌍 100개가 있으므로, synchronous sweep 한 번은 r + γ v(s′)를 100번 계산하는 일이고, 수렴까지 걸리는 220~285번의 sweep은 곱셈 약 25,000번입니다. 규모가 커질 때 문제는 state 하나당 비용이 아니라 state의 개수입니다. backgammon의 10<sup>20</sup>개라면 sweep 한 번도 불가능합니다. 이 코스의 뒤에 나오는 방법이 하나도 모든 state를 방문하지 않는 이유입니다. <a class="src" href="http://incompleteideas.net/book/RLbook2020.pdf">Sutton &amp; Barto 2018</a>
+@@ 121
+Q1. 공이 공중을 날아가고 있습니다. 다음 중 Markov인 state 기술은 무엇입니까?
+@@ 122
+공의 위치만
+@@ 123
+던진 뒤 흐른 시간
+@@ 124
+공의 위치와 속도
+@@ 125
+공이 지나온 모든 위치의 전체 목록. 이것만이 유일하게 Markov인 선택지입니다
+@@ 126
+정답 3. 위치와 속도가 있으면 다음 위치를 예측할 수 있고 history를 더해도 새로 알게 되는 것이 없으므로, 이것이 sufficient statistic입니다. 위치만으로는 Markov가 아닙니다 (올라가는 공과 내려가는 공이 똑같아 보입니다). 전체 history도 Markov이기는 하지만 당연한 이야기이고 낭비입니다. Markov는 모든 것을 간직하라고 요구하지 않습니다. 중요한 것만 모두 간직하면 됩니다.
+@@ 127
+Q2. Bellman expectation equation과 Bellman optimality equation의 수학적으로 가장 큰 차이는 무엇입니까?
+@@ 128
+expectation equation은 value에 대해 선형이고, optimality equation은 max가 있어서 비선형입니다
+@@ 129
+expectation equation은 Q를 쓰고 optimality equation은 V를 씁니다
+@@ 130
+optimality equation은 discount γ를 쓰지 않습니다
+@@ 131
+expectation equation은 deterministic policy에만 적용됩니다
+@@ 132
+정답 1. expectation equation은 π로 action에 대한 평균을 냅니다. 이 식은 v에 대해 선형이어서 선형 연립방정식으로 풀 수 있습니다 (책이 random policy gridworld의 값을 구한 방법입니다). optimality equation은 평균을 max로 바꾸므로 비선형입니다. 두 방정식 모두 V 형태와 Q 형태가 있고, 둘 다 γ를 쓰며, 둘 다 stochastic policy를 허용합니다.
+@@ 133
+Q3. optimal 5×5 gridworld에서 v*(A′) = 16.0이고, A에서는 어떤 action을 하든 +10을 받고 A′으로 순간이동하며, γ = 0.9입니다. v*(A)는 얼마입니까?
+@@ 134
+정답 4. v*(A) = 10 + 0.9 × 16.0 = 24.4입니다. agent가 다섯 step마다 reward를 다시 받기 때문에 value는 +10보다 훨씬 큽니다. 26.0은 discount를 빠뜨린 값입니다.
+@@ 135
+Q4. equiprobable random policy에서 gridworld의 state A는 value가 8.8로, reward 10보다 작습니다. 왜 그렇습니까?
+@@ 136
+discount γ = 0.9가 10을 받기 전에 9로 줄이기 때문에
+@@ 137
+A′으로 순간이동하면 무작위로 걷는 agent가 맨 아래 가장자리에 놓이고, 거기서 벽에 부딪혀 계속 −1을 받기 때문에
+@@ 138
+random policy가 가끔 reward를 받지 않는 쪽을 고르기 때문에
+@@ 139
+책의 표가 소수 첫째 자리로 반올림되어 있기 때문에
+@@ 140
+정답 2. +10은 온전히 받습니다 (R<sub>t+1</sub>이므로 discount되지 않습니다). 하지만 random policy에서 v(A′) = −1.3이고, 10 + 0.9 × (−1.3) = 8.8입니다. A에서는 어떤 action을 해도 reward를 받으므로 policy가 그것을 "건너뛸" 수 없습니다.
+@@ 141
+Q5. 어떤 MDP의 정확한 q*(s, a) 표를 건네받았습니다. optimal하게 행동하려면 무엇이 더 필요합니까?
+@@ 142
+한 step 앞을 내다보기 위한 dynamics p
+@@ 143
+다음 state들을 비교하기 위한 state-value 표 v*
+@@ 144
+아무것도 필요 없습니다. 각 state에서 argmax<sub>a</sub> q*(s, a)를 고르면 됩니다
+@@ 145
+stochastic policy. optimal policy는 deterministic일 수 없기 때문입니다
+@@ 146
+정답 3. q*에 대해 greedy한 policy는 모두 optimal이고, q*에는 한 step lookahead가 이미 들어 있습니다. v*만 있다면 한 step 앞을 내다보기 위해 p가 필요합니다. deterministic한 optimal policy는 항상 존재합니다.
+@@ 147
+Q6. 2013년 DQN agent는 왜 Atari의 마지막 네 프레임을 쌓아서 입력으로 썼습니까?
+@@ 148
+convolutional network를 네 배 크게 만들려고
+@@ 149
+화면 한 장은 Markov가 아니기 때문에. 위치는 보이지만 움직임은 보이지 않으므로 최근 history를 근사적인 state로 씁니다
+@@ 150
+Atari 게임은 네 프레임마다 한 번씩만 화면을 갱신하기 때문에
+@@ 151
+agent가 각 reward를 볼 기회를 네 번 주려고
+@@ 152
+정답 2. 논문은 이 task가 "부분적으로만 관측"되며 화면 한 장으로는 "현재 상황을 완전히 이해"할 수 없다고 말합니다. 프레임을 쌓으면 속도와 가속도가 입력에 들어가서 POMDP가 MDP에 가까운 것으로 바뀝니다.
+@@ 153
+state가 과거 가운데 미래를 예측하는 데 필요한 모든 것을 담고 있으면 Markov입니다. 이것은 세상이 아니라 우리가 고르는 state에 대한 요구 조건입니다.
+@@ 154
+finite MDP는 state, action, reward, dynamics p(s′, r | s, a), 그리고 γ로 이루어집니다. policy π(a | s)가 action을 고릅니다. v<sub>π</sub>(s)와 q<sub>π</sub>(s, a)는 기대 return이고, v<sub>π</sub>(s) = Σ<sub>a</sub> π(a | s) q<sub>π</sub>(s, a)입니다.
+@@ 155
+Bellman expectation: v<sub>π</sub>(s) = Σ<sub>a</sub> π Σ<sub>s′, r</sub> p [r + γ v<sub>π</sub>(s′)]. 선형이고, state마다 방정식이 하나이며, 알고리즘이 아니라 일관성 조건입니다.
+@@ 156
+Bellman optimality: v*(s) = max<sub>a</sub> Σ<sub>s′, r</sub> p [r + γ v*(s′)]. 비선형이고 해가 유일하며, v*에 대해 (또는 lookahead 없이 q*에 대해) greedy한 policy는 모두 optimal입니다. 검산: v*(A) = 10 + 0.9 × 16.0 = 24.4, 3-state MDP의 v* = (8.18, 7.87).
+@@ 157
+state가 숨겨져 있으면 POMDP입니다. 이론적으로는 belief state가 Markov property를 되살리고, 실제로는 최근 observation을 쌓는 방법(DQN의 네 프레임)으로 근사합니다.
+@@ 158
+<a href="http://incompleteideas.net/book/RLbook2020.pdf">Reinforcement Learning: An Introduction, 2nd ed., Chapter 3</a> — Sutton &amp; Barto, MIT Press, 2018 (무료 PDF). 3.1절부터 3.7절까지가 오늘 레슨의 내용을 저자들의 말로 설명한 부분입니다. Example 3.5와 3.8이 gridworld 표이고, 17.3절은 observation과 state를 논의합니다. 책 페이지: <a href="http://incompleteideas.net/book/the-book-2nd.html">incompleteideas.net</a>.
+@@ 159
+<a href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Lecture 2: Markov Decision Processes</a> — David Silver, UCL RL 강의, 2015. Markov property, MDP tuple, optimality 정리, POMDP 슬라이드가 들어 있습니다. Student MDP 예제는 두 번째로 풀어 보기에 좋은 예제입니다.
+@@ 160
+<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">Spinning Up: Key Concepts in RL</a> — OpenAI (Achiam), 2018. Bellman equation 네 개를 현대 deep RL 표기법으로 한 페이지에 정리했습니다.
+@@ 161
+<a href="https://www.iumj.indiana.edu/IUMJ/FULLTEXT/1957/6/56038">A Markovian Decision Process</a> — Richard Bellman, Indiana University Mathematics Journal 6(4):679–684, 1957. 이 모델에 이름을 붙인 논문입니다.
+@@ 162
+<a href="https://arxiv.org/abs/1312.5602">Playing Atari with Deep Reinforcement Learning</a> — Mnih et al., DeepMind, 2013. 위에서 인용한 partial observability 문제와 네 프레임 해법을 서술합니다.

@@ -1,0 +1,400 @@
+@@ 1
+<span class="eyebrow">Week 1 · Day 1</span>
+@@ 2
+What is reinforcement learning?
+@@ 3
+After today you can draw the agent–environment loop, compute a discounted return by hand for any γ, and say precisely why reinforcement learning is not supervised learning.
+@@ 4
+About 90 min · No prerequisites
+@@ 5
+Reinforcement learning is learning what to do from the consequences of what you did. The agent is never told which action was right; after each action it gets a single number, the reward, and its job is to act so that the sum of future rewards is as large as possible. Because nobody hands it the right answers, it has to find them by trying things, and because rewards can arrive long after the action that earned them, it has to work out which of its past actions deserve the credit.
+@@ 6
+1. Learning from consequences
+@@ 7
+In the 1890s the psychologist Edward Thorndike put cats in "puzzle boxes" that opened when the cat pulled a loop or pressed a lever. The cats scratched at random until, by accident, they hit the latch; put back in the box, they got out a little faster each time, and after a few dozen trials they went straight to it. Thorndike's <strong>Law of Effect</strong> summarises it: of several responses to the same situation, those "accompanied or closely followed by satisfaction to the animal" become more firmly connected to the situation, and those followed by discomfort are weakened. <a class="src" href="https://psychclassics.yorku.ca/Thorndike/Animal/chap5.htm">Thorndike 1911</a> Sutton and Barto, whose textbook this course follows, call that sentence "the essence of trial-and-error learning as a principle of learning". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 8
+Two things in the cat story carry over unchanged to the algorithms of this course. The cat was not shown the solution; it <em>searched</em> for it. And the satisfaction came after a chain of actions, not after each one, so the cat had to connect the reward to the earlier movements that caused it. Sutton and Barto name exactly these two as the "most important distinguishing features" of reinforcement learning: <strong>trial-and-error search</strong> and <strong>delayed reward</strong>. Their one-sentence definition is worth memorising: RL is "learning what to do, how to map situations to actions, so as to maximize a numerical reward signal". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 9
+Think about teaching a puppy to sit. You do not hand it a textbook. It tries things, and when it does the right one it gets a treat. Sometimes the treat comes a bit late, after it has already done two or three other things, and the puppy has to work out which thing earned it. Reinforcement learning is a computer program doing exactly that: trying things, getting points, and slowly learning which things earn the most points.
+@@ 10
+2. The agent–environment loop, precisely
+@@ 11
+Everything in RL is described with two pieces. The <strong>agent</strong> is the learner and decision maker. The <strong>environment</strong> is everything the agent interacts with: the game, the robot's body and the room, the stock market, the user reading a chatbot's answer. They talk to each other in a loop of discrete time steps t = 0, 1, 2, …
+@@ 12
+At step t the agent receives a <strong>state</strong> S<sub>t</sub> (a description of the situation) and chooses an <strong>action</strong> A<sub>t</sub>. One step later, as a consequence, it receives a <strong>reward</strong> R<sub>t+1</sub>, a single real number, together with the next state S<sub>t+1</sub>. Then it chooses again. The whole interaction is one long sequence: <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 13
+Notice the indices. The reward caused by action A<sub>t</sub> is written R<sub>t+1</sub>, not R<sub>t</sub>, because reward and next state arrive together, one tick after the action. Some books write R<sub>t</sub> for the same quantity; this course follows Sutton and Barto. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> The agent's rule for choosing actions is its <strong>policy</strong> π: a deterministic function a = μ(s) or, more often, a probability distribution π(a | s) over actions given the state. <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">OpenAI 2018</a> Learning, in RL, means improving the policy.
+@@ 14
+Interaction comes in two shapes. In an <strong>episodic</strong> task the loop breaks into <strong>episodes</strong>, "such as plays of a game, trips through a maze", each ending in a <strong>terminal state</strong> after which the environment resets. In a <strong>continuing</strong> task it "goes on continually without limit", as in process control or "a robot with a long life span". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> One notation covers both if the end of an episode is treated as an <strong>absorbing state</strong> that leads only to itself with reward 0 forever. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 15
+Try it: steer the agent with the arrows. Every move costs −1; the goal pays +10 and ends the episode; the trap pays −10 and also ends it. Watch the trajectory build in exactly the S, A, R order above, and watch the two returns change as you drag γ.
+@@ 16
+Notice that walking into a wall still costs a step, and that a longer route to the goal has a lower return than a shorter one even though both end with +10: the step cost is how the designer tells the agent that time matters.
+@@ 17
+3. Reward, return and discount, with a worked example
+@@ 18
+The reward is always a plain number: "at each time step, the reward is a simple number, R<sub>t</sub> ∈ ℝ". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> But the agent does not maximise the reward it gets right now; it maximises everything it will collect from now on. That total is the <strong>return</strong> G<sub>t</sub>. For an episode ending at step T, the simplest version is the sum:
+@@ 19
+For continuing tasks that sum could be infinite, and even in episodic ones it is useful to care a little less about far-away rewards. So each future reward is multiplied by a <strong>discount</strong> factor γ (gamma), a number between 0 and 1, raised to the power of how far away it is: <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 20
+A reward k steps in the future is worth γ<sup>k−1</sup> times what it would be worth immediately. With γ = 0 the agent is "myopic", caring only about the next reward; as γ approaches 1 it becomes "farsighted". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> One line of algebra gives the most useful fact about returns: each return is the next reward plus the discounted return after it, G<sub>t</sub> = R<sub>t+1</sub> + γ G<sub>t+1</sub>, with G<sub>T</sub> = 0 at the end of an episode. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> <a href="#d3">Day 3</a> turns that line into the Bellman equation, the backbone of the field.
+@@ 21
+<strong>Worked example.</strong> Take the shortest path in the widget above, three steps and then the goal: rewards −1, −1, −1, +10. With γ = 0.9 (so γ² = 0.81, γ³ = 0.729) the return from the start is
+@@ 22
+With γ = 1 the same path returns 7; with γ = 0 it returns −1. A second example, from David Silver's lectures, shows that the same start can produce very different returns. In his "Student" chain with γ = ½, a student who goes Class 1 → Class 2 → Class 3 → Pass → Sleep collects −2, −2, −2, +10, so G<sub>1</sub> = −2 − 2·½ − 2·¼ + 10·⅛ = −2.25; one who goes Class 1 → Facebook → Facebook → Class 1 → Class 2 → Sleep collects −2, −1, −1, −2, −2 and gets −2 − ½ − ¼ − ¼ − ⅛ = −3.125. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a> Same start, different luck, different returns. The <em>average</em> return from a state is its <strong>value</strong>, and <a href="#d3">Day 3</a> is about computing it.
+@@ 23
+Two more numbers to keep in your head. If the reward were +1 at every step forever, the return would be the geometric series 1 + γ + γ² + … = 1/(1−γ): exactly 10 for γ = 0.9 and 100 for γ = 0.99. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> That ratio is a good rule of thumb for the agent's <strong>effective horizon</strong>: 0.9<sup>10</sup> ≈ 0.35 and 0.99<sup>100</sup> ≈ 0.37, so a reward one horizon away counts for roughly a third of its face value.
+@@ 24
+Try it: pick a reward pattern (or type your own ten rewards) and drag γ. The bars are the discounted terms γ<sup>k</sup>·r<sub>k</sub>; the big number is their sum.
+@@ 25
+Notice how fast the single +10 at step 8 shrinks as γ falls: at γ = 0.9 it is worth 4.3, at γ = 0.5 it is worth 0.04. A small change in γ is a large change in what the agent is willing to wait for.
+@@ 26
+Discounting is interest in reverse. A dollar promised next year is worth less than a dollar today, because you could invest today's dollar and because the promise might not be kept; γ = 0.9 says "a reward one step away is worth 90 cents on the dollar to me". Spinning Up puts it in four words: "cash now is better than cash later". <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">OpenAI 2018</a> Silver's reasons to discount: it keeps infinite sums finite, encodes uncertainty about the future, matches how animals and people behave, and is mathematically convenient. When every episode is guaranteed to end, γ = 1 is fine. <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Silver 2015</a>
+@@ 27
+<strong>"The agent maximises the reward it gets now."</strong> It maximises the <em>return</em>, the discounted sum of all future rewards. Grabbing the biggest immediate reward "can reduce access to future rewards", which is the whole reason the problem is interesting. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 28
+<strong>"γ is a fudge factor."</strong> It sets the agent's planning horizon (about 1/(1−γ) steps) and it is what makes the return of a never-ending task a finite number.
+@@ 29
+<strong>"The reward for A<sub>t</sub> is R<sub>t</sub>."</strong> In this course it is R<sub>t+1</sub>; reward and next state arrive together, one tick later. Check the convention whenever you open a new paper.
+@@ 30
+<strong>"A terminal state is worth something."</strong> Its value is always zero: nothing can be collected after the episode ends. The +10 for reaching the goal is the reward for the <em>transition into</em> it, not a property of the state. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 31
+4. The reward hypothesis, and what makes RL hard
+@@ 32
+Is a single number enough to describe a goal? The field's working assumption says yes. The <strong>reward hypothesis</strong>: "all of what we mean by goals and purposes can be well thought of as the maximization of the expected value of the cumulative sum of a received scalar signal (called reward)". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> Richard Sutton's web page gives the same sentence and notes that Michael Littman calls it the reinforcement learning hypothesis. <a class="src" href="http://incompleteideas.net/rlai.cs.ualberta.ca/RLAI/rewardhypothesis.html">Sutton n.d.</a> It is a hypothesis, not a theorem (<a href="#d14">Day 14</a> returns to the awkward cases), but it stretches far: a walking robot rewarded in proportion to forward motion; a maze robot given −1 for every step still inside; a can-collecting robot given +1 per can; a chess program given +1 for a win, −1 for a loss and 0 for everything else, including every move before the end. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> The chess example is the important one: the reward says <em>what</em> to achieve, never <em>how</em>.
+@@ 33
+That is also why RL is hard. Silver lists four things that make it unlike the machine learning you already know: <a class="src" href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/intro_rl.pdf">Silver 2015</a>
+@@ 34
+<strong>No supervisor, only a reward.</strong> Nobody says "the right move was e4". The agent learns that a move was good only from a number, often the same number for most moves.
+@@ 35
+<strong>Delayed feedback.</strong> In chess the only nonzero reward comes at the end. Which of the 40 moves earned the +1? That is the <strong>credit assignment</strong> problem.
+@@ 36
+<strong>Time matters.</strong> The data is a sequence, not independent draws; what the agent sees at step 50 depends on what it did at step 49.
+@@ 37
+<strong>Your actions change your data.</strong> The agent collects its own data, so a policy that never tries a move never learns whether it was good.
+@@ 38
+The last point creates a dilemma that "does not even arise in supervised and unsupervised learning": <strong>exploration versus exploitation</strong>. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> To earn reward, exploit what you know works; to find out whether something else works better, explore, which costs reward now. <a href="#d2">Day 2</a> isolates this dilemma and measures what it alone costs.
+@@ 39
+Going deeper (optional): the objective in one line
+@@ 40
+Spinning Up writes the goal compactly. A trajectory is τ = (s<sub>0</sub>, a<sub>0</sub>, s<sub>1</sub>, a<sub>1</sub>, …), its return is R(τ), and a policy's quality is the expected return of the trajectories it produces, J(π) = E<sub>τ∼π</sub>[R(τ)]; the optimal policy is π* = argmax<sub>π</sub> J(π). <a class="src" href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">OpenAI 2018</a> Every algorithm from <a href="#d4">Day 4</a> to <a href="#d12">Day 12</a> is a different way of climbing J(π): estimate values and act greedily on them, push the policy's parameters up the gradient of J, or learn a model of the environment and plan.
+@@ 41
+5. RL versus supervised versus unsupervised learning
+@@ 42
+Sutton and Barto call RL "a third machine learning paradigm, alongside supervised learning and unsupervised learning", and they are explicit that it is not a kind of unsupervised learning: RL "is trying to maximize a reward signal instead of trying to find hidden structure". <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> The table lines the three up.
+@@ 43
+Question
+@@ 44
+Supervised
+@@ 45
+Unsupervised
+@@ 46
+Reinforcement
+@@ 47
+What you are given
+@@ 48
+Inputs with correct labels
+@@ 49
+Inputs, no labels
+@@ 50
+A loop you can act in; a scalar reward per step
+@@ 51
+Where the data comes from
+@@ 52
+A fixed dataset, independent samples
+@@ 53
+A fixed dataset
+@@ 54
+The agent's own actions; changes as the policy changes
+@@ 55
+What feedback says
+@@ 56
+The right answer for this input
+@@ 57
+Nothing
+@@ 58
+How good this action turned out, often much later
+@@ 59
+Goal
+@@ 60
+Predict labels on new inputs
+@@ 61
+Find structure (clusters, density, representations)
+@@ 62
+Maximise expected return
+@@ 63
+Does exploration matter?
+@@ 64
+No
+@@ 65
+Yes: you only learn about actions you try
+@@ 66
+Typical example
+@@ 67
+Image classification; next-token prediction
+@@ 68
+Clustering customers
+@@ 69
+Playing Go; controlling a robot; tuning a chatbot from feedback
+@@ 70
+The second row is the one that bites in practice: in interactive problems "it is often impractical to obtain examples of desired behavior that are both correct and representative" of the situations the agent will meet. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> A chess teacher can show you grandmaster games, but not the right move in the strange position you reached by making a mistake. If you did LLM School, you have seen this boundary: pretraining a language model is supervised next-token prediction on a fixed corpus; tuning it from human feedback is RL, because the feedback is a scalar score on text the model itself produced (<a href="#d12">Day 12</a>).
+@@ 71
+6. A short history, with dates
+@@ 72
+<strong>1911: Thorndike.</strong> The Law of Effect, above, gives RL its psychological ancestor: behaviour followed by satisfaction is repeated, behaviour followed by discomfort is not. <a class="src" href="https://psychclassics.yorku.ca/Thorndike/Animal/chap5.htm">Thorndike 1911</a>
+@@ 73
+<strong>1957: Bellman.</strong> Richard Bellman's book <em>Dynamic Programming</em> introduced the recursive equation for the value of a decision problem now called the Bellman equation, and his paper "A Markovian Decision Process" introduced the <strong>Markov decision process</strong>, the formal object behind every lesson in Week 1. <a class="src" href="https://www.iumj.indiana.edu/IUMJ/FULLTEXT/1957/6/56038">Bellman 1957</a> <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a> <a href="#d3">Day 3</a> and <a href="#d4">Day 4</a> are the Bellman days.
+@@ 74
+<strong>1959: Samuel's checkers.</strong> Arthur Samuel's program at IBM improved by playing itself, nudging its evaluation of a position toward the evaluation of the positions that followed, the first implementation of a <strong>temporal-difference</strong> idea. It learned "to play a better game of checkers than can be played by the person who wrote the program" in "8 or 10 hours of machine-playing time". <a class="src" href="https://people.csail.mit.edu/brooks/idocs/Samuel.pdf">Samuel 1959</a> <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 75
+<strong>1989: Q-learning.</strong> Chris Watkins's thesis "fully brought together" the trial-and-error thread and the optimal-control thread into one algorithm, which <a href="#d6">Day 6</a> builds from scratch. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 76
+<strong>1992–1995: TD-Gammon.</strong> Gerald Tesauro trained a neural network to play backgammon purely by self-play with temporal-difference learning. Version 2.1 reached "strong master level", within a few hundredths of a point per game of the best humans; the raw-board network had 40 hidden units and trained on 200,000 games. <a class="src" href="https://www.bkgm.com/articles/tesauro/tdl.html">Tesauro 1995</a> Sutton and Barto date its first success to 1992. <a class="src" href="http://incompleteideas.net/book/the-book-2nd.html">Sutton &amp; Barto 2018</a>
+@@ 77
+<strong>2013–2015: DQN.</strong> DeepMind's Deep Q-Network combined Q-learning with a convolutional network reading raw Atari pixels. The December 2013 preprint learned 7 games, beating prior methods on 6 and a human expert on 3; <a class="src" href="https://arxiv.org/abs/1312.5602">Mnih 2013</a> the February 2015 <em>Nature</em> paper scaled to 49 games with one architecture and one hyperparameter set, "comparable to a professional human games tester". <a class="src" href="https://www.nature.com/articles/nature14236">Mnih 2015</a> Deep RL begins here; see <a href="#d6">Day 6</a> and <a href="#p-dqn">the DQN review</a>.
+@@ 78
+<strong>2016: AlphaGo.</strong> Policy and value networks trained on human expert games and then by self-play, combined with tree search. It won 99.8% of games against other Go programs and beat the European champion Fan Hui 5–0, the first program to beat a professional at full-size Go. <a class="src" href="https://www.nature.com/articles/nature16961">Silver 2016</a> See <a href="#d9">Day 9</a> and <a href="#p-alphago">the AlphaGo review</a>.
+@@ 79
+<strong>2019: OpenAI Five and AlphaStar.</strong> OpenAI Five became "the first AI system to defeat the world champions at an esports game", beating the Dota 2 champions OG in April 2019 after 10 months of training at about 2 million frames every 2 seconds. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> AlphaStar reached Grandmaster level in all three StarCraft II races, above 99.8% of ranked human players, with a league of agents trained against each other. <a class="src" href="https://www.nature.com/articles/s41586-019-1724-z">Vinyals 2019</a> <a href="#d11">Day 11</a> covers self-play.
+@@ 80
+<strong>2022: InstructGPT and ChatGPT.</strong> InstructGPT (March 2022) fine-tuned GPT-3 on human demonstrations, then applied RL from human feedback on ranked outputs; raters preferred the 1.3B-parameter tuned model to the 175B untuned one. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> ChatGPT, released on 30 November 2022, used the same family of methods. <a class="src" href="https://en.wikipedia.org/wiki/ChatGPT">Wikipedia 2026</a> <a href="#d12">Day 12</a> and <a href="#p-instructgpt">the InstructGPT review</a> explain how a preference becomes a reward.
+@@ 81
+<strong>2025: DeepSeek-R1.</strong> DeepSeek-R1-Zero was trained "via large-scale reinforcement learning without supervised fine-tuning as a preliminary step" and learned to reason in long chains of thought; R1 performed comparably to OpenAI's o1. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> In the <em>Nature</em> version, R1-Zero's accuracy on the AIME 2024 maths competition rose from 15.6% to 77.9% during RL. <a class="src" href="https://www.nature.com/articles/s41586-025-09422-z">Guo 2025</a> As of October 2026 this recipe is the main way frontier labs build reasoning models; see <a href="#d12">Day 12</a> and <a href="#p-deepseek-r1">the DeepSeek-R1 review</a>.
+@@ 82
+Notice the pattern: the ideas (trial and error, Bellman's recursion, temporal differences, self-play) were all in place by 1992. What changed after 2013 was the function approximator, deep networks, and the compute to train them.
+@@ 83
+7. The map of this course
+@@ 84
+Week 1 builds the classical machine; Week 2 is the modern toolkit and where it is used. Each day is about 90 minutes and assumes the days before it.
+@@ 85
+Day
+@@ 86
+Topic
+@@ 87
+The question it answers
+@@ 88
+<a href="#d2">Day 2</a>
+@@ 89
+Bandits
+@@ 90
+How do you trade off exploring and exploiting when there is no state at all?
+@@ 91
+<a href="#d3">Day 3</a>
+@@ 92
+MDPs and Bellman equations
+@@ 93
+What is the value of a state, and what equation does it satisfy?
+@@ 94
+<a href="#d4">Day 4</a>
+@@ 95
+Dynamic programming
+@@ 96
+If you know how the world works, how do you compute the best policy?
+@@ 97
+<a href="#d5">Day 5</a>
+@@ 98
+Monte Carlo and TD learning
+@@ 99
+How do you learn values from experience alone?
+@@ 100
+<a href="#d6">Day 6</a>
+@@ 101
+Q-learning, SARSA, DQN
+@@ 102
+How do you learn to act from experience, and how did a network learn Atari from pixels?
+@@ 103
+<a href="#d7">Day 7</a>
+@@ 104
+Policy gradients and actor–critic
+@@ 105
+How do you improve a policy directly, without a table of values?
+@@ 106
+<a href="#d8">Day 8</a>
+@@ 107
+TRPO, PPO, SAC
+@@ 108
+Which policy-gradient methods actually work at scale, and why?
+@@ 109
+<a href="#d9">Day 9</a>
+@@ 110
+Model-based RL and world models
+@@ 111
+What does learning a model of the environment buy you?
+@@ 112
+<a href="#d10">Day 10</a>
+@@ 113
+Offline RL and generative policies
+@@ 114
+Can you learn a policy from a fixed dataset, with no interaction?
+@@ 115
+<a href="#d11">Day 11</a>
+@@ 116
+Exploration, self-play, multi-agent
+@@ 117
+How do agents find rare rewards, and what happens when they train against each other?
+@@ 118
+<a href="#d12">Day 12</a>
+@@ 119
+RL for language models and agents
+@@ 120
+How do RLHF and RL with verifiable rewards turn a text predictor into an assistant and a reasoner?
+@@ 121
+<a href="#d13">Day 13</a>
+@@ 122
+RL in robots and industry
+@@ 123
+Where is RL deployed for real, and what does it take?
+@@ 124
+<a href="#d14">Day 14</a>
+@@ 125
+Open problems
+@@ 126
+What does the field not know how to do, as of October 2026?
+@@ 127
+Every method in this course is a particular way of filling in the two boxes below. The first diagram is the loop itself; the second shows where learning sits relative to it.
+@@ 128 attr
+The agent–environment loop. A box labelled Agent contains a smaller box labelled policy pi(a|s). An arrow labelled action A_t goes from the agent to a box labelled Environment. Two arrows return from the environment to the agent: state S_t+1 and reward R_t+1.
+@@ 129
+Agent
+@@ 130
+policy π(a | s)
+@@ 131
+state → action
+@@ 132
+game · robot and room ·
+@@ 133
+market · user reading an answer
+@@ 134
+dynamics p(s′, r | s, a)
+@@ 135
+action A<tspan baseline-shift="sub" font-size="10">t</tspan>
+@@ 136
+state S<tspan baseline-shift="sub" font-size="10">t+1</tspan>
+@@ 137
+reward R<tspan baseline-shift="sub" font-size="10">t+1</tspan>
+@@ 138
+one tick: agent acts, environment answers with a new state and a number
+@@ 139
+The loop of Section 2. The policy is the only part the agent controls; the environment's dynamics are fixed and usually unknown to it.
+@@ 140 attr
+Where learning sits. Experience, a stream of state, action, reward tuples, flows into a learning algorithm box, which outputs an improved policy; the policy feeds back into the loop that generates more experience.
+@@ 141
+experience
+@@ 142
+learning algorithm
+@@ 143
+values · gradients · models
+@@ 144
+policy π
+@@ 145
+improved, then used to act
+@@ 146
+the new policy generates the next batch of experience
+@@ 147
+Learning sits beside the loop, not inside one step of it. The algorithm turns experience into a better policy, and the better policy produces new experience, which is why RL data is never fixed.
+@@ 148
+Read the first diagram left to right. The agent holds a policy, a function from state to action (in Week 2 a neural network; today any rule). The action goes to the environment, which applies its dynamics and sends back two things: the next state and a scalar reward. Nothing else crosses the boundary: no label, no gradient, no description of what the right action would have been. The reward is the whole message.
+@@ 149
+The second diagram is where the fourteen days differ. Experience, the stream of (S, A, R, S′) tuples the loop produces, feeds a learning algorithm that outputs an improved policy. <a href="#d2">Day 2</a>'s algorithm is a table of running averages; <a href="#d4">Day 4</a>'s needs a model of the environment and no experience at all; <a href="#d6">Day 6</a> stores a million tuples in a buffer and trains a network on random batches of them; <a href="#d7">Day 7</a> nudges the policy's parameters toward whatever made good trajectories more likely. The loop never changes; the box in the middle does.
+@@ 150
+In practice the two diagrams run on different hardware. The loop (environment simulation and the policy's forward pass) is cheap per step and runs in many parallel copies, usually on CPUs; the learning algorithm batches up their experience and trains on a GPU. How many copies, how large the buffer between them, and how stale the experience is allowed to be are the engineering questions behind <a href="#d6">Day 6</a>, <a href="#d8">Day 8</a> and <a href="#d12">Day 12</a>, where the numbers are.
+@@ 151
+Q1. In Sutton and Barto's convention, which reward is the consequence of action A<sub>t</sub>?
+@@ 152
+R<sub>t</sub>, received at the same step
+@@ 153
+R<sub>t−1</sub>, since rewards lag behind states
+@@ 154
+R<sub>t+1</sub>, which arrives together with S<sub>t+1</sub>
+@@ 155
+The return G<sub>t</sub>
+@@ 156
+Answer 3. The trajectory is S<sub>0</sub>, A<sub>0</sub>, R<sub>1</sub>, S<sub>1</sub>, …: the reward and the next state arrive together one tick after the action. Some other books write R<sub>t</sub>; the convention differs, the idea does not.
+@@ 157
+Q2. An agent receives +1 at every step forever. With γ = 0.9 its discounted return is…
+@@ 158
+Infinite
+@@ 159
+Exactly 10
+@@ 160
+About 2.71
+@@ 161
+Answer 2. The geometric series 1 + 0.9 + 0.81 + … sums to 1/(1 − 0.9) = 10. With γ = 0.99 it would be 100. This is also the rule of thumb for the agent's effective horizon.
+@@ 162
+Q3. Rewards −1, −1, −1, +10 with γ = 0.9. The return from the start is…
+@@ 163
+Answer 1. −1 − 0.9 − 0.81 + 0.729·10 = 4.58. Option 2 is the undiscounted return (γ = 1); option 4 is γ = 0; option 3 would be the answer if the +10 were not discounted.
+@@ 164
+Q4. Which statement about RL and supervised learning is correct?
+@@ 165
+RL is supervised learning with a noisier label
+@@ 166
+RL is a kind of unsupervised learning, because there are no labels
+@@ 167
+In RL the training set is fixed before learning starts
+@@ 168
+In RL the agent's own actions determine what data it sees, so exploration matters
+@@ 169
+Answer 4. There is no label at all, only a scalar reward, and the data distribution shifts with the policy. Sutton and Barto call RL a third paradigm, distinct from both supervised and unsupervised learning, and note that the exploration–exploitation trade-off "does not even arise" in the other two.
+@@ 170
+Q5. What did the 2015 <em>Nature</em> DQN paper demonstrate?
+@@ 171
+A program that beat the European Go champion 5–0
+@@ 172
+One network architecture and one hyperparameter set learning 49 Atari games from pixels
+@@ 173
+A backgammon program trained on 200,000 self-play games
+@@ 174
+A language model trained by RL without supervised fine-tuning
+@@ 175
+Answer 2. DQN (Mnih et al., 2015) played 49 games with the same algorithm, architecture and hyperparameters. Option 1 is AlphaGo (2016), option 3 is TD-Gammon (1992–95), option 4 is DeepSeek-R1-Zero (2025).
+@@ 176
+Q6. The reward hypothesis says that goals can be expressed as…
+@@ 177
+A list of rules the agent must follow
+@@ 178
+The reward the agent receives at the next step
+@@ 179
+The maximisation of the expected cumulative sum of a scalar reward
+@@ 180
+A labelled dataset of correct actions
+@@ 181
+Answer 3. "All of what we mean by goals and purposes can be well thought of as the maximization of the expected value of the cumulative sum of a received scalar signal." Cumulative and expected are both essential: the agent maximises the return, not the next reward.
+@@ 182
+RL is learning what to do from consequences: trial-and-error search plus delayed reward, with no supervisor telling the agent which action was right.
+@@ 183
+The loop is S<sub>t</sub> → A<sub>t</sub> → R<sub>t+1</sub>, S<sub>t+1</sub>; the agent's rule for choosing actions is the policy π(a | s), and learning means improving it.
+@@ 184
+The agent maximises the return G<sub>t</sub> = Σ γ<sup>k</sup> R<sub>t+k+1</sub>, not the next reward. For −1, −1, −1, +10 at γ = 0.9 that is 4.58; for +1 forever it is 1/(1−γ) = 10.
+@@ 185
+γ sets the horizon (about 1/(1−γ) steps) and keeps infinite sums finite; terminal states are worth zero.
+@@ 186
+RL is hard because feedback is a delayed scalar, data is sequential, and the agent's own actions choose its data, which forces a trade-off between exploring and exploiting. Day 2 is about that trade-off alone.
+@@ 187
+<a href="http://incompleteideas.net/book/the-book-2nd.html">Reinforcement Learning: An Introduction, 2nd edition</a> — Sutton &amp; Barto, MIT Press, 2018 (free PDF). Chapter 1 for the definition and history, Chapter 3 (sections 3.1–3.4) for the loop, reward, return and discount. The textbook for this whole course.
+@@ 188
+<a href="https://spinningup.openai.com/en/latest/spinningup/rl_intro.html">Spinning Up: Key Concepts in RL</a> — OpenAI (Achiam), 2018. A compact restatement of today's notation with the objective J(π).
+@@ 189
+<a href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/intro_rl.pdf">Lecture 1: Introduction to Reinforcement Learning</a> — David Silver, UCL, 2015. The "characteristics of RL" list in Section 4.
+@@ 190
+<a href="https://davidstarsilver.wordpress.com/wp-content/uploads/2025/04/lecture-2-mdp.pdf">Lecture 2: Markov Decision Processes</a> — David Silver, UCL, 2015. The Student example and the "Why discount?" slide.
+@@ 191
+<a href="http://incompleteideas.net/rlai.cs.ualberta.ca/RLAI/rewardhypothesis.html">The reward hypothesis</a> — Richard Sutton, web page. One paragraph, worth reading in the original.
+@@ 192
+<a href="https://psychclassics.yorku.ca/Thorndike/Animal/chap5.htm">Animal Intelligence, Chapter V</a> — Edward Thorndike, 1911. The Law of Effect.
+@@ 193
+<a href="https://www.iumj.indiana.edu/IUMJ/FULLTEXT/1957/6/56038">A Markovian Decision Process</a> — Richard Bellman, Indiana University Mathematics Journal 6(4), 1957. The paper that introduced MDPs.
+@@ 194
+<a href="https://people.csail.mit.edu/brooks/idocs/Samuel.pdf">Some Studies in Machine Learning Using the Game of Checkers</a> — Arthur Samuel, IBM Journal of R&amp;D, 1959. The first self-improving game program.
+@@ 195
+<a href="https://www.bkgm.com/articles/tesauro/tdl.html">Temporal Difference Learning and TD-Gammon</a> — Gerald Tesauro, Communications of the ACM, 1995. Readable and short.
+@@ 196
+<a href="https://arxiv.org/abs/1312.5602">Playing Atari with Deep Reinforcement Learning</a> — Mnih et al., DeepMind, 2013; and <a href="https://www.nature.com/articles/nature14236">Human-level control through deep reinforcement learning</a> — Nature, 2015. The DQN papers.
+@@ 197
+<a href="https://www.nature.com/articles/nature16961">Mastering the game of Go with deep neural networks and tree search</a> — Silver et al., Nature, 2016.
+@@ 198
+<a href="https://arxiv.org/abs/1912.06680">Dota 2 with Large Scale Deep Reinforcement Learning</a> — Berner et al., OpenAI, 2019; and <a href="https://www.nature.com/articles/s41586-019-1724-z">Grandmaster level in StarCraft II using multi-agent reinforcement learning</a> — Vinyals et al., Nature, 2019.
+@@ 199
+<a href="https://arxiv.org/abs/2203.02155">Training language models to follow instructions with human feedback</a> — Ouyang et al., OpenAI, 2022. The InstructGPT paper.
+@@ 200
+<a href="https://arxiv.org/abs/2501.12948">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a> — DeepSeek-AI, 2025; and the <a href="https://www.nature.com/articles/s41586-025-09422-z">Nature version</a>, 2025.

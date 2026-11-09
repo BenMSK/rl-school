@@ -1,0 +1,112 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+새 policy와 이전 policy의 probability ratio를 ε = 0.2로 [1−ε, 1+ε] 안에 clip하고, batch마다 minibatch SGD를 여러 epoch 돌립니다. 그러면 first-order 코드만으로 TRPO의 안정성을 대부분 얻습니다. MuJoCo task 일곱 개에서 clip한 objective는 0.82, clip하지 않은 objective는 −0.39였습니다.
+@@ 4
+<a href="#d8">Day 8</a>에서 다룸 · 원문 읽는 시간: 약 45분 (본문 8쪽과 부록)
+@@ 5
+PPO는 TRPO의 KL constraint를 clipped surrogate objective로 바꿉니다. 이 objective는 "r<sub>t</sub>를 구간 [1−ε, 1+ε] 밖으로 움직일 유인을 없애" 주므로, 같은 batch로 "minibatch update를 여러 epoch" 수행해도 안전합니다. 표준 policy gradient로는 할 수 없는 일입니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 6
+코치가 연습을 지켜보다가 이렇게 말해요. "좋아, 그 동작은 오늘 충분히 늘었어. 더 무리한다고 점수를 더 주지는 않을 거야." 코치가 한 번에 너무 많이 바꾸지 못하게 막아 주니까, 같은 연습 영상을 한 번 보고 버리지 않아도 돼요. 다음 경기 전까지 여러 번 돌려 보며 공부해도 안전해요.
+@@ 7
+논문은 성적표로 시작합니다. Deep Q-learning은 "단순한 문제 여럿에서 실패하고 제대로 이해되지 않았으며", vanilla policy gradient는 "데이터 효율과 robustness가 나쁘고", TRPO는 "비교적 복잡하며, (dropout 같은) noise가 들어가거나 파라미터를 공유하는 아키텍처와는 호환되지 않습니다". <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a> 근본 문제는 <a href="#p-trpo">TRPO 논문 리뷰</a>에서 설명한 그대로입니다. 크기가 잘못된 policy gradient step 하나가 policy를 무너뜨립니다. 그런데 vanilla 방법은 sample마다 gradient step을 정확히 한 번만 밟으므로, 그런 붕괴를 감수하지 않고는 데이터를 재사용할 수 없습니다. TRPO의 해법은 update마다 conjugate gradient 풀이가 필요합니다.
+@@ 8
+surrogate를 probability ratio r<sub>t</sub>(θ) = π<sub>θ</sub>(a<sub>t</sub>|s<sub>t</sub>) / π<sub>θold</sub>(a<sub>t</sub>|s<sub>t</sub>)로 씁니다. 그러면 매 update의 시작점에서 r = 1입니다. 그다음 clip하지 않은 항과, ratio를 [1−ε, 1+ε]로 clip한 항 가운데 작은 쪽(minimum)을 취합니다. 이 minimum 덕분에 objective는 "clip하지 않은 objective의 lower bound(즉, 비관적인 bound)"가 됩니다. ratio가 advantage가 원하는 방향으로 구간을 벗어나면 gradient는 0이 되지만, 상황을 나쁘게 만드는 변화는 결코 무시되지 않습니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 9
+N개의 actor가 각각 고정된 policy π<sub>θold</sub>를 T step 동안 실행합니다 (MuJoCo는 actor 1개에 T = 2048, Atari는 actor 8개에 T = 128). <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 10
+truncated GAE로 advantage Â<sub>t</sub>를 계산합니다. γ = 0.99, λ = 0.95를 쓰며, λ = 1이면 A3C의 k-step estimator와 같아집니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 11
+clipped surrogate를 minibatch로 K epoch 동안 최적화합니다 (MuJoCo는 크기 64로 10 epoch, Atari는 3 epoch):
+@@ 12
+=
+@@ 13
+policy head와 value head가 파라미터를 공유할 때는 value 항과 entropy bonus를 합친 loss를 씁니다 (Atari에서 c<sub>1</sub> = 1, c<sub>2</sub> = 0.01):
+@@ 14
+=
+@@ 15
+θ<sub>old</sub> ← θ로 두고 batch를 버린 뒤 반복합니다. Adam을 쓰고, learning rate는 3 × 10<sup>−4</sup> (MuJoCo), 또는 2.5 × 10<sup>−4</sup>에서 시작해 0까지 anneal합니다 (Atari). <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 16
+ε = 0.2로 항 하나를 손으로 계산해 봅시다. 구간은 [0.8, 1.2]입니다. Â = +2, r = 1.5: clip 전 3.0, clip 후 1.2 × 2 = 2.4, min = 2.4. r에 대해 평평하므로 더 밀지 않습니다. Â = +2, r = 0.6: clip 전 1.2, clip 후 1.6, min = 1.2. gradient가 살아 있어 r을 다시 끌어올립니다. Â = −2, r = 1.5: clip 전 −3.0, clip 후 −2.4, min = −3.0. gradient가 살아 있어 확률을 끌어내립니다. objective가 평평해지는 것은 update가 r을 advantage가 이미 원하는 방향으로 더 움직이려 할 때뿐입니다 (eq. 7로 RL School이 계산). <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 17 attr
+clipped surrogate의 항 하나를 probability ratio r에 대해 그린 그래프 두 개: advantage가 양수이면 선이 올라가다가 1 더하기 epsilon에서 평평해지고, advantage가 음수이면 1 빼기 epsilon까지 평평하다가 내려감. 빨간 원은 r = 1을 표시
+@@ 18
+<a class="src" href="https://arxiv.org/abs/1707.06347">Figure 1, Schulman 2017</a> 한 timestep의 L<sup>CLIP</sup> 항을 r의 함수로 그린 것입니다. 왼쪽은 advantage가 양수일 때, 오른쪽은 음수일 때입니다. 빨간 원은 시작점 r = 1입니다. 평평한 구간에서는 gradient가 꺼집니다.
+@@ 19
+Table 1. MuJoCo task 일곱 개, 21회 실행. 점수는 random = 0, 최고 결과 = 1이 되도록 정규화했습니다: <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 20
+=
+@@ 21
+평균 정규화 점수
+@@ 22
+clipping도 penalty도 없음
+@@ 23
+=
+@@ 24
+=
+@@ 25
+=
+@@ 26
+=
+@@ 27
+=
+@@ 28
+음수 점수는 HalfCheetah에서 나왔습니다. 여기서 clip하지 않은 surrogate는 "초기 random policy보다 나쁜" 결과로 끝납니다. 이어서 Figure 3은 각 environment에서 100만 step 동안 PPO를 TRPO, CEM, vanilla policy gradient, A2C와 비교합니다. Atari 게임 49개에서는 튜닝한 A2C, ACER와 비교해, seed 세 개의 평균으로 "이긴" 게임 수를 셌습니다. 훈련 전체의 평균 reward 기준으로는 A2C 1, ACER 18, PPO 30입니다. 마지막 100 episode 기준으로는 A2C 1, ACER 28, PPO 19, 무승부 1입니다. <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 29 attr
+MuJoCo environment에서 100만 timestep 동안의 학습 곡선을 그린 작은 패널 일곱 개. PPO를 TRPO, cross-entropy method, vanilla policy gradient, A2C와 비교하며, 대부분의 패널에서 PPO의 곡선이 가장 높거나 그에 가까움
+@@ 30
+<a class="src" href="https://arxiv.org/abs/1707.06347">Figure 3, Schulman 2017</a> "여러 MuJoCo environment에서 여러 알고리즘을 100만 timestep 동안 훈련해 비교한 결과." 대부분의 task에서 PPO가 가장 빨리 학습합니다. TRPO와의 격차는 각 batch를 10 epoch 동안 재사용해서 얻은 이득입니다.
+@@ 31
+PPO는 규모를 가리지 않고 policy를 최적화하는 기본 방법이 되었습니다. OpenAI Five는 4096-unit LSTM을 써서 "Proximal Policy Optimization으로 훈련"되었고, 10개월에 걸쳐 180일 동안 훈련한 끝에 2019년 4월 13일 Dota 2 세계 챔피언 OG를 이겼습니다. <a class="src" href="https://arxiv.org/abs/1912.06680">Berner 2019</a> OpenAI의 dexterous hand(2018)도 같은 clip 값 0.2로 PPO를 썼습니다. <a class="src" href="https://arxiv.org/abs/1808.00177">OpenAI 2018</a> InstructGPT(2022)는 token별 KL penalty를 더해 "우리 environment에서 PPO로 SFT 모델을 fine-tune했고", 그 1.3B 모델이 175B GPT-3보다 선호되었습니다. <a class="src" href="https://arxiv.org/abs/2203.02155">Ouyang 2022</a> DeepSeek-R1의 GRPO(2025)는 PPO의 clipped objective를 유지하면서 critic을 버리고 group-mean baseline을 씁니다. DAPO(2025)는 clip을 비대칭으로 조정합니다. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 32
+Clipping은 trust region이 아닙니다. 구간을 벗어날 유인을 없앨 뿐 KL을 제한하지는 않습니다. 그래서 구현체들은 approximate KL에 대한 early stopping을 추가합니다 (Spinning Up의 target은 0.01). <a class="src" href="https://spinningup.openai.com/en/latest/algorithms/ppo.html">Achiam 2018</a> 성능의 상당 부분은 수식이 아니라 코드에 있습니다. reference implementation에는 논문에 없는 detail이 37개 있습니다. Adam ε = 10<sup>−5</sup>, 0.5에서의 global gradient-norm clipping, value-loss clipping 등입니다. 이 가운데 value-loss clipping은 후속 연구들이 효과가 있다는 "근거를 찾지 못했습니다". <a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a> seed와 네트워크 크기에 따라 결과가 크게 흔들립니다. Hopper에서 PPO는 (400, 300) 네트워크로 61 ± 33, (64, 64) 네트워크로 2790 ± 62를 기록했습니다. <a class="src" href="https://arxiv.org/abs/1709.06560">Henderson 2018</a> PPO는 on-policy여서 sample이 많이 필요합니다. HalfCheetah 100만 step 시점에 TD3는 9637을 보고했고 PPO는 1795였습니다. <a class="src" href="https://arxiv.org/abs/1802.09477">Fujimoto 2018</a> 그리고 Atari 최종 점수는 여전히 ACER가 조금 더 좋았습니다 (28승 대 19승). <a class="src" href="https://arxiv.org/abs/1707.06347">Schulman 2017</a>
+@@ 33
+Section 1–3과 Figure 1 (15분): 성적표, ratio, clip. Section 5, Algorithm 1 (5분): 방법 전체가 아홉 줄에 담겨 있습니다. Section 6.1과 Table 1 (10분): clip을 정당화하는 단 하나의 표입니다. Figure 3과 Table 2 (10분). Section 4 (adaptive KL)는 처음 읽을 때 건너뛰어도 됩니다. 저자들도 "성능이 더 나빴다"고 밝혔습니다. 그런 다음, 코드를 한 줄이라도 쓰기 전에 37 details 블로그를 읽으세요. <a class="src" href="https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/">Huang 2022</a>
+@@ 34
+Q1. MuJoCo task 일곱 개에서, clipping도 penalty도 없는 surrogate의 점수와 ε = 0.2로 clip했을 때의 점수는 각각 얼마였습니까?
+@@ 35
+=
+@@ 36
+=
+@@ 37
+=
+@@ 38
+=
+@@ 39
+Table 1: −0.39 (HalfCheetah에서 random보다 나쁨) 대 0.82. ε = 0.1은 0.76, ε = 0.3은 0.70이었습니다.
+@@ 40
+Q2. ε = 0.2, Â = +2, r = 1.5일 때 clipped 항의 r에 대한 gradient는 얼마입니까?
+@@ 41
++2, clip하지 않은 항의 기울기입니다
+@@ 42
+0입니다. min이 clip된 항 2.4를 고르고, 이 값은 r에 대해 평평합니다
+@@ 43
+clip 전 3.0, clip 후 1.2 × 2 = 2.4입니다. min은 2.4이고 r에 대해 상수이므로, 이 sample은 더 이상 그 action의 확률을 끌어올리지 않습니다.
+@@ 44
+Q3. "ε = 0.2이면 update 한 번에 policy가 최대 20%까지만 변한다는 것이 보장된다." 무엇이 틀렸습니까?
+@@ 45
+Clipping은 sample별로, advantage가 원하는 방향에 대해서만 유인을 없앨 뿐 KL을 제한하지 않습니다. 그래서 KL early stopping은 따로 덧붙이는 장치입니다
+@@ 46
+틀린 것이 없습니다. clip이 하는 일이 정확히 그것입니다
+@@ 47
+bound는 20%가 아니라 10%입니다
+@@ 48
+bound는 value function에만 적용됩니다
+@@ 49
+구간 밖에서 objective는 평평하지만, minibatch의 다른 sample들이 r을 그쪽으로 미는 것은 아무것도 막지 못합니다. 논문의 Figure 2도 update가 진행되는 동안 KL이 계속 커지는 것을 보여 줍니다.
+@@ 50
+Schulman, J., Wolski, F., Dhariwal, P., Radford, A. &amp; Klimov, O. (2017). Proximal Policy Optimization Algorithms. <a href="https://arxiv.org/abs/1707.06347">arXiv:1707.06347</a> (v2, 2017년 8월 28일; PDF는 <a href="https://arxiv.org/pdf/1707.06347">arxiv.org/pdf/1707.06347</a>에서 읽음).
+@@ 51
+=
+@@ 52
+=
+@@ 53
+=
+@@ 54
+=
+@@ 55
+=
+@@ 56
+=

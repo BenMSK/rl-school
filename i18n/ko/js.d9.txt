@@ -1,0 +1,148 @@
+@@ dyna
+"Press “Run 50 episodes”. The maze below shows S, G and the seven wall cells; arrows will show the greedy action wherever Q > 0."
+==
+"“50 episode 실행”을 누르세요. 아래 미로에는 S, G와 벽 일곱 칸이 보입니다. Q > 0인 칸에는 greedy action이 화살표로 표시됩니다."
+@@ dyna
+"Steps per episode against episode number for the chosen planning counts; curves for larger n fall to the 14-step optimum within a few episodes."
+==
+"선택한 planning 횟수별로 episode 번호에 따른 episode당 step 수를 그린 그래프. n이 큰 곡선은 몇 episode 만에 최적인 14 step으로 떨어집니다."
+@@ dyna
+"episode (first episode not plotted)"
+==
+"episode (첫 episode는 제외)"
+@@ dyna
+"steps per episode"
+==
+"episode당 step 수"
+@@ dyna
+"to first average under 30 steps"
+==
+"평균이 처음 30 step 아래로 내려갈 때까지"
+@@ dyna
+"Average of "+RUNS+" seeded runs, ε = 0.1, α = 0.1, γ = 0.95. The optimum is 14 steps; the first episode (~1,700 random steps) is left out, as in the book."
+==
+"seed를 고정한 "+RUNS+"회 실행의 평균, ε = 0.1, α = 0.1, γ = 0.95. 최적은 14 step입니다. 첫 episode(무작위에 가까운 약 1,700 step)는 교재와 마찬가지로 그리지 않았습니다."
+@@ dyna
+"The 9 by 6 Dyna maze with start, goal, walls and greedy-policy arrows."
+==
+"시작점, goal, 벽, greedy policy 화살표가 있는 9×6 Dyna 미로."
+@@ dyna
+"Dyna-Q on the book's maze"
+==
+"교재의 미로에서 돌리는 Dyna-Q"
+@@ dyna
+"Each real step is followed by n planning updates on remembered transitions. Pick n, run, and compare how many episodes it takes before the agent walks the 14-step shortest path."
+==
+"실제 step을 한 번 밟을 때마다 기억한 transition으로 planning update를 n번 합니다. n을 고르고 실행한 다음, agent가 14 step짜리 최단 경로를 걷기까지 몇 episode가 걸리는지 비교해 보세요."
+@@ dyna
+"Planning steps n"
+==
+"Planning step 수 n"
+@@ dyna
+"0 (plain Q-learning)"
+==
+"0 (순수 Q-learning)"
+@@ dyna
+" compare all three"
+==
+" 셋 모두 비교"
+@@ dyna
+"Run 50 episodes"
+==
+"50 episode 실행"
+@@ imagine
+"Real environment"
+==
+"실제 environment"
+@@ imagine
+"Imagine 15 steps (prior ẑ)"
+==
+"15 step 상상 (prior ẑ)"
+@@ imagine
+"Actor π and critic v"
+==
+"Actor π와 critic v"
+@@ imagine
+"Dreamer pipeline; highlighted boxes are active in this step."
+==
+"Dreamer 파이프라인. 강조된 상자가 이 단계에서 동작하는 부분입니다."
+@@ imagine
+"action a_t (real)"
+==
+"action a_t (실제)"
+@@ imagine
+"real data"
+==
+"실제 데이터"
+@@ imagine
+"imagined data"
+==
+"상상 데이터"
+@@ imagine
+": a 4 by 4 image and a reward number."
+==
+": 4×4 이미지와 reward 숫자."
+@@ imagine
+"Encode real frames"
+==
+"실제 프레임 encode"
+@@ imagine
+"A replayed real frame x_t goes through the CNN encoder to a stochastic latent z_t (in DreamerV2/V3: 32 categorical variables with 32 classes each). A GRU carries the deterministic state h_t = f(h_{t−1}, z_{t−1}, a_{t−1}). Together (h_t, z_t) is the model state. Solid arrows: this is real data."
+==
+"Replay한 실제 프레임 x_t가 CNN encoder를 거쳐 stochastic latent z_t가 됩니다(DreamerV2/V3에서는 class가 32개씩인 categorical 변수 32개). GRU는 deterministic state h_t = f(h_{t−1}, z_{t−1}, a_{t−1})를 실어 나릅니다. 둘을 합친 (h_t, z_t)가 모델의 state입니다. 실선 화살표는 실제 데이터라는 뜻입니다."
+@@ imagine
+"RSSM predicts next latent"
+==
+"RSSM이 다음 latent 예측"
+@@ imagine
+"From h_{t+1} alone, with no frame to look at, the dynamics predictor guesses ẑ_{t+1} (the prior). The KL loss pulls this guess toward the latent the encoder produces when it does see the frame (the posterior). This one-step guess is the whole world model; imagination is just calling it repeatedly."
+==
+"Dynamics predictor는 볼 프레임 없이 h_{t+1}만으로 ẑ_{t+1}을 추측합니다(prior). KL loss는 이 추측을 encoder가 프레임을 실제로 보고 만든 latent(posterior) 쪽으로 끌어당깁니다. 이 one-step 추측이 world model의 전부입니다. 상상은 이것을 반복해서 호출하는 일일 뿐입니다."
+@@ imagine
+"Decode: image, reward, continue"
+==
+"Decode: 이미지, reward, continue"
+@@ imagine
+"Three heads read (h_t, z_t): the decoder reconstructs the frame, the reward head predicts r̂_t, the continue head predicts whether the episode goes on. Decoding is only a training signal that forces the latent to keep what matters; here is the decoded view of the current state."
+==
+"세 개의 head가 (h_t, z_t)를 읽습니다. Decoder는 프레임을 복원하고, reward head는 r̂_t를 예측하고, continue head는 episode가 계속되는지 예측합니다. Decode는 latent가 중요한 것을 유지하도록 강제하는 학습 신호일 뿐입니다. 아래는 현재 state를 decode한 모습입니다."
+@@ imagine
+"decoded, horizon 0"
+==
+"decode, horizon 0"
+@@ imagine
+"Imagine 15 steps ahead"
+==
+"15 step 앞까지 상상"
+@@ imagine
+"Start from a real latent and apply actor → dynamics predictor → reward head, 15 times, never touching pixels. The frames below are decoded only so you can watch the error build: with per-step error "+err.toFixed(2)+", a cell is wrong with probability 1 − (1 − "+err.toFixed(2)+")^k, which is "+(100*(1-Math.pow(1-err,15))).toFixed(0)+"% at k = 15. Move the slider below."
+==
+"실제 latent에서 출발해 actor → dynamics predictor → reward head를 15번 적용합니다. 픽셀은 한 번도 거치지 않습니다. 아래 프레임은 오차가 쌓이는 모습을 볼 수 있게 decode한 것일 뿐입니다. Step당 오차가 "+err.toFixed(2)+"이면 한 칸이 틀릴 확률은 1 − (1 − "+err.toFixed(2)+")^k이고, k = 15에서는 "+(100*(1-Math.pow(1-err,15))).toFixed(0)+"%입니다. 아래 슬라이더를 움직여 보세요."
+@@ imagine
+"Actor–critic on the imagined trajectory"
+==
+"상상한 trajectory로 actor–critic 학습"
+@@ imagine
+"The critic v(h, z) regresses onto λ-returns built from imagined rewards and continue flags; the actor is pushed toward actions with higher imagined return (REINFORCE-style for discrete actions, straight backprop through the dynamics for continuous ones). Thousands of these imagined trajectories are processed per real step of data, which is where the sample efficiency comes from."
+==
+"Critic v(h, z)는 상상한 reward와 continue flag로 만든 λ-return에 regression합니다. Actor는 상상한 return이 더 높은 action 쪽으로 밀려갑니다(discrete action은 REINFORCE 방식으로, continuous action은 dynamics를 그대로 통과하는 backprop으로). 실제 데이터 한 step마다 이런 상상 trajectory 수천 개를 처리하며, sample efficiency는 여기서 나옵니다."
+@@ imagine
+"Act in the real environment"
+==
+"실제 environment에서 행동"
+@@ imagine
+"The actor picks a_t = π(a | h_t, z_t) from the latent of the real frame, the environment answers with a new frame and reward, and the transition goes into the replay buffer. The world model is refitted on it, and the loop starts again at step 1."
+==
+"Actor는 실제 프레임의 latent에서 a_t = π(a | h_t, z_t)를 고릅니다. Environment는 새 프레임과 reward로 답하고, 이 transition은 replay buffer에 들어갑니다. World model을 이 데이터에 다시 맞추고, loop는 1단계부터 다시 시작합니다."
+@@ imagine
+"Dreamer's loop, one step at a time"
+==
+"Dreamer의 loop, 한 단계씩"
+@@ imagine
+"Six stages from a real frame to a real action. Highlighted boxes are active; dashed orange arrows carry imagined data. The slider sets how wrong the one-step model is."
+==
+"실제 프레임에서 실제 action까지 여섯 단계입니다. 강조된 상자가 동작 중인 부분이고, 주황색 점선 화살표는 상상 데이터를 나릅니다. 슬라이더로 one-step 모델이 얼마나 틀리는지 정합니다."
+@@ imagine
+"Model error per imagined step"
+==
+"상상 step당 모델 오차"

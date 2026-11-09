@@ -1,0 +1,110 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+GRPO에 대한 수정 네 가지를 하나하나 공개적으로 ablation하며, Qwen2.5-32B base model의 AIME 2024 점수를 30에서 50으로 끌어올렸습니다. 학습 step을 절반만 쓰고도 DeepSeek-R1-Zero-Qwen-32B의 47을 넘었고, 코드와 데이터, recipe를 모두 공개했습니다. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 4
+<a href="#d12">Day 12</a>에서 다룸 · 원문 읽는 시간: 약 30분
+@@ 5
+GRPO를 논문에 적힌 그대로 쓰면 스스로 exploration을 무너뜨리고, 모든 sample의 결과가 같은 문제에 compute를 낭비하며, 긴 답에 가중치를 너무 적게 주고, 잘린 답을 무작위로 벌합니다. DAPO는 이 문제들을 각각 변경 하나로 고치고, 성능이 한 단계씩 올라가는 사다리를 보여 줍니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 6
+<a href="#p-deepseek-r1">DeepSeek-R1</a>과 같은 교실이에요. 학생 16명이 한 문제에 답하고 반 평균과 비교돼요. DAPO는 여기에 교실 규칙 네 가지를 더해요. 모두가 맞히거나 모두가 틀린 문제는 다른 문제로 바꿔요. 오늘은 그 문제에서 배울 게 없으니까요. 드물게 나온 좋은 생각은 평소보다 조금 더 빨리 자라게 해 줘요. 학생마다 똑같이가 아니라 문장마다 똑같이 점수를 매겨서, 길고 꼼꼼한 답도 제대로 쳐 줘요. 그리고 종이가 모자라 가는 학생에게는 답을 끊기 전에 미리 알려 줘요.
+@@ 7
+R1이 나왔을 때 recipe는 설명되어 있었지만 학습의 세부 사항은 없었습니다. DAPO 저자들은 Qwen2.5-32B에 naive GRPO를 적용하니 AIME 2024에서 30점에 그쳤고 <strong>entropy collapse</strong>, reward noise, 학습 불안정을 겪었다고 보고합니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> entropy collapse란 policy의 분포가 일찍부터 뾰족해지는 현상입니다. sample 16개가 거의 복사본처럼 같아지고, group 안에 분산이 없어지며, advantage는 0이 됩니다(<a href="#d12">Day 12</a>의 계산 예시 참고).
+@@ 8
+GRPO의 group-relative advantage와 PPO의 clipped ratio(<a href="#p-ppo">논문 리뷰</a>)는 그대로 두고, KL 항을 빼고, 세부 사항 네 가지를 바꿉니다. 네 가지 변경은 각각 이름이 붙은 실패 원인 하나씩을 겨냥합니다. 이 논문의 기여는 알고리즘 못지않게 <strong>공개된 ablation ladder</strong>에 있습니다. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a>
+@@ 9
+Objective(Eq. 12):
+@@ 10
+J<sub>DAPO</sub>(θ) = E[ 1/(Σ<sub>i</sub>|o<sub>i</sub>|) · Σ<sub>i</sub> Σ<sub>t</sub> min( ρ<sub>i,t</sub> Â<sub>i,t</sub>, clip(ρ<sub>i,t</sub>, 1−ε<sub>low</sub>, 1+ε<sub>high</sub>) Â<sub>i,t</sub> ) ] &nbsp; s.t. &nbsp; 0 &lt; |{ o<sub>i</sub> : 정답 }| &lt; G
+@@ 11
+<strong>Clip-Higher.</strong> PPO의 대칭 clip ε = 0.2는 드문 token이 커질 수 있는 속도에 상한을 둡니다. 확률이 0.01인 token은 update 한 번에 최대 0.012까지만 갈 수 있지만, 0.9인 token은 1.0까지 갈 수 있습니다. DAPO는 두 bound를 분리해 ε<sub>low</sub> = 0.2, ε<sub>high</sub> = 0.28로 둡니다. 그래서 확률이 낮은 token에 여유가 생기고 entropy가 높게 유지됩니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 12
+<strong>Dynamic sampling.</strong> G = 16개 sample이 모두 맞거나 모두 틀린 prompt는 버리고(advantage가 0이고 gradient도 0입니다), batch가 정보를 주는 prompt로 가득 찰 때까지 sampling을 계속합니다. 기댓값 아래에 붙은 제약 조건이 바로 이것입니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 13
+<strong>Token-level loss.</strong> GRPO는 response마다 평균을 낸 뒤 response들에 걸쳐 다시 평균을 냅니다. 그래서 10,000-token 답과 100-token 답의 무게가 같고, 긴 답의 token 하나하나는 거의 반영되지 않습니다. DAPO는 대신 전체 token 수 Σ|o<sub>i</sub>|로 나눕니다. 그러면 긴 reasoning은 길이에 비례해 가중치를 받고, 길게 늘어놓기만 한 답은 길이에 비례해 penalty를 받습니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 14
+<strong>Overlong reward shaping.</strong> 예전에는 잘린 답도 틀린 답과 똑같이 −1을 받았는데, 이는 noise입니다. Soft punishment는 예상 최대 길이 16,384 token 앞에 4,096-token buffer를 두고(합계 20,480), 이 구간에서 길이에 따라 penalty가 커지게 합니다. 저자들이 처음에 쓴 방법은 잘린 sample을 loss에서 단순히 mask하는 것이었습니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 15
+<strong>Setup.</strong> KL 항은 없습니다. long-CoT policy는 초기화 지점에서 멀리 벗어나는 것이 당연하기 때문입니다. reward는 DAPO-Math-17K 데이터셋에 대한 rule-based reward입니다. 이 데이터셋의 정답은 정수로 다시 쓰여 있어서 string match가 곧 verifier입니다. prompt batch는 512, learning rate는 1×10<sup>−6</sup>이고, verl 위에 구현했습니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 16 attr
+DAPO loop: prompt batch가 policy로 들어가고 policy가 response 16개를 sampling함. rule verifier가 채점하고, reward가 모두 같은 group은 dynamic sampling으로 버려짐. 나머지는 group-relative advantage를 받아 비대칭 bound의 token-level clipped update에 쓰임. KL 항 없음, critic 없음
+@@ 17
+=
+@@ 18
+17K, 정수 정답
+@@ 19
+=
+@@ 20
+=
+@@ 21
+=
+@@ 22
+=
+@@ 23
+=
+@@ 24
+전부 같은 group? resample
+@@ 25
+Token-level clipped update, ε_low 0.2 / ε_high 0.28, KL 없음
+@@ 26
+Value model, reference model: 제거
+@@ 27
+DAPO loop입니다. RLHF-PPO(<a href="#p-instructgpt">InstructGPT</a>)와 비교하면 critic과 reference model이 사라졌습니다. GRPO와 비교하면 버려진 부품을 담은 점선 상자에 KL 항이 추가되고, 필터 두 개(dynamic sampling, overlong shaping)가 새로 생겼습니다.
+@@ 28
+Table 1의 수치는 모두 Qwen2.5-32B의 AIME 2024 avg@32입니다. naive GRPO 30; + overlong filtering 36; + Clip-Higher 38; + soft overlong punishment 41; + token-level loss 42; + dynamic sampling 50. 한 단계로 가장 크게 오른 것은 마지막 단계입니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> 이 50점은 "학습 step의 50%"만 쓰고도 DeepSeek-R1-Zero-Qwen-32B의 47점을 넘습니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> training dynamics 절은 Clip-Higher를 쓰면 entropy가 더 높게 유지되고 response 길이가 꾸준히 늘어나는 것을 보여 줍니다. case study는 base model에서는 나오지 않던, 스스로 검산하는 모습이 RL 도중에 나타나는 것을 보여 줍니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a>
+@@ 29 attr
+gradient update step 대비 AIME 2024 정확도: DAPO는 50까지 올라가고, DeepSeek-R1-Zero-Qwen-32B가 두 배의 step으로 도달한 47에 수평선이 그어져 있음
+@@ 30
+<a class="src" href="https://arxiv.org/abs/2503.14476">Figure 1, Yu 2025</a> gradient step 대비 AIME 2024 avg@32. Qwen2.5-32B에 적용한 DAPO는 R1-Zero-Qwen-32B 선(47)을 넘고, 약 절반의 step으로 50에 도달합니다.
+@@ 31
+DAPO는 32B 규모에서 처음으로 나온 완전하고 재현 가능한 RLVR 시스템이었습니다. 알고리즘, verl 학습 코드, DAPO-Math-17K 데이터셋이 2025년 3월에 함께 공개되었습니다. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a> 네 가지 수정은 빠르게 퍼졌습니다. Hugging Face TRL은 token-level loss를 기본 <code>loss_type</code>으로 삼았고 ε<sub>high</sub> = 0.28을 권장합니다. <a class="src" href="https://huggingface.co/docs/trl/grpo_trainer">Hugging Face 2026</a> ProRL은 dynamic sampling과 Clip-Higher(ε<sub>high</sub> = 0.4)를 그대로 가져가 2,000+ step 동안 학습했습니다. <a class="src" href="https://arxiv.org/abs/2505.24864">Liu 2025</a> ScaleRL 연구(<a href="#p-scalerl">논문 리뷰</a>)는 DAPO를 이름이 붙은 baseline recipe로 사용했고, dynamic sampling의 사촌 격인 zero-variance filtering을 유지했습니다. <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a>
+@@ 32
+limitations 절이 없습니다. 평가는 수학뿐이고, base model 하나와 metric 하나만 썼습니다. 저자들은 이 방법을 "다른 task로 쉽게 옮길 수 있다"고 말하지만 실험하지는 않았고, 새로 나타나는 reflective behaviour에 대한 연구는 후속 연구로 남겼습니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> KL 항 제거는 주장만 있고 ablation은 없습니다. <a class="src" href="https://arxiv.org/html/2503.14476">Yu 2025</a> 한 달 뒤 같은 연구실에서 value-based 반론인 VAPO가 나왔습니다. VAPO는 critic을 쓰면서 crash 없이 5,000 step 만에 같은 설정에서 60.4에 도달했습니다. critic은 쓸모없는 것이 아니라 비쌀 뿐입니다. <a class="src" href="https://arxiv.org/abs/2504.05118">Yue 2025</a> 또 ScaleRL은 compute를 늘렸을 때 DAPO의 loss가 CISPO나 GSPO보다 낮은 asymptote에 도달한다는 것을 발견했습니다. <a class="src" href="https://arxiv.org/html/2510.13786">Khatri 2025</a>
+@@ 33
+먼저 Figure 1과 Table 1을 읽습니다. 이 둘이 곧 논문입니다. 그다음 한 쪽씩인 Section 3.1–3.4를 읽고, Section 4.3의 entropy plot과 길이 plot을 봅니다. Section 2는 PPO와 GRPO를 간결하게 다시 정리한 부분으로, <a href="#p-deepseek-r1">R1 논문 리뷰</a>가 잘 이해되지 않았다면 훑어볼 만합니다. Appendix A는 건너뛰어도 됩니다. 약 25분이 걸립니다.
+@@ 34
+Q1. ablation ladder에서 가장 큰 상승을 가져온 변경 하나는 무엇입니까?
+@@ 35
+=
+@@ 36
+=
+@@ 37
+=
+@@ 38
+=
+@@ 39
+모두 맞은 group과 모두 틀린 group을 빼자 8점이 올랐고, 이는 다른 어떤 단계보다 큽니다.
+@@ 40
+Q2. clip의 upper bound만 0.28로 올린 이유는 무엇입니까?
+@@ 41
+드문 token의 확률이 더 빨리 커질 수 있게 해서 entropy가 collapse하지 않도록 하려고
+@@ 42
+GPU에서 학습을 더 빠르게 하려고
+@@ 43
+긴 답에 penalty를 주려고
+@@ 44
+reward가 [0, 1] 범위에 있어서
+@@ 45
+대칭 0.2에서는 p = 0.01인 token이 step당 0.012까지만 갈 수 있습니다. 비대칭 bound는 exploration에 여유를 줍니다.
+@@ 46
+Q3. "DAPO는 reference model에 대한 KL penalty를 유지한다." 참입니까, 거짓입니까?
+@@ 47
+참, β = 0.001로 유지한다
+@@ 48
+거짓. long-CoT policy는 시작점에서 멀리 벗어나는 것이 당연하므로 제거했다
+@@ 49
+참, 단 처음 100 step에서만
+@@ 50
+거짓. value model로 대체했다
+@@ 51
+Section 2.3에서 ablation 없이 KL 항을 제거합니다. critic도 없습니다.
+@@ 52
+Yu, Zhang, Zhu, Yuan, Zuo et al. (ByteDance Seed, Tsinghua AIR). DAPO: An Open-Source LLM Reinforcement Learning System at Scale. 2025. <a href="https://arxiv.org/abs/2503.14476">arXiv 2503.14476</a> · <a href="https://arxiv.org/html/2503.14476">전문</a>
+@@ 53
+=
+@@ 54
+=
+@@ 55
+=

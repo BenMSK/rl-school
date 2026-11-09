@@ -1,0 +1,92 @@
+@@ 1
+=
+@@ 2
+=
+@@ 3
+사람이 쓴 reasoning trace 없이 규칙 기반 0/1 reward만으로 순수하게 RL을 돌렸더니, base 모델의 AIME 2024 점수가 15.6%에서 77.9%로 올랐습니다. 공개된 DeepSeek-R1은 AIME 2024에서 79.8%, MATH-500에서 97.3%를 기록했습니다. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a>
+@@ 4
+<a href="#d12">Day 12</a>에서 다룸 · 원문 읽는 시간: 약 45분 (v1), Nature 판은 세부 내용 대부분을 부록으로 옮김
+@@ 5
+수학 문제마다 답을 16개씩 sampling해 정답지로 채점하고, 평균보다 나은 답의 확률은 높이고 평균보다 못한 답의 확률은 낮추기만 하면, 모델은 예시를 한 번도 보지 않고도 긴 chain of thought를 쓰고, 풀이를 검산하고, "wait"라고 말하는 법을 스스로 익힙니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 6
+한 반 학생 16명이 모두 같은 수학 문제를 풀어요. 풀이를 얼마나 멋지게 썼는지 봐 주는 선생님은 없고, 책 뒤에 있는 정답지만 있어요. 맞았는지 틀렸는지만 알 수 있는 거예요. 학생들은 저마다 반 평균과 비교돼요. 반 평균보다 잘했으면 그렇게 푸는 걸 더 많이 하고, 못했으면 덜 해요. 이렇게 문제를 수천 개 풀고 나면 학생들은 풀이 과정을 하나하나 적고 다시 확인하기 시작해요. 그렇게 한 쪽이 계속 이겼으니까요.
+@@ 7
+OpenAI의 o1(2024년 9월)은 "대규모 강화학습으로 chain of thought를 써서 reasoning하도록" 훈련한 모델이 수학과 코딩에서 크게 도약한다는 것을 보여 주었지만, 레시피는 공개하지 않았습니다. <a class="src" href="https://arxiv.org/abs/2412.16720">OpenAI 2024</a> 그래서 질문이 남았습니다. reasoning을 익히려면 SFT용으로 사람이 작성한 reasoning trace가 필요한가, 단계마다 점수를 매기는 process reward model이 필요한가, 아니면 inference 시점의 search가 필요한가 하는 것입니다. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a> 게다가 RLHF 방식의 PPO(<a href="#p-instructgpt">InstructGPT 논문 리뷰</a>)는 policy와 같은 크기의 value model을 따로 둡니다. 파라미터가 671B인 base 모델에서는 만만치 않은 비용입니다.
+@@ 8
+두 가지 수를 둡니다. 첫째는 <strong>verifiable reward</strong>입니다. 수학과 코드는 프로그램이 최종 답을 검사할 수 있으므로 학습된 reward model이 필요 없고, 속여서 점수를 딸 대상도 checker밖에 없습니다. 둘째는 <strong>GRPO</strong>(Group Relative Policy Optimization, 2024년 2월 DeepSeekMath에서 제안)입니다. PPO의 value model을 없애고, 같은 질문에 대한 sample group 안에서 구한 reward의 평균과 표준편차로 대신합니다. <a class="src" href="https://arxiv.org/abs/2402.03300">Shao 2024</a> 이 둘을 SFT 없이 base 모델에 바로 적용하고, 무엇이 나타나는지 지켜봅니다. 그렇게 나온 모델이 <strong>DeepSeek-R1-Zero</strong>입니다. <a class="src" href="https://arxiv.org/abs/2501.12948">DeepSeek-AI 2025</a>
+@@ 9
+<strong>sampling.</strong> 질문 q마다 이전 policy에서 출력 o<sub>1..G</sub>를 G = 16개 뽑습니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 10
+<strong>채점.</strong> Reward = 정확성(박스 안의 최종 답이 정답과 일치하거나 코드가 테스트를 통과) + 형식(reasoning이 <code>&lt;think&gt;…&lt;/think&gt;</code> 안에 있음)이며, 두 항의 가중치는 같습니다. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a>
+@@ 11
+<strong>Advantage와 update</strong> (Eqs. 1–3):
+@@ 12
+=
+@@ 13
+=
+@@ 14
+=
+@@ 15
+clipping된 ratio는 PPO의 것 그대로입니다(<a href="#p-ppo">PPO 논문 리뷰</a>). 새로운 부분은 A<sub>i</sub>입니다. 이 <strong>group-relative advantage</strong>에는 critic이 필요 없습니다. R1-Zero는 β = 0.001을 썼습니다. 실제 구현에서는 ratio를 token 단위로 적용하고, 응답마다 1/|o<sub>i</sub>|을 곱해 평균합니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> 직접 계산해 봅니다. reward가 [2, 1, 1, 0]이면 평균은 1.0, 모표준편차는 0.7071, advantage는 [+1.414, 0, 0, −1.414]입니다. 가운데 두 답은 gradient를 받지 않습니다.
+@@ 16
+<strong>R1-Zero에서 R1으로.</strong> R1-Zero의 trace는 읽기 어렵고 여러 언어가 섞여 있었습니다. 그래서 공개 모델에는 네 단계가 더해졌습니다. 사람이 다듬은 긴 reasoning 예시 수천 개로 하는 cold-start SFT, language-consistency reward를 추가한 reasoning RL, rejection sampling을 거친 약 800k개 sample(reasoning 약 600k, 그 외 200k)로 하는 SFT, 그리고 reward model을 써서 helpfulness와 harmlessness를 높이는 마지막 RL 단계입니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 17 attr
+DeepSeek-V3-Base에서 출발해 R1-Zero, cold-start SFT, reasoning RL, rejection sampling SFT, 마지막 RL 단계를 거쳐 DeepSeek-R1에 이르는 다단계 파이프라인. 중간 checkpoint Dev1부터 Dev3까지 표시
+@@ 18
+<a class="src" href="https://arxiv.org/abs/2501.12948">Figure 2, DeepSeek 2025</a> 다단계 파이프라인. R1-Zero(순수 RL)는 cold-start 데이터를 생성하는 데 쓰이고, 공개된 R1은 SFT와 RL을 두 번 번갈아 거칩니다. Dev1–Dev3은 중간 checkpoint입니다.
+@@ 19
+R1-Zero의 AIME 2024 pass@1은 RL을 거치며 15.6%에서 77.9%로 올랐고, majority voting을 쓰면 86.7%까지 올랐습니다. v1 preprint는 당시의 평가 설정에서 71.0%로 보고했습니다. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a> <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> 응답 길이는 훈련 내내 꾸준히 늘었습니다. 모델이 더 오래 생각하는 법을 배운 것입니다. 한 중간 checkpoint는 "Wait, wait. Wait. That's an aha moment I can flag here"(잠깐, 잠깐. 잠깐만. 여기가 짚어 둘 만한 aha moment네요)라고 쓴 뒤 풀이를 처음부터 다시 유도했습니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a> DeepSeek-R1의 성적은 AIME 2024 79.8, MATH-500 97.3, Codeforces rating 2029(96.3 percentile), SWE-bench Verified 49.2, GPQA Diamond 71.5입니다. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a> R1의 sample 800k개를 SFT만으로 Qwen-32B에 distillation했더니 AIME 72.6이 나왔고, Qwen-32B에 R1-Zero 방식의 RL을 직접 돌렸을 때는 47.0이었습니다. <a class="src" href="https://arxiv.org/html/2501.12948v1">DeepSeek-AI 2025</a>
+@@ 20 attr
+왼쪽: RL 훈련 step에 따른 DeepSeek-R1-Zero의 AIME 2024 정확도와 사람 참가자 평균. 오른쪽: 훈련 세트에서의 평균 응답 길이가 step이 지날수록 늘어나는 모습
+@@ 21
+<a class="src" href="https://arxiv.org/abs/2501.12948">Figure 1, DeepSeek 2025</a> (a) RL 도중 R1-Zero의 AIME 정확도. 가로선은 AIME 사람 참가자의 평균입니다. (b) 같은 step 구간의 평균 응답 길이. 더 길게 생각하라고 지시한 적은 없습니다. 스스로 나타난 결과입니다.
+@@ 22
+R1(2025년 1월)은 o1급 reasoning 모델의 레시피와 weight를 처음으로 공개한 사례였습니다. GRPO와 verifiable reward의 조합은 2025년 "RLVR" 흐름의 기본값이 되었습니다. DAPO(2025년 3월, <a href="#p-dapo">논문 리뷰</a>), Dr. GRPO, GSPO, ScaleRL(2025년 10월, <a href="#p-scalerl">논문 리뷰</a>)은 모두 위 objective를 손본 것입니다. <a class="src" href="https://arxiv.org/abs/2503.14476">Yu 2025</a> <a class="src" href="https://arxiv.org/abs/2510.13786">Khatri 2025</a> R1의 distillation 결과는 작은 모델을 만드는 공식도 정해 놓았습니다. RL이 teacher를 만들고, SFT가 student를 만듭니다.
+@@ 23
+저자들이 꼽는 한계는 다음과 같습니다. 약한 tool use와 structured output, 쉬운 질문에서의 overthinking, 중국어와 영어 밖에서 언어가 섞이는 문제, few-shot prompt에 대한 민감성, 소프트웨어 엔지니어링에서의 제한적인 향상, 그리고 글쓰기 같은 과제에서 믿을 만한 reward를 만들기 어렵다는 점입니다. Discussion에서는 process reward model과 MCTS가 둘 다 대규모에서 실패했다고 보고합니다. step을 정의하고 라벨링하기 어렵고, PRM은 hacking당하며, token search 공간이 폭발하기 때문입니다. <a class="src" href="https://arxiv.org/html/2501.12948">DeepSeek-AI 2025</a> 두 달 뒤 <strong>Dr. GRPO</strong>("GRPO Done Right")는 objective 자체에 bias가 있다고 주장했습니다. 1/|o<sub>i</sub>| 길이 정규화 때문에 길고 틀린 답이 받는 token당 penalty가 작아져서 응답이 점점 길어지고, group std로 나누면 거의 다 맞거나 거의 다 틀린 질문에 가중치가 지나치게 실린다는 것입니다. 두 항을 모두 없앴더니 7B base 모델로 A100 8대에서 하루 정도 만에 AIME 2024 43.3%에 도달했습니다. 같은 논문은 "aha" 식의 self-reflection이 RL을 하기 전의 DeepSeek-V3-Base에 이미 있었다는 것도 발견했습니다. <a class="src" href="https://arxiv.org/abs/2503.20783">Liu 2025</a> RLVR이 능력을 새로 더해 주는지, 있던 능력을 날카롭게 다듬을 뿐인지는 아직 논쟁 중입니다. sample 수 k = 1024에서 AIME24 문제의 13.3%는 base 모델만 풀고 RL 모델은 끝내 풀지 못했으며, 그 반대인 문제는 0.0%였습니다. <a class="src" href="https://arxiv.org/abs/2504.13837">Yue 2025</a>
+@@ 24
+Nature 판이 아니라 v1 preprint를 읽습니다. Section 2.1(GRPO), 2.2(reward), 2.3과 Figure 2–3, Table 3(aha moment)을 읽고, 이어서 R1 파이프라인을 다루는 Section 2.3과 Table 4–5를 봅니다. Section 4(distillation 대 RL, 그리고 실패한 시도들)로 마무리합니다. safety와 평가 부록은 건너뜁니다. 약 40분.
+@@ 25
+Q1. GRPO에서 PPO의 value model을 대신하는 것은 무엇입니까?
+@@ 26
+더 작은 value model
+@@ 27
+같은 질문에 대한 sample group 안에서 구한 reward의 평균과 std
+@@ 28
+Process reward model
+@@ 29
+=
+@@ 30
+G = 16개 sample에 대해 A<sub>i</sub> = (r<sub>i</sub> − mean)/std를 계산합니다. critic은 없습니다.
+@@ 31
+Q2. reward가 [2, 1, 1, 0]일 때 gradient가 0인 답은 어느 것입니까?
+@@ 32
+2점을 받은 답
+@@ 33
+0점을 받은 답
+@@ 34
+없음
+@@ 35
+1점을 받은 두 답
+@@ 36
+두 답은 group 평균과 같아서 A<sub>i</sub> = 0입니다. 하나는 정답이고 다른 하나는 오답인데도 그렇습니다.
+@@ 37
+Q3. 32B 모델에서 AIME 2024 점수가 더 높았던 쪽은 어느 것입니까?
+@@ 38
+R1에서 distillation한 sample 800k개로 하는 SFT (72.6)
+@@ 39
+그 모델에 직접 돌린 R1-Zero 방식의 RL (47.0)
+@@ 40
+둘의 점수가 같았다
+@@ 41
+어느 쪽도 아니다. 둘 다 base 모델보다 낮았다
+@@ 42
+더 큰 모델에서 distillation하는 쪽이 작은 모델에 대규모 RL을 돌리는 쪽보다 나았습니다.
+@@ 43
+DeepSeek-AI (Guo et al.). DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning. Nature 645, 633–638 (2025). <a href="https://arxiv.org/abs/2501.12948">arXiv 2501.12948</a> · <a href="https://arxiv.org/html/2501.12948v1">v1 전문</a>
+@@ 44
+Shao et al. DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models (GRPO를 처음 제안). 2024. <a href="https://arxiv.org/abs/2402.03300">arXiv 2402.03300</a>
+@@ 45
+=
+@@ 46
+=

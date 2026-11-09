@@ -1,0 +1,58 @@
+@@ 1
+Today's big idea
+@@ 2
+Explain it to a 10-year-old
+@@ 3
+Analogy
+@@ 4
+Common misunderstandings
+@@ 5
+8. Architecture
+@@ 6
+Environment
+@@ 7
+Systems view
+@@ 8
+Check yourself
+@@ 9
+Recap: five things to remember
+@@ 10
+Sources
+@@ 11
+9. Architecture
+@@ 12
+action a
+@@ 13
+environment
+@@ 14
+Method
+@@ 15
+DQN
+@@ 16
+observations
+@@ 17
+Year
+@@ 18
+Montezuma's Revenge
+@@ 19
+PPO
+@@ 20
+In one sentence
+@@ 21
+The problem
+@@ 22
+The key idea
+@@ 23
+How it works, step by step
+@@ 24
+Results
+@@ 25
+Why it mattered
+@@ 26
+Limitations
+@@ 27
+How to read the paper
+@@ 28
+References
+@@ 29
+Schulman, J. et al. (2016). High-Dimensional Continuous Control Using Generalized Advantage Estimation. <a href="https://arxiv.org/abs/1506.02438">arXiv:1506.02438</a>.
